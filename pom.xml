@@ -11,7 +11,7 @@
 	<url>http://maven.apache.org</url>
 
 	<modules>
-		<module>xpatterns-jaws-data</module>
-		<module>xpatterns-jaws</module>
+		<module>jaws-spark-sql-rest</module>
+		<module>jaws-spark-sql-data</module>
 	</modules>
 </project>
