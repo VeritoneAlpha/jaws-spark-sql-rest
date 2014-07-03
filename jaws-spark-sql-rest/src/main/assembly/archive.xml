@@ -19,7 +19,7 @@
 			<directory>${project.build.directory}</directory>
 			<outputDirectory>/target/</outputDirectory>
 			<includes>
-				<include>xpatterns-jaws.jar</include>
+				<include>jaws-spark-sql-rest.jar</include>
 			</includes>
 		</fileSet>
 	</fileSets>

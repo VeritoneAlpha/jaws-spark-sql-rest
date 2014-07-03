@@ -3,11 +3,11 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com</groupId>
-	<artifactId>xpatterns-jaws</artifactId>
+	<artifactId>jaws-spark-sql-rest</artifactId>
 	<version>0.0.1</version>
 	<packaging>jar</packaging>
 
-	<name>xpatterns-jaws</name>
+	<name>jaws-spark-sql-rest</name>
 	<url>http://maven.apache.org</url>
 
 	<repositories>
@@ -238,7 +238,7 @@
 
 		<dependency>
 			<groupId>com.xpatterns</groupId>
-			<artifactId>xpatterns-jaws-data</artifactId>
+			<artifactId>jaws-spark-sql-data</artifactId>
 			<version>1.0.0</version>
 			<exclusions>
 				<exclusion>
