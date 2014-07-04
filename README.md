@@ -1,7 +1,18 @@
-# http-spark-sql-server
+# jaws-spark-sql-rest
 
-http shark server for running Shark queries on top of Spark, with Mesos and Tachyon support (codenamed jaws)
+Restful service for running and Spark SQL/Shark queries on top of Spark, with Mesos and Tachyon support (codenamed jaws)
+Currently, only Spark 0.9.x and Shark are supported as backend framework for Jaws, will add support for Spark 1.0 and Spark SQL very soon.
 
+
+## Features
+
+Highly scalable and resilient restful (http) interface on top of a managed Spark SQL/Shark session that can concurrently and asynchronously submit HiveQL queries, return persisted results (automatically limited in size or paged), execution logs and query history (Cassandra or hdfs persisted).
+Jaws supports query cancellation even when there are multiple load balanced instances for higher availability and scalability.
+Jaws exposes configuration options for fine-tuning Spark & Shark performance and running against a stand-alone Spark deployment, with or without Tachyon as in-memory distributed file system on top of HDFS, and with or without Mesos as resource manager
+We are using this service for building a warehouse explorer GUI component, that provides data analysts and scientists with a view into the warehouse through a metadata explorer, provides a query editor with intelligent features like auto-complete, a results viewer, logs viewer and historical queries for asynchronously retrieving persisted results, logs and query information for both running and historical queries.
+
+For Spark 0.9.x Jaws uses Shark against tables created through Hive, Shark or Tachyon.
+For Spark 1.0 it uses SparkSQL against Hive tables and Parquet files stored in hdfs and it is not backward compatible with Shark tables created in 0.9.x.
 
 
 

@@ -3,11 +3,11 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.xpatterns</groupId>
-	<artifactId>http-spark-sql-server</artifactId>
+	<artifactId>jaws-spark-sql</artifactId>
 	<version>1.0.0</version>
 	<packaging>pom</packaging>
 
-	<name>http-spark-sql-server</name>
+	<name>jaws-spark-sql</name>
 	<url>http://maven.apache.org</url>
 
 	<modules>
