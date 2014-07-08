@@ -19,7 +19,7 @@ import com.xpatterns.jaws.data.contracts.IJawsLogging;
 import com.xpatterns.jaws.data.utils.JobType;
 import com.xpatterns.jaws.data.utils.Randomizer;
 
-public class JawsLoggingTests {
+public class JawsLoggingTest {
 
 	private static IJawsLogging dal;
 

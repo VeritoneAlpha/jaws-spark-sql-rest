@@ -13,14 +13,13 @@ import com.xpatterns.jaws.data.DTO.ResultDTO;
 import com.xpatterns.jaws.data.contracts.IJawsResults;
 import com.xpatterns.jaws.data.utils.Randomizer;
 
-public class JawsResultsTests {
+public class JawsResultsOnHdfsTest {
 
 	private static IJawsResults resultsDal;
 
 	@BeforeClass
 	public static void setUp() throws Exception {
-		ApplicationContext context = new ClassPathXmlApplicationContext(
-				"test-application-context.xml");
+		ApplicationContext context = new ClassPathXmlApplicationContext("test-application-context-hdfs.xml");;
 		resultsDal = (IJawsResults) context.getBean("resultsDal");
 
 	}

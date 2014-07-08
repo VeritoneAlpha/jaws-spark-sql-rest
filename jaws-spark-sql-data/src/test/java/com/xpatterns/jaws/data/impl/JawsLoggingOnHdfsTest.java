@@ -16,7 +16,7 @@ import com.xpatterns.jaws.data.contracts.IJawsLogging;
 import com.xpatterns.jaws.data.utils.JobType;
 import com.xpatterns.jaws.data.utils.Randomizer;
 
-public class JawsLoggingOnHdfsTests {
+public class JawsLoggingOnHdfsTest {
 	private static IJawsLogging dal;
 
 	@Before
