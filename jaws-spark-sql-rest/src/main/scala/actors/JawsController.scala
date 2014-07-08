@@ -110,7 +110,7 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
   implicit val timeout = Timeout(Configuration.timeout.toInt)
 
   val getJobsActor = createActor(Props(new GetJobsApiActor(dals)), "GetJobs", system)
-  val runScriptActor = createActor(Props(new RunScriptApiActor(hdfsConf, customSharkContext, dals)), "RunScript", system)
+  val runScriptActor = createActor(Props(new RunScriptApiActor(hdfsConf, customSharkContext, dals)), "RunScript", domainSystem)
   val getLogsActor = createActor(Props(new GetLogsApiActor(dals)), "GetLogs", system)
   val getResultsActor = createActor(Props(new GetResultsApiActor(hdfsConf, customSharkContext, dals)), "GetResults", system)
   val getDescriptionActor = createActor(Props(new GetDescriptionApiActor(dals)), "GetDescription", system)
