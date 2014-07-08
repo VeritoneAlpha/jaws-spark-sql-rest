@@ -67,10 +67,10 @@ object SharkUtils {
 
     if (tokens(0).equalsIgnoreCase("select")) {
       Configuration.log4j.info("[SharkUtils]: the command is a select")
-      Configuration.log4j.info("[SharkUtils]: the maximum number of results is: " + Configuration.numberOfResults)
+      Configuration.log4j.info("[SharkUtils]: the maximum number of results is: " + Configuration.numberOfResults.getOrElse("100"))
       val temporaryTableName = RandomStringUtils.randomAlphabetic(10)
       // take only x results
-      cmd_trimmed = "select " + temporaryTableName + ".* from ( " + cmd_trimmed + ") " + temporaryTableName + " limit " + Configuration.numberOfResults.toString
+      cmd_trimmed = "select " + temporaryTableName + ".* from ( " + cmd_trimmed + ") " + temporaryTableName + " limit " +  Configuration.numberOfResults.getOrElse("100")
     } else if (tokens(0).equalsIgnoreCase("set") || tokens(0).equalsIgnoreCase("add")) {
       // we won't put an uuid
       Configuration.log4j.info("[SharkUtils]: the command is a set or add")
