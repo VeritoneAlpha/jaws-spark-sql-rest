@@ -112,7 +112,7 @@ Parameters:
 
 Results:
 
-The api returns a JSON containing the results schema and a list of result entries.
+The api returns a JSON containing the results schema and a list of result entries. The results are retrieved paginated. Before reading the results, the information about how the job was executed is retrieved from the database (see run api documentation) and based on it, Jaws knows if it has to search for results inside the database or inside a stored RDD on HDFS
 
 Example:
 {
