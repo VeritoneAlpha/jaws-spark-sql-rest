@@ -24,7 +24,7 @@ import implementation.CassandraDal
 import implementation.CustomSharkContextCreator
 import implementation.HdfsDal
 import messages._
-import model.Jobs
+import model.Queries
 import model.Logs
 import model.Result
 import spray.http.HttpHeaders
@@ -186,12 +186,12 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
             }
           }
       } ~
-      path(pathPrefix / "jobs") {
+      path(pathPrefix / "queries") {
         get {
-          parameters('startUuid.?, 'limit.as[Int]) { (startUuid, limit) =>
+          parameters('startQueryID.?, 'limit.as[Int]) { (startQueryID, limit) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
               complete {
-                val future = ask(getJobsActor, GetJobsMessage(startUuid.getOrElse(null), limit)).mapTo[Jobs]
+                val future = ask(getJobsActor, GetJobsMessage(startQueryID.getOrElse(null), limit)).mapTo[Queries]
                 future
               }
             }

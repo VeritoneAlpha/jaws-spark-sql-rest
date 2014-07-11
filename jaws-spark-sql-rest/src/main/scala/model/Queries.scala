@@ -5,9 +5,9 @@ import spray.json.DefaultJsonProtocol._
 /**
  * Created by emaorhian
  */
-case class Jobs (jobs : Array[Job])
+case class Queries (queries : Array[Query])
 
-object Jobs {
+object Queries {
   implicit val jobsJson = jsonFormat1(apply)
   
   

@@ -7,8 +7,8 @@ import com.google.common.base.Preconditions
 import actors.LogsActor
 import akka.actor.ActorLogging
 import traits.DAL
-import model.Jobs
-import model.Job
+import model.Queries
+import model.Query
 import messages.GetDescriptionMessage
 import messages.GetDatabasesMessage
 import java.util.UUID
