@@ -124,11 +124,11 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
   startServer(interface = InetAddress.getLocalHost().getHostName(), port = Configuration.webServicesPort.getOrElse("8080").toInt) {
     path(pathPrefix / "run") {
       post {
-        parameters('resultsnumber.as[Int] ? 100, 'limited.as[Boolean]) { (resultsnumber, limited) =>
+        parameters('numberOfResults.as[Int] ? 100, 'limited.as[Boolean]) { (numberOfResults, limited) =>
           corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
             entity(as[String]) { string: String =>
               complete {
-                val future = ask(runScriptActor, RunScriptMessage(string, limited, resultsnumber)).mapTo[String]
+                val future = ask(runScriptActor, RunScriptMessage(string, limited, numberOfResults)).mapTo[String]
                 future
               }
             }
