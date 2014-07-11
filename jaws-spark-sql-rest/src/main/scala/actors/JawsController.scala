@@ -131,7 +131,7 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
                 val future = ask(runScriptActor, RunScriptMessage(string, limited, numberOfResults)).mapTo[String]
                 future
               }
-            }
+            }	
           }
         }
       } ~
@@ -145,14 +145,14 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
     } ~
       path(pathPrefix / "logs") {
         get {
-          parameters('uuid, 'starttimestamp.as[Long].?, 'limit.as[Int]) { (uuid, starttimestamp, limit) =>
+          parameters('queryID, 'startTimestamp.as[Long].?, 'limit.as[Int]) { (queryID, startTimestamp, limit) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
               complete {
                 var timestamp: java.lang.Long = 0
-                if (starttimestamp.isDefined) {
-                  timestamp = starttimestamp.get
+                if (startTimestamp.isDefined) {
+                  timestamp = startTimestamp.get
                 }
-                val future = ask(getLogsActor, GetLogsMessage(uuid, timestamp, limit)).mapTo[Logs]
+                val future = ask(getLogsActor, GetLogsMessage(queryID, timestamp, limit)).mapTo[Logs]
                 future
               }
             }
