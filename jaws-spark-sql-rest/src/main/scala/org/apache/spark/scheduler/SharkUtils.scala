@@ -59,6 +59,10 @@ object SharkUtils {
     return result
   }
 
+  def rrunCmd (cmd: String, sharkContext: SharkContext, uuid: String, loggingDal: IJawsLogging) {
+    loggingDal.setMetaInfo(uuid, new ScriptMetaDTO(1, 2, false, true))
+  }
+  
   def runCmd(cmd: String, sharkContext: SharkContext, uuid: String, loggingDal: IJawsLogging): Result = {
     Configuration.log4j.info("[SharkUtils]: execute the following command:" + cmd)
     val prefix = "--" + uuid + "\n"
