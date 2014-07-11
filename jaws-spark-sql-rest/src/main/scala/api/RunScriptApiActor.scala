@@ -2,7 +2,7 @@ package api
 
 import akka.actor.Actor
 import akka.actor.actorRef2Scala
-import messages.GetJobsMessage
+import messages.GetQueriesMessage
 import com.google.common.base.Preconditions
 import actors.LogsActor
 import akka.actor.ActorLogging
@@ -68,9 +68,9 @@ class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, customSh
     }
 
     case message: CancelMessage => {
-      Configuration.log4j.info("[RunScriptApiActor]: Canceling the jobs for the following uuid: " + message.uuid)
+      Configuration.log4j.info("[RunScriptApiActor]: Canceling the jobs for the following uuid: " + message.queryID)
 
-      val task = taskCache.getIfPresent(message.uuid)
+      val task = taskCache.getIfPresent(message.queryID)
 
       Option(task) match {
         case None => {
@@ -79,10 +79,10 @@ class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, customSh
         case _ => {
 
           task.setCanceled(true)
-          taskCache.invalidate(message.uuid)
+          taskCache.invalidate(message.queryID)
           if (System.getProperty("spark.mesos.coarse").equalsIgnoreCase("true")) {
             Configuration.log4j.info("[RunScriptApiActor]: Jaws is running in coarse grained mode!")
-            customSharkContext.sharkContext.cancelJobGroup(message.uuid)
+            customSharkContext.sharkContext.cancelJobGroup(message.queryID)
           } else {
             Configuration.log4j.info("[RunScriptApiActor]: Jaws is running in fine grained mode!")
           }

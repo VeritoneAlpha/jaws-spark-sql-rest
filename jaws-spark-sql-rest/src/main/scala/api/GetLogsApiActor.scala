@@ -2,7 +2,7 @@ package api
 
 import akka.actor.Actor
 import akka.actor.actorRef2Scala
-import messages.GetJobsMessage
+import messages.GetQueriesMessage
 import com.google.common.base.Preconditions
 import actors.LogsActor
 import akka.actor.ActorLogging
@@ -23,8 +23,8 @@ class GetLogsApiActor(dals: DAL) extends Actor {
   override def receive = {
 
     case message: GetLogsMessage => {
-      Configuration.log4j.info("[GetLogsApiActor]: retrieving logs for: " + message.uuid)
-      Preconditions.checkArgument(message.uuid != null && !message.uuid.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE)
+      Configuration.log4j.info("[GetLogsApiActor]: retrieving logs for: " + message.queryID)
+      Preconditions.checkArgument(message.queryID != null && !message.queryID.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE)
       var startDate = message.startDate
       var limit = message.limit
 
@@ -43,8 +43,8 @@ class GetLogsApiActor(dals: DAL) extends Actor {
       
       // retrieving the status earlier because otherwise we might lose the
       // last logs
-      val status = dals.loggingDal.getState(message.uuid).name()
-      val logs = dals.loggingDal.getLogs(message.uuid, startDate, limit)
+      val status = dals.loggingDal.getState(message.queryID).name()
+      val logs = dals.loggingDal.getLogs(message.queryID, startDate, limit)
 
       sender ! Logs(Log.getLogArray(logs), status)
 

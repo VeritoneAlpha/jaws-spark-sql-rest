@@ -2,20 +2,18 @@ package api
 
 import akka.actor.Actor
 import akka.actor.actorRef2Scala
-import messages.GetJobsMessage
+import messages.GetQueriesMessage
 import com.google.common.base.Preconditions
 import actors.LogsActor
 import akka.actor.ActorLogging
 import traits.DAL
-import model.Queries
-import model.Query
-import messages.GetDescriptionMessage
 import messages.GetDatabasesMessage
 import java.util.UUID
 import traits.CustomSharkContext
 import actors.Configuration
 import model.Result
 import org.apache.spark.scheduler.SharkUtils
+
 /**
  * Created by emaorhian
  */

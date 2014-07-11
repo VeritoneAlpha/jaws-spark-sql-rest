@@ -2,7 +2,7 @@ package api
 
 import akka.actor.Actor
 import akka.actor.actorRef2Scala
-import messages.GetJobsMessage
+import messages.GetQueriesMessage
 import com.google.common.base.Preconditions
 import actors.LogsActor
 import akka.actor.ActorLogging
@@ -13,15 +13,15 @@ import actors.Configuration
 /**
  * Created by emaorhian
  */
-class GetJobsApiActor (dals: DAL) extends Actor{
+class GetQueriesApiActor (dals: DAL) extends Actor{
   
   override def receive = {
     
-  	case message : GetJobsMessage => {
+  	case message : GetQueriesMessage => {
       
-		Configuration.log4j.info("[GetJobsApiActor]: retrieving " + message.limit + " number of jobs starting with " + message.startUuid)
+		Configuration.log4j.info("[GetQueriesApiActor]: retrieving " + message.limit + " number of jobs starting with " + message.startQueryID)
 		Preconditions.checkArgument(message.limit != null, Configuration.LIMIT_EXCEPTION_MESSAGE)
-		val jobStates = dals.loggingDal.getStateOfJobs(message.startUuid, message.limit)
+		val jobStates = dals.loggingDal.getStateOfJobs(message.startQueryID, message.limit)
 		val jobs = new Array[Query](jobStates.size())
 
 		var index = 0
@@ -33,7 +33,7 @@ class GetJobsApiActor (dals: DAL) extends Actor{
 		}
 		
 		val returnVal = new Queries(jobs)
-		Configuration.log4j.debug("[GetJobsApiActor]: Returning jobs")
+		Configuration.log4j.debug("[GetQueriesApiActor]: Returning jobs")
 		sender ! returnVal
 
     }

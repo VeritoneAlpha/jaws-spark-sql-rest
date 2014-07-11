@@ -2,7 +2,7 @@ package api
 
 import akka.actor.Actor
 import akka.actor.actorRef2Scala
-import messages.GetJobsMessage
+import messages.GetQueriesMessage
 import com.google.common.base.Preconditions
 import actors.LogsActor
 import akka.actor.ActorLogging
@@ -31,8 +31,8 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, customS
   override def receive = {
 
     case message: GetResultsMessage => {
-      Configuration.log4j.info("[GetResultsMessage]: retrieving results for: " + message.uuid)
-      Preconditions.checkArgument(message.uuid != null && !message.uuid.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE)
+      Configuration.log4j.info("[GetResultsMessage]: retrieving results for: " + message.queryID)
+      Preconditions.checkArgument(message.queryID != null && !message.queryID.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE)
       var offset = message.offset
       var limit = message.limit
 
@@ -56,9 +56,9 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, customS
         }
       }
 
-      val metaInfo = dals.loggingDal.getMetaInfo(message.uuid)
+      val metaInfo = dals.loggingDal.getMetaInfo(message.queryID)
       if (metaInfo.resultsInCassandra == true) {
-        val result = dals.resultsDal.getResults(message.uuid)
+        val result = dals.resultsDal.getResults(message.queryID)
         var endIndex = offset + limit
         if (endIndex > result.results.size()) {
           endIndex = result.results.size()
@@ -68,9 +68,9 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, customS
 
       } else {
 
-        val schema = SharkUtils.getSchema(Utils.readFile(hdfsConf, Configuration.schemaFolder + "/" + message.uuid))
+        val schema = SharkUtils.getSchema(Utils.readFile(hdfsConf, Configuration.schemaFolder + "/" + message.queryID))
 
-        val resultsRDD: RDD[Tuple2[Object, Array[Object]]] = customSharkContext.sharkContext.objectFile(SharkUtils.getHDFSRddPath(message.uuid, Configuration.jawsNamenode.get))
+        val resultsRDD: RDD[Tuple2[Object, Array[Object]]] = customSharkContext.sharkContext.objectFile(SharkUtils.getHDFSRddPath(message.queryID, Configuration.jawsNamenode.get))
         val filteredResults = resultsRDD.filter(tuple => tuple._1.asInstanceOf[Long] >= offset && tuple._1.asInstanceOf[Long] < offset + limit).collect()
 
         sender ! Result.fromTuples(schema, filteredResults)

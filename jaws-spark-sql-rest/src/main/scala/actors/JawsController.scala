@@ -13,8 +13,8 @@ import akka.pattern.ask
 import akka.util.Timeout
 import akka.util.Timeout
 import api.GetDatabasesApiActor
-import api.GetDescriptionApiActor
-import api.GetJobsApiActor
+import api.GetQueryInfoApiActor
+import api.GetQueriesApiActor
 import api.GetLogsApiActor
 import api.GetResultsApiActor
 import api.GetTablesApiActor
@@ -39,6 +39,7 @@ import spray.routing.directives.ParamDefMagnet.apply
 import traits.CustomSharkContext
 import traits.DAL
 import messages.GetResultsMessage
+import model.QueryInfo
 
 /**
  * Created by emaorhian
@@ -109,11 +110,11 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
   initialize()
   implicit val timeout = Timeout(Configuration.timeout.toInt)
 
-  val getJobsActor = createActor(Props(new GetJobsApiActor(dals)), "GetJobs", system)
+  val getQueriesActor = createActor(Props(new GetQueriesApiActor(dals)), "GetQueries", system)
   val runScriptActor = createActor(Props(new RunScriptApiActor(hdfsConf, customSharkContext, dals)), "RunScript", domainSystem)
   val getLogsActor = createActor(Props(new GetLogsApiActor(dals)), "GetLogs", system)
   val getResultsActor = createActor(Props(new GetResultsApiActor(hdfsConf, customSharkContext, dals)), "GetResults", system)
-  val getDescriptionActor = createActor(Props(new GetDescriptionApiActor(dals)), "GetDescription", system)
+  val getQueryInfoActor = createActor(Props(new GetQueryInfoApiActor(dals)), "GetQueryInfo", system)
   val getDatabasesActor = createActor(Props(new GetDatabasesApiActor(customSharkContext, dals)), "GetDatabases", system)
   val cancelActor = createActor(Props(classOf[CancelActor], runScriptActor), "Cancel", cancelSystem)
   val getTablesActor = createActor(Props(new GetTablesApiActor(customSharkContext, dals)), "GetTables", system)
@@ -191,7 +192,7 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
           parameters('startQueryID.?, 'limit.as[Int]) { (startQueryID, limit) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
               complete {
-                val future = ask(getJobsActor, GetJobsMessage(startQueryID.getOrElse(null), limit)).mapTo[Queries]
+                val future = ask(getQueriesActor, GetQueriesMessage(startQueryID.getOrElse(null), limit)).mapTo[Queries]
                 future
               }
             }
@@ -205,12 +206,12 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
             }
           }
       } ~
-      path(pathPrefix / "description") {
+      path(pathPrefix / "queryInfo") {
         get {
-          parameters('uuid) { uuid =>
+          parameters('queryID) { queryID =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
               complete {
-                val future = ask(getDescriptionActor, GetDescriptionMessage(uuid)).mapTo[String]
+                val future = ask(getQueryInfoActor, GetQueryInfoMessage(queryID)).mapTo[QueryInfo]
                 future
               }
             }
