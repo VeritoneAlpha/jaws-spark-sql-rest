@@ -237,9 +237,9 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
       } ~
       path(pathPrefix / "cancel") {
         post {
-          parameters('uuid.as[String]) { uuid =>
+          parameters('queryID.as[String]) { queryID =>
             complete {
-              cancelActor ! CancelMessage(uuid)
+              cancelActor ! CancelMessage(queryID)
 
               Configuration.log4j.info("Cancel message was sent")
               "Cancel message was sent"
