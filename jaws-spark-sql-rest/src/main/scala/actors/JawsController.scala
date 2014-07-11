@@ -168,10 +168,10 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
       } ~
       path(pathPrefix / "results") {
         get {
-          parameters('uuid, 'offset.as[Int], 'limit.as[Int]) { (uuid, offset, limit) =>
+          parameters('queryID, 'offset.as[Int], 'limit.as[Int]) { (queryID, offset, limit) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
               complete {
-                val future = ask(getResultsActor, GetResultsMessage(uuid, offset, limit)).mapTo[Result]
+                val future = ask(getResultsActor, GetResultsMessage(queryID, offset, limit)).mapTo[Result]
                 future
 
               }
