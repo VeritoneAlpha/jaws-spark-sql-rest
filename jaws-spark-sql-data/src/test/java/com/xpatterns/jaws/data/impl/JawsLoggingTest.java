@@ -16,7 +16,7 @@ import com.xpatterns.jaws.data.DTO.LogDTO;
 import com.xpatterns.jaws.data.DTO.ScriptMetaDTO;
 import com.xpatterns.jaws.data.DTO.StateDTO;
 import com.xpatterns.jaws.data.contracts.IJawsLogging;
-import com.xpatterns.jaws.data.utils.JobType;
+import com.xpatterns.jaws.data.utils.QueryState;
 import com.xpatterns.jaws.data.utils.Randomizer;
 
 public class JawsLoggingTest {
@@ -34,13 +34,13 @@ public class JawsLoggingTest {
 	@Test
 	public void testWriteReadStatus() throws Exception {
 		String uuid = DateTime.now().toString();
-		dal.setState(uuid, JobType.IN_PROGRESS);
-		JobType state = dal.getState(uuid);
-		Assert.assertEquals(JobType.IN_PROGRESS, state);
+		dal.setState(uuid, QueryState.IN_PROGRESS);
+		QueryState state = dal.getState(uuid);
+		Assert.assertEquals(QueryState.IN_PROGRESS, state);
 		
-		dal.setState(uuid, JobType.DONE);
+		dal.setState(uuid, QueryState.DONE);
 		state = dal.getState(uuid);
-		Assert.assertEquals(JobType.DONE, state);
+		Assert.assertEquals(QueryState.DONE, state);
 	}
 	
 	@Test
@@ -66,20 +66,20 @@ public class JawsLoggingTest {
 	@Test
 	public void testWriteReadLogs() throws IOException, Exception {
 		String uuid = DateTime.now().toString();
-		String jobId = Randomizer.getRandomString(5);
+		String queryId = Randomizer.getRandomString(5);
 		String log = Randomizer.getRandomString(300);
 		Long now = System.currentTimeMillis();
-		LogDTO logDto = new LogDTO(log, jobId);
+		LogDTO logDto = new LogDTO(log, queryId);
 		logDto.timestamp = now;
 		
-		dal.addLog(uuid, jobId, now, log);
+		dal.addLog(uuid, queryId, now, log);
 		Collection<LogDTO> result = dal.getLogs(uuid, now, 100);
 		Assert.assertEquals(1, result.size());
 		Assert.assertEquals(logDto, result.iterator().next());
 		 
-		dal.addLog(uuid, jobId, System.currentTimeMillis() + 100, log);
-		dal.addLog(uuid, jobId, System.currentTimeMillis() + 200, log);
-		dal.addLog(uuid, jobId, System.currentTimeMillis() + 300, log);
+		dal.addLog(uuid, queryId, System.currentTimeMillis() + 100, log);
+		dal.addLog(uuid, queryId, System.currentTimeMillis() + 200, log);
+		dal.addLog(uuid, queryId, System.currentTimeMillis() + 300, log);
 		
 		result = dal.getLogs(uuid, now, 100);
 		Assert.assertEquals(4, result.size());
@@ -101,44 +101,44 @@ public class JawsLoggingTest {
 		String uuid5 = DateTime.now() + " - 5";
 		Thread.sleep(300);
 		String uuid6 = DateTime.now() + " - 6";
-		String jobId = Randomizer.getRandomString(5);
+		String queryId = Randomizer.getRandomString(5);
 		String log = Randomizer.getRandomString(300);
 		Long now = System.currentTimeMillis();
-		LogDTO logDto = new LogDTO(log, jobId);
+		LogDTO logDto = new LogDTO(log, queryId);
 		logDto.timestamp = now;
 		
-		dal.addLog(uuid, jobId, now, log);
-		dal.addLog(uuid2, jobId, now, log);
-		dal.addLog(uuid3, jobId, now, log);
+		dal.addLog(uuid, queryId, now, log);
+		dal.addLog(uuid2, queryId, now, log);
+		dal.addLog(uuid3, queryId, now, log);
 				
-		dal.setState(uuid, JobType.DONE);
-		dal.setState(uuid2, JobType.IN_PROGRESS);
-		dal.setState(uuid3, JobType.FAILED);
-		dal.setState(uuid4, JobType.FAILED);
-		dal.setState(uuid5, JobType.FAILED);
-		dal.setState(uuid6, JobType.FAILED);
+		dal.setState(uuid, QueryState.DONE);
+		dal.setState(uuid2, QueryState.IN_PROGRESS);
+		dal.setState(uuid3, QueryState.FAILED);
+		dal.setState(uuid4, QueryState.FAILED);
+		dal.setState(uuid5, QueryState.FAILED);
+		dal.setState(uuid6, QueryState.FAILED);
 		
-		Collection<StateDTO> stateOfJobs = dal.getStateOfJobs(null, 3);
-		System.out.println(stateOfJobs);
-		Assert.assertEquals(3, stateOfJobs.size());
-		Iterator<StateDTO> iterator = stateOfJobs.iterator();
+		Collection<StateDTO> stateOfQuery = dal.getQueriesStates(null, 3);
+		System.out.println(stateOfQuery);
+		Assert.assertEquals(3, stateOfQuery.size());
+		Iterator<StateDTO> iterator = stateOfQuery.iterator();
 		Assert.assertEquals(uuid6,iterator.next().uuid);
 		Assert.assertEquals(uuid5,iterator.next().uuid);
 		Assert.assertEquals(uuid4,iterator.next().uuid);	
 		
-		stateOfJobs = dal.getStateOfJobs(uuid4, 3);
-		System.out.println(stateOfJobs);
-		Assert.assertEquals(3, stateOfJobs.size());
-		iterator = stateOfJobs.iterator();
+		stateOfQuery = dal.getQueriesStates(uuid4, 3);
+		System.out.println(stateOfQuery);
+		Assert.assertEquals(3, stateOfQuery.size());
+		iterator = stateOfQuery.iterator();
 		Assert.assertEquals(uuid3,iterator.next().uuid);
 		Assert.assertEquals(uuid2,iterator.next().uuid);
 		Assert.assertEquals(uuid,iterator.next().uuid);
 		
 		
-		stateOfJobs = dal.getStateOfJobs(uuid3, 2);
-		System.out.println(stateOfJobs);
-		Assert.assertEquals(2, stateOfJobs.size());
-		iterator = stateOfJobs.iterator();
+		stateOfQuery = dal.getQueriesStates(uuid3, 2);
+		System.out.println(stateOfQuery);
+		Assert.assertEquals(2, stateOfQuery.size());
+		iterator = stateOfQuery.iterator();
 		Assert.assertEquals(uuid2,iterator.next().uuid);
 		Assert.assertEquals(uuid,iterator.next().uuid);
 		

@@ -5,11 +5,11 @@ import actors.Systems
 import actors.MainActors
 import shark.SharkContext
 import com.xpatterns.jaws.data.DTO.ResultDTO
-import com.xpatterns.jaws.data.utils.JobType
 import actors.Configuration
 import actors.LogsActor.PushLogs
 import model.Result
 import org.apache.commons.lang.time.DurationFormatUtils
+import com.xpatterns.jaws.data.utils.QueryState
 
 /**
  * Created by emaorhian
@@ -18,7 +18,7 @@ class RunSharkScriptTask(dals: DAL, hqlScript: String, sharkContext: SharkContex
 
   override def run() {
     try {
-      dals.loggingDal.setState(uuid, JobType.IN_PROGRESS)
+      dals.loggingDal.setState(uuid, QueryState.IN_PROGRESS)
       dals.loggingDal.setScriptDetails(uuid, hqlScript)
 
       // parse the hql into independent commands
@@ -61,7 +61,7 @@ class RunSharkScriptTask(dals: DAL, hqlScript: String, sharkContext: SharkContex
       message = "The total execution time was: " + formattedDuration + "!"
       dals.loggingDal.addLog(uuid, "hql", System.currentTimeMillis(), message)
       logsActor ! new PushLogs(uuid, message)
-      dals.loggingDal.setState(uuid, JobType.DONE)
+      dals.loggingDal.setState(uuid, QueryState.DONE)
 
     } catch {
       case e: Exception => {
@@ -86,7 +86,7 @@ class RunSharkScriptTask(dals: DAL, hqlScript: String, sharkContext: SharkContex
         Configuration.log4j.error(e.getMessage())
         dals.loggingDal.addLog(uuid, "hql", System.currentTimeMillis(), e.getMessage())
         logsActor ! PushLogs(uuid, e.getMessage())
-        dals.loggingDal.setState(uuid, JobType.FAILED)
+        dals.loggingDal.setState(uuid, QueryState.FAILED)
         throw new RuntimeException(e)
       }
     }

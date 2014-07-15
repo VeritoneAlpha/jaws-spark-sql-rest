@@ -30,7 +30,7 @@ import com.xpatterns.jaws.data.DTO.LogDTO;
 import com.xpatterns.jaws.data.DTO.ScriptMetaDTO;
 import com.xpatterns.jaws.data.DTO.StateDTO;
 import com.xpatterns.jaws.data.contracts.IJawsLogging;
-import com.xpatterns.jaws.data.utils.JobType;
+import com.xpatterns.jaws.data.utils.QueryState;
 
 public class JawsCassandraLogging implements IJawsLogging {
 
@@ -41,7 +41,7 @@ public class JawsCassandraLogging implements IJawsLogging {
 	private static final int LEVEL_UUID = 1;
 	private static final int LEVEL_TIME_STAMP = 2;
 
-	private static final int TYPE_JOB_STATE = -1;
+	private static final int TYPE_QUERY_STATE = -1;
 	private static final int TYPE_SCRIPT_DETAILS = 0;
 	private static final int TYPE_LOG = 1;
 	private static final int TYPE_META = 2;
@@ -66,14 +66,14 @@ public class JawsCassandraLogging implements IJawsLogging {
 	}
 
 	@Override
-	public void setState(String uuid, JobType type) {
+	public void setState(String uuid, QueryState type) {
 
-		logger.debug("Writing job state " + type.toString() + " to job " + uuid);
+		logger.debug("Writing query state " + type.toString() + " to query " + uuid);
 
 		int key = computeRowKey(uuid);
 
 		Composite column = new Composite();
-		column.setComponent(LEVEL_TYPE, TYPE_JOB_STATE, is);
+		column.setComponent(LEVEL_TYPE, TYPE_QUERY_STATE, is);
 		column.setComponent(LEVEL_UUID, uuid, ss);
 
 		Mutator<Integer> mutator = HFactory.createMutator(keyspace, is);
@@ -85,7 +85,7 @@ public class JawsCassandraLogging implements IJawsLogging {
 	@Override
 	public void setScriptDetails(String uuid, String scriptDetails) {
 
-		logger.debug("Writing script details " + scriptDetails + " to job " + uuid);
+		logger.debug("Writing script details " + scriptDetails + " to query " + uuid);
 
 		int key = computeRowKey(uuid);
 
@@ -104,10 +104,10 @@ public class JawsCassandraLogging implements IJawsLogging {
 	}
 
 	@Override
-	public void addLog(String uuid, String jobId, Long time, String log) {
+	public void addLog(String uuid, String queryId, Long time, String log) {
 
-		logger.debug("Writing log " + log + " to job " + uuid + " at time " + time);
-		LogDTO dto = new LogDTO(log, jobId);
+		logger.debug("Writing log " + log + " to query " + uuid + " at time " + time);
+		LogDTO dto = new LogDTO(log, queryId);
 
 		int key = computeRowKey(uuid);
 
@@ -123,14 +123,14 @@ public class JawsCassandraLogging implements IJawsLogging {
 	}
 
 	@Override
-	public JobType getState(String uuid) {
+	public QueryState getState(String uuid) {
 
-		logger.debug("Reading job state for job: " + uuid);
+		logger.debug("Reading query state for query: " + uuid);
 
 		int key = computeRowKey(uuid);
 
 		Composite column = new Composite();
-		column.addComponent(LEVEL_TYPE, TYPE_JOB_STATE, Composite.ComponentEquality.EQUAL);
+		column.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, Composite.ComponentEquality.EQUAL);
 		column.addComponent(LEVEL_UUID, uuid, Composite.ComponentEquality.EQUAL);
 
 		SliceQuery<Integer, Composite, String> sliceQuery = HFactory.createSliceQuery(keyspace, is, cs, ss);
@@ -140,28 +140,28 @@ public class JawsCassandraLogging implements IJawsLogging {
 		if (result != null) {
 			ColumnSlice<Composite, String> columnSlice = result.get();
 			if (columnSlice == null) {
-				return JobType.NOT_FOUND;
+				return QueryState.NOT_FOUND;
 			}
 			if (columnSlice.getColumns() == null) {
-				return JobType.NOT_FOUND;
+				return QueryState.NOT_FOUND;
 			}
 			if (columnSlice.getColumns().size() == 0) {
-				return JobType.NOT_FOUND;
+				return QueryState.NOT_FOUND;
 			}
 			HColumn<Composite, String> col = columnSlice.getColumns().get(0);
 			String state = col.getValue();
 
-			return JobType.valueOf(state);
+			return QueryState.valueOf(state);
 
 		}
 
-		return JobType.NOT_FOUND;
+		return QueryState.NOT_FOUND;
 	}
 
 	@Override
 	public String getScriptDetails(String uuid) {
 
-		logger.debug("Reading script details for job: " + uuid);
+		logger.debug("Reading script details for query: " + uuid);
 
 		int key = computeRowKey(uuid);
 
@@ -197,7 +197,7 @@ public class JawsCassandraLogging implements IJawsLogging {
 	@Override
 	public Collection<LogDTO> getLogs(String uuid, Long time, int limit) {
 
-		logger.debug("Reading logs for job: " + uuid + " from date: " + time);
+		logger.debug("Reading logs for query: " + uuid + " from date: " + time);
 		Collection<LogDTO> logs = new ArrayList<LogDTO>();
 
 		int key = computeRowKey(uuid);
@@ -242,10 +242,10 @@ public class JawsCassandraLogging implements IJawsLogging {
 	}
 
 	@Override
-	public Collection<StateDTO> getStateOfJobs(String uuid, int limit) {
+	public Collection<StateDTO> getQueriesStates(String uuid, int limit) {
 
 		boolean skipFirst = false;
-		logger.debug("Reading states for jobs starting with the job: " + uuid);
+		logger.debug("Reading queries states starting with the query: " + uuid);
 
 		TreeMap<String, StateDTO> map = new TreeMap<String, StateDTO>();
 		Collection<StateDTO> stateList = new ArrayList<StateDTO>();
@@ -257,16 +257,16 @@ public class JawsCassandraLogging implements IJawsLogging {
 		}
 
 		Composite startColumn = new Composite();
-		startColumn.addComponent(LEVEL_TYPE, TYPE_JOB_STATE, Composite.ComponentEquality.EQUAL);
+		startColumn.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, Composite.ComponentEquality.EQUAL);
 		if (uuid != null && !uuid.isEmpty()) {
 			startColumn.addComponent(LEVEL_UUID, uuid, Composite.ComponentEquality.EQUAL);
 		}
 
 		Composite endColumn = new Composite();
 		if (uuid != null && !uuid.isEmpty()) {
-			endColumn.addComponent(LEVEL_TYPE, TYPE_JOB_STATE, Composite.ComponentEquality.LESS_THAN_EQUAL);
+			endColumn.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, Composite.ComponentEquality.LESS_THAN_EQUAL);
 		} else {
-			endColumn.addComponent(LEVEL_TYPE, TYPE_JOB_STATE, Composite.ComponentEquality.GREATER_THAN_EQUAL);
+			endColumn.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, Composite.ComponentEquality.GREATER_THAN_EQUAL);
 		}
 
 		MultigetSliceQuery<Integer, Composite, String> multiSliceQuery = HFactory.createMultigetSliceQuery(keyspace, is, cs, ss);
@@ -290,9 +290,8 @@ public class JawsCassandraLogging implements IJawsLogging {
 			List<HColumn<Composite, String>> columns = columnSlice.getColumns();
 			for (HColumn<Composite, String> column : columns) {
 				Composite name = column.getName();
-				if (name.get(LEVEL_TYPE, is) == TYPE_JOB_STATE) {
-					// stateList.add(new StateDTO(JobType.valueOf(column.getValue()), name.get(LEVEL_UUID,ss)));
-					map.put(name.get(LEVEL_UUID, ss), new StateDTO(JobType.valueOf(column.getValue()), name.get(LEVEL_UUID, ss)));
+				if (name.get(LEVEL_TYPE, is) == TYPE_QUERY_STATE) {
+					map.put(name.get(LEVEL_UUID, ss), new StateDTO(QueryState.valueOf(column.getValue()), name.get(LEVEL_UUID, ss)));
 				}
 			}
 		}
@@ -323,7 +322,7 @@ public class JawsCassandraLogging implements IJawsLogging {
 	
 	@Override
 	public void setMetaInfo(String uuid, ScriptMetaDTO metainfo) throws Exception {
-		logger.debug("Writing script meta info " + metainfo + " to job " + uuid);
+		logger.debug("Writing script meta info " + metainfo + " to query " + uuid);
 
 		int key = computeRowKey(uuid);
 
@@ -342,7 +341,7 @@ public class JawsCassandraLogging implements IJawsLogging {
 
 	@Override
 	public ScriptMetaDTO getMetaInfo(String uuid) throws IOException {
-		logger.debug("Reading meta info for for job: " + uuid);
+		logger.debug("Reading meta info for for query: " + uuid);
 		ScriptMetaDTO res = new ScriptMetaDTO();
 		int key = computeRowKey(uuid);
 

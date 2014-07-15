@@ -18,7 +18,7 @@ object Log {
     var it = logs.iterator()
     while (it.hasNext()){
       var logDto = it.next()
-      scalaLogs = scalaLogs ++ Array(Log(logDto.log, logDto.jobId, logDto.timestamp))
+      scalaLogs = scalaLogs ++ Array(Log(logDto.log, logDto.queryId, logDto.timestamp))
     }
     scalaLogs
   }

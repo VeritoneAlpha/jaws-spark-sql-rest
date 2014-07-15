@@ -1,19 +1,19 @@
 package com.xpatterns.jaws.data.DTO;
 
 import com.google.gson.Gson;
-import com.xpatterns.jaws.data.utils.JobType;
+import com.xpatterns.jaws.data.utils.QueryState;
 
 public class StateDTO {
 
-	public JobType state;
+	public QueryState state;
 	public String uuid;
 	
 	public StateDTO(){
-		state = JobType.NOT_FOUND;
+		state = QueryState.NOT_FOUND;
 		uuid = null;
 	}
 	
-	public StateDTO(JobType state, String uuid){
+	public StateDTO(QueryState state, String uuid){
 		this.state = state;
 		this.uuid = uuid;
 	}

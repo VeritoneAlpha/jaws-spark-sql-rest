@@ -39,7 +39,7 @@ public class JawsCassandraResults implements IJawsResults {
 	public ResultDTO getResults(String uuid) {
 		
 
-		logger.debug("Reading results for job: " + uuid);
+		logger.debug("Reading results for query: " + uuid);
 
 		int key = Math.abs(uuid.hashCode() % CF_SPARK_RESULTS_NUMBER_OF_ROWS);
 		
@@ -73,7 +73,7 @@ public class JawsCassandraResults implements IJawsResults {
 	@Override
 	public void setResults(String uuid, ResultDTO resultDTO) {
 	
-		logger.debug("Writing results to job " + uuid);
+		logger.debug("Writing results to query " + uuid);
 
 		int key = Math.abs(uuid.hashCode() % CF_SPARK_RESULTS_NUMBER_OF_ROWS);
 		

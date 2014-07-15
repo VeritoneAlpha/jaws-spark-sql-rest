@@ -5,17 +5,17 @@ import com.google.gson.Gson;
 public class LogDTO {
 
 	public String log;
-	public String jobId;
+	public String queryId;
 	public long timestamp;
 
-	public LogDTO(String log, String jobId) {
+	public LogDTO(String log, String queryId) {
 		this.log = log;
-		this.jobId = jobId;
+		this.queryId = queryId;
 	}
 	
-	public LogDTO(String log, String jobId, long timestamp) {
+	public LogDTO(String log, String queryId, long timestamp) {
 		this.log = log;
-		this.jobId = jobId;
+		this.queryId = queryId;
 		this.timestamp = timestamp;
 	}
 
@@ -36,7 +36,7 @@ public class LogDTO {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((jobId == null) ? 0 : jobId.hashCode());
+		result = prime * result + ((queryId == null) ? 0 : queryId.hashCode());
 		result = prime * result + ((log == null) ? 0 : log.hashCode());
 		result = prime * result + (int) (timestamp ^ (timestamp >>> 32));
 		return result;
@@ -51,10 +51,10 @@ public class LogDTO {
 		if (getClass() != obj.getClass())
 			return false;
 		LogDTO other = (LogDTO) obj;
-		if (jobId == null) {
-			if (other.jobId != null)
+		if (queryId == null) {
+			if (other.queryId != null)
 				return false;
-		} else if (!jobId.equals(other.jobId))
+		} else if (!queryId.equals(other.queryId))
 			return false;
 		if (log == null) {
 			if (other.log != null)
@@ -68,7 +68,7 @@ public class LogDTO {
 
 	@Override
 	public String toString() {
-		return "LogDTO [log=" + log + ", jobId=" + jobId + ", timestamp="
+		return "LogDTO [log=" + log + ", queryId=" + queryId + ", timestamp="
 				+ timestamp + "]";
 	}
 
