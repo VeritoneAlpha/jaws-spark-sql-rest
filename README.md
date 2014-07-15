@@ -1,6 +1,6 @@
 # jaws-spark-sql-rest
 
-Restful service for running and Spark SQL/Shark queries on top of Spark, with Mesos and Tachyon support (codenamed jaws)
+Restful service for running Spark SQL/Shark queries on top of Spark, with Mesos and Tachyon support (codenamed jaws)
 Currently, only Spark 0.9.x and Shark are supported as backend framework for Jaws, will add support for Spark 1.0 and Spark SQL very soon.
 
 
@@ -49,33 +49,35 @@ After editing all the configuration files Jaws can be run in the following manne
 Below are some queries with example purpose:
 
 ### Run api:
-    curl -d "select * from table" 'http://devbox.local:8181/jaws/run?limited=true&resultsnumber=99' -X POST
+    curl -d "select * from table" 'http://devbox.local:8181/jaws/run?limited=true&numberOfResults=99' -X POST
 
 Parameters:
    
-  * limited [required]:  if set on true, the query will be limited to a fixed number of results. The number of results will be the one specified in the "resultsnumber" parameter, if set. Otherwise, the default results number will be taken from the configuration file (nr.of.results field). If the requested number of results it is lower than the default one, they will be saved in the configured database (cassandra or hdfs), otherwise, they will be stored in an RDD on HDFS. If the limited field is set on false, then the query will return all the results and this time they will be stored in an RDD on HDFS. This is needed to be able to retrieve the results paginated. These run configurations are stored in the database.
-  * resultsnumber [not required]: this parameter represents the number of results that the query should return. The parameter is considered only if the "limited" parameter is set on true
+  * limited [required]:  if set on true, the query will be limited to a fixed number of results. The number of results will be the one specified in the "numberOfResults" parameter, and they will be collected (in memory) and persisted in the configured backend database (cassandra or hdfs, no latency difference upon retrieval of small datasets). Otherwise, if not specified, the results number will be retrieved from the configuration file (nr.of.results field, default is 100).
+  However, for large datasets that exceed the default number of results (100, configurable), results will not be persisted in memory and the configured database anymore, they will only be stored as an RDD on HDFS, and used for paginated retrieval (offset and limit parameters in the results api).
+  If the limited parameter is set on false, then the query will return all the results and this time they will be stored in an RDD on HDFS, this is an indicator that a large dataset is about to be queried.
+  * numberOfResults [not required]: The parameter is considered only if the "limited" parameter is set on true
 
 Results:
 
-The api returns an uuid representing the script that was submitted.
+The api returns an uuid representing the query that was submitted. The query is executed asynchronously and the expectation is that clients poll for logs and completion status.
 
 Exemple:
  1404998257416357bb29d-6801-41ca-82e4-7a265816b50c
  
 
 ### Logs api:
-    curl 'http://devbox.local:8181/jaws/logs?uuid=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&starttimestamp=0&limit=10' -X GET 
+    curl 'http://devbox.local:8181/jaws/logs?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&startTimestamp=0&limit=10' -X GET
 
 Parameters:
 
-  * uuid [required] : is the uuid returned by the run api. This uuid represents the submitted script
-  * starttimestamp [not required] : represents the time-stamp starting with which the logs will be returned
-  * limit [required] : represents the number of logs to be returned
+  * queryID [required] : is the uuid returned by the run api.
+  * startTimestamp [not required] : start timestamp from where the logs will be returned
+  * limit [required] : number of log entries to be returned
 
 Results:
 
-The api returns a JSON with a list of logs entries and the status of the submitted job.
+The api returns a JSON with a list of log entries and the status of the submitted query.
 
 Exemple:
 
@@ -84,17 +86,17 @@ Exemple:
     "logs": [
         {
             "log": "There are 2 commands that need to be executed",
-            "jobId": "hql",
+            "queryID": "hql",
             "timestamp": 1404998257430
         },
         {
             "log": "Command progress : There were executed 1 commands out of 2",
-            "jobId": "hql",
+            "queryID": "hql",
             "timestamp": 1404998257501
         },
         {
             "log": "The job 16 has started. Executing command --1404998257416357bb29d-6801-41ca-82e4-7a265816b50c\nselect UPkmbVaZXr.* from ( select * from user_predictions limit 3) UPkmbVaZXr limit 100",
-            "jobId": "16",
+            "queryID": "16",
             "timestamp": 1404998258154
         }
     ],
@@ -102,17 +104,17 @@ Exemple:
 }
 
 ### Results api:
-    curl 'http://devbox.local:8181/jaws/results?uuid=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&offset=0&limit=10' -X GET 
+    curl 'http://devbox.local:8181/jaws/results?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&offset=0&limit=10' -X GET
 
 Parameters:
 
-  * uuid [required] : is the uuid returned by the run api. This uuid represents the submitted script
-  * offset [required] : represents the starting result entry that needs to be returned
-  * limit [required] : represents the number of results to be returned
+  * queryID [required] : uuid returned by the run api. This uuid represents the submitted query
+  * offset [required] : starting result entry that needs to be returned
+  * limit [required] : number of results to be returned (page size)
 
 Results:
 
-The api returns a JSON containing the results schema and a list of result entries. The results are retrieved paginated. Before reading the results, the information about how the job was executed is retrieved from the database (see run api documentation) and based on it, Jaws knows if it has to search for results inside the database or inside a stored RDD on HDFS
+The api returns a JSON containing the results schema and a list of result entries. The results are retrieved in pages, with the size specified by the limit parameter, starting with offset.
 
 Example:
 {
@@ -138,57 +140,58 @@ Example:
 }
 
 
-### Jobs api: 
-    curl 'http://devbox.local:8181/jaws/jobs?startUuid=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&limit=50' -X GET 
+### Queries api:
+    curl 'http://devbox.local:8181/jaws/queries?startQueryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&limit=50' -X GET
 
 Parameters:
 
-  * startUuid [not required] : is the starting uuid from which the executed jobs will be returned
-  * limit [required] : represents the number of jobs to be returned
+  * startQueryID [not required] : uuid of the first executed query in the list to be returned
+  * limit [required] : number of queries to be returned
 
 Results:
 
-The api returns a JSON containing a list of jobs with information about them.
+The api returns a JSON containing a list of queries and associated meta information, in chronological order (most recent at the top)
 
 Example:
 {
 
-    "jobs": [
+    "queries": [
         {
             "state": "DONE",
-            "uuid": "1404998257416357bb29d-6801-41ca-82e4-7a265816b50c",
-            "description": "USE test;\n\nselect * from user_predictions limit 3"
+            "queryID": "1404998257416357bb29d-6801-41ca-82e4-7a265816b50c",
+            "query": "USE test;\n\nselect * from user_predictions limit 3"
         },
         {
             "state": "DONE",
-            "uuid": "14049979591823fde2ad2-3dcd-4cc9-92ec-4a65745f0d12",
-            "description": "drop table if exists ii_tachyon;\ncreate table ii_tachyon as select * from varsta;\nselect * from ii_tachyon;"
+            "queryID": "14049979591823fde2ad2-3dcd-4cc9-92ec-4a65745f0d12",
+            "query": "drop table if exists ii_tachyon;\ncreate table ii_tachyon as select * from varsta;\nselect * from ii_tachyon;"
         },
         {
             "state": "FAILED",
-            "uuid": "1404977509762f832602b-2ad8-423f-ab45-97ebcc354167",
-            "description": "USE test;\n\nrefresh;\n\nselect userid from ema_tachyon;"
+            "queryID": "1404977509762f832602b-2ad8-423f-ab45-97ebcc354167",
+            "query": "USE test;\n\nrefresh;\n\nselect userid from ema_tachyon;"
         }
     ]
 }
 
-### Description api:
-    curl 'http://devbox.local:8181/jaws/description?uuid=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7' -X GET 
+### queryInfo api:
+    curl 'http://devbox.local:8181/jaws/queryInfo?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7' -X GET
 
 Parameters:
 
-  * uuid [required] : is the uuid returned by the run api. This uuid represents the submitted script
+  * queryID [required] : uuid returned by the run api.
 
 Results:
 
-The api returns a string containing the jobs description
+The api returns the status and the query string (could be one statement or an entire HiveQL script)
 
 Example:
 
-"USE test;
-
-select * from user_predictions limit 3
-"
+        {
+            "state": "DONE",
+            "queryID": "1404998257416357bb29d-6801-41ca-82e4-7a265816b50c",
+            "query": "USE test;\n\nselect * from user_predictions limit 3"
+        }
 
 ### Databases api: 
     curl 'http://devbox.local:8181/jaws/databases' -X GET
@@ -218,13 +221,13 @@ The api returns a JSON containing a list of existing databases.
 Example:
 
 ### Cancel api:
-    curl 'http://devbox.local:8181/jaws/cancel?uuid=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7' -X POST 
+    curl 'http://devbox.local:8181/jaws/cancel?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7' -X POST
 
 Parameters:
 
-  * uuid [required] : is the uuid returned by the run api. This uuid represents the submitted script
+  * queryID [required] : uuid returned by the run api.
 
-This api cancels a running job, job represented by the uuid passed as a parameter
+This api cancels a running query. Unless Jaws runs in fine-grained mode under Mesos, the underlying Spark job is also cancelled. Spark job cancellation in Mesos fine-grained mode is not implemented in Spark core yet! In this mode, if the query is still in the queue, it won't be executed, but we cannot stop it once it started.
  
 
 ### Tables api:

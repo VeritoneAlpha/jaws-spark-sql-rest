@@ -13,7 +13,7 @@ import com.xpatterns.jaws.data.DTO.LogDTO;
 import com.xpatterns.jaws.data.DTO.ScriptMetaDTO;
 import com.xpatterns.jaws.data.DTO.StateDTO;
 import com.xpatterns.jaws.data.contracts.IJawsLogging;
-import com.xpatterns.jaws.data.utils.JobType;
+import com.xpatterns.jaws.data.utils.QueryState;
 import com.xpatterns.jaws.data.utils.Randomizer;
 
 public class JawsLoggingOnHdfsTest {
@@ -41,10 +41,10 @@ public class JawsLoggingOnHdfsTest {
 	@Test
 	public void testWriteReadStatus_1() throws Exception {
 		String uuid = Randomizer.getRandomString(10);
-		JobType type = JobType.FAILED;
+		QueryState type = QueryState.FAILED;
 	
 		dal.setState(uuid, type);
-		JobType resultType = dal.getState(uuid);
+		QueryState resultType = dal.getState(uuid);
 		
 		Assert.assertEquals(type, resultType);
 	}
@@ -53,13 +53,13 @@ public class JawsLoggingOnHdfsTest {
 	public void testWriteReadStatus_2() throws Exception {
 		String uuid1 = "123";
 		String uuid2 = "124";
-		JobType type1 = JobType.FAILED;
-		JobType type2 = JobType.FAILED;
+		QueryState type1 = QueryState.FAILED;
+		QueryState type2 = QueryState.FAILED;
 	
 		dal.setState(uuid1, type1);
 		dal.setState(uuid2, type2);
 		
-		Collection<StateDTO> result1 = dal.getStateOfJobs(uuid1, 2);
+		Collection<StateDTO> result1 = dal.getQueriesStates(uuid1, 2);
 		
 		Assert.assertEquals(2, result1.size());
 		Iterator<StateDTO> it = result1.iterator();
@@ -73,7 +73,7 @@ public class JawsLoggingOnHdfsTest {
 		Assert.assertEquals(type2, state2.state);
 		Assert.assertEquals(uuid2, state2.uuid);
 		
-		Collection<StateDTO> result2 = dal.getStateOfJobs(uuid1, 1);
+		Collection<StateDTO> result2 = dal.getQueriesStates(uuid1, 1);
 		
 		Assert.assertEquals(1, result2.size());
 		Iterator<StateDTO> it2 = result2.iterator();
@@ -81,7 +81,7 @@ public class JawsLoggingOnHdfsTest {
 		StateDTO state3 = it2.next();
 		Assert.assertEquals(state2, state3);
 		
-		Collection<StateDTO> result3 = dal.getStateOfJobs(uuid1, 3);
+		Collection<StateDTO> result3 = dal.getQueriesStates(uuid1, 3);
 		
 		Assert.assertEquals(2, result3.size());
 		Iterator<StateDTO> it3 = result3.iterator();
@@ -108,17 +108,17 @@ public class JawsLoggingOnHdfsTest {
 	@Test
 	public void testWriteReadLogs_1() throws Exception {
 		String uuid = Randomizer.getRandomString(10);
-		String jobId = Randomizer.getRandomString(10);
+		String queryId = Randomizer.getRandomString(10);
 		long time = Randomizer.getRandomLong();
 		String log = Randomizer.getRandomString(100);
 	
-		dal.addLog(uuid, jobId, time, log);
+		dal.addLog(uuid, queryId, time, log);
 		Collection<LogDTO> result = dal.getLogs(uuid, time, 1);
 		
 		Assert.assertEquals(1, result.size());
 		LogDTO resultLog = result.iterator().next();
 		Assert.assertEquals(log, resultLog.log);
-		Assert.assertEquals(jobId, resultLog.jobId);
+		Assert.assertEquals(queryId, resultLog.queryId);
 		Assert.assertEquals(time, resultLog.timestamp);
 		
 	}
@@ -126,15 +126,15 @@ public class JawsLoggingOnHdfsTest {
 	@Test
 	public void testWriteReadLogs_2() throws Exception {
 		String uuid = Randomizer.getRandomString(10);
-		String jobId = Randomizer.getRandomString(10);
+		String queryId = Randomizer.getRandomString(10);
 		long time = 123;
 		String log = Randomizer.getRandomString(100);
 		
 		long time2 = 124;
 		String log2 = Randomizer.getRandomString(100);
 	
-		dal.addLog(uuid, jobId, time, log);
-		dal.addLog(uuid, jobId, time2, log2);
+		dal.addLog(uuid, queryId, time, log);
+		dal.addLog(uuid, queryId, time2, log2);
 		Collection<LogDTO> result = dal.getLogs(uuid, time, 2);
 		Collection<LogDTO> result2 = dal.getLogs(uuid, time, 1);
 		
@@ -143,11 +143,11 @@ public class JawsLoggingOnHdfsTest {
 		LogDTO resultLog1 = it.next();
 		LogDTO resultLog12 = it.next();
 		Assert.assertEquals(log, resultLog1.log);
-		Assert.assertEquals(jobId, resultLog1.jobId);
+		Assert.assertEquals(queryId, resultLog1.queryId);
 		Assert.assertEquals(time, resultLog1.timestamp);
 		
 		Assert.assertEquals(log2, resultLog12.log);
-		Assert.assertEquals(jobId, resultLog12.jobId);
+		Assert.assertEquals(queryId, resultLog12.queryId);
 		Assert.assertEquals(time2, resultLog12.timestamp);
 		
 		Assert.assertEquals(1, result2.size());

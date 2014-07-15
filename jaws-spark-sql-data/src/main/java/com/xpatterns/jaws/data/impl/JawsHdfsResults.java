@@ -36,14 +36,14 @@ public class JawsHdfsResults implements IJawsResults {
 	@Override
 	public void setResults(String uuid, ResultDTO resultDTO) throws IOException, Exception {
 
-		logger.info("Writing results to job " + uuid);
+		logger.info("Writing results to query " + uuid);
 		Utils.rewriteFile(resultDTO.toJson().getBytes(), configuration, configuration.get(Utils.RESULTS_FOLDER) + "/" + uuid);
 
 	}
 	
 	@Override
 	public ResultDTO getResults(String uuid) throws IOException {
-		logger.debug("Reading results for job: " + uuid);
+		logger.debug("Reading results for query: " + uuid);
 		FileSystem fs = null;
 		ByteArrayOutputStream fileContent = new ByteArrayOutputStream();
 		try {

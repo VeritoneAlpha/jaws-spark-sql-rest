@@ -15,13 +15,13 @@ import com.xpatterns.jaws.data.DTO.LogDTO;
 import com.xpatterns.jaws.data.DTO.ScriptMetaDTO;
 import com.xpatterns.jaws.data.DTO.StateDTO;
 import com.xpatterns.jaws.data.contracts.IJawsLogging;
-import com.xpatterns.jaws.data.utils.JobType;
+import com.xpatterns.jaws.data.utils.QueryState;
 import com.xpatterns.jaws.data.utils.Utils;
 
 public class JawsHdfsLogging implements IJawsLogging {
 
 	Configuration configuration;
-	public static final String JOBID_SEPARATOR = "-----";
+	public static final String QUERYID_SEPARATOR = "-----";
 
 	private static Logger logger = Logger.getLogger(JawsHdfsLogging.class.getName());
 
@@ -42,9 +42,9 @@ public class JawsHdfsLogging implements IJawsLogging {
 	}
 
 	@Override
-	public void setState(String uuid, JobType type) throws Exception {
+	public void setState(String uuid, QueryState type) throws Exception {
 
-		logger.debug("Writing job state " + type.toString() + " to job " + uuid + " on hdfs");
+		logger.debug("Writing query state " + type.toString() + " to query " + uuid + " on hdfs");
 		Utils.rewriteFile(type.name(), configuration, configuration.get(Utils.STATUS_FOLDER) + "/" + uuid);
 
 	}
@@ -52,35 +52,35 @@ public class JawsHdfsLogging implements IJawsLogging {
 	@Override
 	public void setScriptDetails(String uuid, String scriptDetails) throws Exception {
 
-		logger.info("Writing script details " + scriptDetails + " to job " + uuid);
+		logger.info("Writing script details " + scriptDetails + " to query " + uuid);
 		Utils.rewriteFile(scriptDetails, configuration, configuration.get(Utils.DETAILS_FOLDER) + "/" + uuid);
 
 	}
 
 	@Override
-	public void addLog(String uuid, String jobId, Long time, String log) throws Exception {
+	public void addLog(String uuid, String queryId, Long time, String log) throws Exception {
 
-		logger.debug("Writing log " + log + " to job " + uuid + " at time " + time);
+		logger.debug("Writing log " + log + " to query " + uuid + " at time " + time);
 		String folderName = configuration.get(Utils.LOGGING_FOLDER) + "/" + uuid;
 		String fileName = folderName + "/" + time.toString();
-		String logMessage = jobId + JOBID_SEPARATOR + log;
+		String logMessage = queryId + QUERYID_SEPARATOR + log;
 		Utils.createFolderIfDoesntExist(configuration, folderName, false);
 		Utils.rewriteFile(logMessage, configuration, fileName);
 
 	}
 
 	@Override
-	public JobType getState(String uuid) throws IOException {
+	public QueryState getState(String uuid) throws IOException {
 
-		logger.info("Reading job state for job: " + uuid);
+		logger.info("Reading query state for query: " + uuid);
 		String state = Utils.readFile(configuration, configuration.get(Utils.STATUS_FOLDER) + "/" + uuid);
-		return JobType.valueOf(state);
+		return QueryState.valueOf(state);
 	}
 
 	@Override
 	public String getScriptDetails(String uuid) throws IOException {
 
-		logger.info("Reading script details for job: " + uuid);
+		logger.info("Reading script details for query: " + uuid);
 		return Utils.readFile(configuration, configuration.get(Utils.DETAILS_FOLDER) + "/" + uuid);
 
 	}
@@ -88,7 +88,7 @@ public class JawsHdfsLogging implements IJawsLogging {
 	@Override
 	public Collection<LogDTO> getLogs(String uuid, Long time, int limit) throws IOException {
 
-		logger.info("Reading logs for job: " + uuid + " from date: " + time);
+		logger.info("Reading logs for query: " + uuid + " from date: " + time);
 		Collection<LogDTO> logs = new ArrayList<LogDTO>();
 
 		String folderName = configuration.get(Utils.LOGGING_FOLDER) + "/" + uuid;
@@ -109,7 +109,7 @@ public class JawsHdfsLogging implements IJawsLogging {
 		Collection<String> filesToBeRead = getSubset(limit, files);
 
 		for (String file : filesToBeRead) {
-			String[] logedInfo = Utils.readFile(configuration, folderName + "/" + file).split(JOBID_SEPARATOR);
+			String[] logedInfo = Utils.readFile(configuration, folderName + "/" + file).split(QUERYID_SEPARATOR);
 			if (logedInfo.length == 2) {
 				logs.add(new LogDTO(logedInfo[1], logedInfo[0], Long.parseLong(file)));
 			}
@@ -133,9 +133,9 @@ public class JawsHdfsLogging implements IJawsLogging {
 	}
 
 	@Override
-	public Collection<StateDTO> getStateOfJobs(String uuid, int limit) throws IOException {
+	public Collection<StateDTO> getQueriesStates(String uuid, int limit) throws IOException {
 
-		logger.info("Reading states for jobs starting with the job: " + uuid);
+		logger.info("Reading states for queries starting with the query: " + uuid);
 		Collection<StateDTO> stateList = new ArrayList<StateDTO>();
 
 		String folderName = configuration.get(Utils.STATUS_FOLDER);
@@ -156,7 +156,7 @@ public class JawsHdfsLogging implements IJawsLogging {
 		Collection<String> filesToBeRead = getSubset(limit, files);
 
 		for (String file : filesToBeRead) {
-			stateList.add(new StateDTO(JobType.valueOf(Utils.readFile(configuration, folderName + "/" + file)), Utils.getNameFromPath(file)));
+			stateList.add(new StateDTO(QueryState.valueOf(Utils.readFile(configuration, folderName + "/" + file)), Utils.getNameFromPath(file)));
 
 		}
 
@@ -165,7 +165,7 @@ public class JawsHdfsLogging implements IJawsLogging {
 
 	@Override
 	public void setMetaInfo(String uuid, ScriptMetaDTO metainfo) throws Exception {
-		logger.info("Writing script metainfo " + metainfo + " to job " + uuid);
+		logger.info("Writing script metainfo " + metainfo + " to query " + uuid);
 		String buffer = metainfo.toJson();
 		Utils.rewriteFile(buffer.getBytes(), configuration, configuration.get(Utils.METAINFO_FOLDER) + "/" + uuid);
 
@@ -173,7 +173,7 @@ public class JawsHdfsLogging implements IJawsLogging {
 
 	@Override
 	public ScriptMetaDTO getMetaInfo(String uuid) throws IOException {
-		logger.info("Reading job metainfo for job: " + uuid);
+		logger.info("Reading query metainfo for query: " + uuid);
 		byte[] bytes = Utils.readBytesFromFile(configuration, configuration.get(Utils.METAINFO_FOLDER) + "/" + uuid);
 		ScriptMetaDTO result = ScriptMetaDTO.fromJson(new String(bytes));
 
