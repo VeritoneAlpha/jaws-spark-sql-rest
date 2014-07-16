@@ -68,7 +68,7 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, customS
 
       } else {
 
-        val schema = SharkUtils.getSchema(Utils.readFile(hdfsConf, Configuration.schemaFolder + "/" + message.queryID))
+        val schema = SharkUtils.getSchema(Utils.readFile(hdfsConf, Configuration.schemaFolder.getOrElse("jawsSchemaFolder") + "/" + message.queryID))
 
         val resultsRDD: RDD[Tuple2[Object, Array[Object]]] = customSharkContext.sharkContext.objectFile(SharkUtils.getHDFSRddPath(message.queryID, Configuration.jawsNamenode.get))
         val filteredResults = resultsRDD.filter(tuple => tuple._1.asInstanceOf[Long] >= offset && tuple._1.asInstanceOf[Long] < offset + limit).collect()
