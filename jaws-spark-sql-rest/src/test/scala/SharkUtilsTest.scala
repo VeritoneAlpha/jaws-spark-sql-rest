@@ -7,8 +7,10 @@ import shark.SharkEnv
 import utils.TestUtils
 import com.xpatterns.jaws.data.contracts.IJawsLogging
 import org.scalatest.FunSuite
-
 import org.scalamock.proxy.ProxyMockFactory
+import org.scalatest.matchers.ShouldMatchers
+import com.xpatterns.jaws.data.utils.Utils
+import actors.Configuration
 
 /**
  * Created by emaorhian
@@ -16,11 +18,10 @@ import org.scalamock.proxy.ProxyMockFactory
 
 class SharkUtilsTest extends FunSuite with MockFactory with BeforeAndAfter with ProxyMockFactory {
 
+  //class SharkUtilsTest extends FunSuite with ShouldMatchers with BeforeAndAfter with org.scalamock.scalatest.proxy.MockFactory {
   var sc: SharkContext = _
 
-
-
-   before {
+  before {
     if (sc == null) {
       sc = SharkEnv.initWithSharkContext("shark-sql-suite-testing", "local")
 
@@ -30,20 +31,29 @@ class SharkUtilsTest extends FunSuite with MockFactory with BeforeAndAfter with 
 
       loadTables()
     }
-    
+
     sc
   }
 
-  
-   def loadTables() = synchronized {
+  def loadTables() = synchronized {
     require(sc != null, "call init() to instantiate a SharkContext first")
 
     // test
     sc.runSql("drop table if exists test")
-    sc.runSql("CREATE TABLE test (key INT, val STRING)")
+    sc.runSql("CREATE TABLE test (key INT, val STRING) ROW FORMAT DELIMITED FIELDS TERMINATED BY \",\"")
     sc.runSql("LOAD DATA LOCAL INPATH '${hiveconf:shark.test.data.path}/kv1.txt' INTO TABLE test")
-   }
-  
+  }
+
+  def getHadoopConf(): org.apache.hadoop.conf.Configuration = {
+    val configuration = new org.apache.hadoop.conf.Configuration()
+    configuration.setBoolean(Utils.FORCED_MODE, true)
+
+    configuration.set("fs.defaultFS", "file://testHdfs/")
+    configuration
+  }
+
+  // **************** TESTS *********************
+
   test("parseHql_test1") {
     val cmd1 = "select * from test_table"
     val cmd2 = "select count(*) from test_table"
@@ -65,11 +75,75 @@ class SharkUtilsTest extends FunSuite with MockFactory with BeforeAndAfter with 
 
   }
 
-    test("runCmd_test1") {
-       val loging= mock[IJawsLogging]
-      loging expects 'setMetaInfo
-       val result = SharkUtils.rrunCmd("select * from test", sc, "uuid", loging)
+  test("runCmd_test1") {
+    val loging = mock[IJawsLogging]
+    loging.expects('setMetaInfo)(*, *)
 
-      println(result)
-    }
+    val result = SharkUtils.runCmd("show databases", sc, "uuid", loging)
+
+    assert(result.getResults.length === 1)
+    assert(result.getResults()(0)(0) === "default")
+
+  }
+
+  test("runCmdRdd_test_limited and few results") {
+    val loging = mock[IJawsLogging]
+    loging.expects('setMetaInfo)(*, *)
+
+    val result = SharkUtils.runCmdRdd("select * from test", sc, 100, "uuid", true, 2, false, "localhost", loging, getHadoopConf)
+    assert(result.getResults.length === 2)
+    assert(result.getResults()(0).length === 2)
+
+  }
+  
+ 
+   test("runCmdRdd_test_limited, lots of results and last command") {
+    val loging = mock[IJawsLogging]
+    loging.expects('setMetaInfo)(*, *)
+
+    val result = SharkUtils.runCmdRdd("select * from test", sc, 100, "uuid", true, 1000, true, "localhost", loging, getHadoopConf)
+    assert(result === null)
+
+
+  }
+   
+    test("runCmdRdd_test_limited, lots of results and not last command") {
+    val loging = mock[IJawsLogging]
+    loging.expects('setMetaInfo)(*, *)
+
+    val result = SharkUtils.runCmdRdd("select * from test", sc, 3, "uuid", true, 1000, false, "localhost", loging, getHadoopConf)
+    assert(result.getResults.length === 3)
+    assert(result.getResults()(0).length === 2)
+
+  }
+  
+   
+   test("runCmdRdd_test_not limited and last command") {
+    val loging = mock[IJawsLogging]
+    loging.expects('setMetaInfo)(*, *)
+
+    val result = SharkUtils.runCmdRdd("select * from test", sc, 100, "uuid", false, 1000, true, "localhost", loging, getHadoopConf)
+    assert(result === null)
+
+
+  }
+   
+    test("runCmdRdd_test_not limited and not last command") {
+    val loging = mock[IJawsLogging]
+    loging.expects('setMetaInfo)(*, *)
+
+    val result = SharkUtils.runCmdRdd("select * from test", sc, 2, "uuid", false, 1000, false, "localhost", loging, getHadoopConf)
+    assert(result.getResults.length === 2)
+    assert(result.getResults()(0).length === 2)
+
+  }
+    
+    test("runCmdRdd_test_set") {
+    val loging = mock[IJawsLogging]
+   
+    val result = SharkUtils.runCmdRdd("set test.val=1", sc, 2, "uuid", false, 1000, false, "localhost", loging, getHadoopConf)
+   
+  }
+  
+   
 }
