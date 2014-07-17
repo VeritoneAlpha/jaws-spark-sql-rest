@@ -298,3 +298,54 @@ Example:
         },
     }
 }
+
+### Tables extended api:
+
+    curl 'http://devbox.local:8181/jaws/tables/extended?database=default&table=test' -X GET
+    curl 'http://devbox.local:8181/jaws/tables?database=default' -X GET
+
+Parameters:
+
+  * database [required] : is the database for which you want to retrieve extended information about tables
+  *  table [not required]: is the table for which you want to retrieve extended information
+
+
+Results:
+
+If the table parameter is set, the api returns a JSON containing the extended information about it. Otherwise, the api will return the extended information about all the tables inside the specified database.
+
+Example:
+
+{
+
+    "test": {
+             "user_predictions": {
+            "schema": [
+                "col_name",
+                "data_type",
+                "comment"
+            ],
+            "results": [
+                [
+                    "userid",
+                    "int",
+                    "None"
+                ],
+                [
+                    "moviename",
+                    "string",
+                    "None"
+                ],
+                 [
+                  "",
+                  " ", 
+                 " "
+               ],
+               [
+                "Detailed Table Information", 
+                "Table(tableName:user_predictions, dbName:test, owner:root, createTime:1404128550, lastAccessTime:0, retention:0, sd:StorageDescriptor(cols:[FieldSchema(name:userid, type:int, comment:null), FieldSchema(name:moviename, type:string, comment:null)], location:hdfs://devBox.local:8020/user/hive/warehouse/test.db/user_predictions, inputFormat:org.apache.hadoop.mapred.SequenceFileInputFormat, outputFormat:org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat, compressed:false, numBuckets:-1, serdeInfo:SerDeInfo(name:null, serializationLib:org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe, parameters:{serialization.format=1}), bucketCols:[], sortCols:[], parameters:{}, skewedInfo:SkewedInfo(skewedColNames:[], skewedColValues:[], skewedColValueLocationMaps:{}), storedAsSubDirectories:false), partitionKeys:[], parameters:{numPartitions=0, numFiles=1, transient_lastDdlTime=1405336104, totalSize=1194934, numRows=29665, rawDataSize=797502}, viewOriginalText:null, viewExpandedText:null, tableType:MANAGED_TABLE)"
+          ]
+       ]
+        }
+    }
+
