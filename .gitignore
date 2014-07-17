@@ -42,3 +42,5 @@ derby.log
 mancenter-2.5
 dependency-reduced-pom.xml
 test_warehouses
+localhost
+jawsSchemaFolder

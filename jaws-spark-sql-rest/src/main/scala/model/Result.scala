@@ -35,7 +35,7 @@ object Result {
     var results = Array[Array[String]]()
     filteredResults.foreach(tuple => {
       var row = Array[String]()
-      tuple._2.foreach(field => row = row ++ Array(field.toString()))
+      tuple._2.foreach(field => row = row ++ Array(Option(field).getOrElse("Null").toString))
       results = results ++ Array(row)
     })
     Result(schema, results)

@@ -62,11 +62,13 @@
 			<artifactId>spray-client</artifactId>
 			<version>${spray.io.version}</version>
 		</dependency>
+		
 		<dependency>
-			<groupId>org.scalatra</groupId>
-			<artifactId>scalatra-scalatest_2.10</artifactId>
-			<version>2.3.0</version>
+			<groupId>org.scalamock</groupId>
+			<artifactId>scalamock-scalatest-support_2.10</artifactId>
+			<version>3.1.RC1</version>
 		</dependency>
+
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
@@ -390,12 +392,10 @@
 							<tasks>
 								<chmod file="${basedir}/target/temp_build/bin/main-jaws.sh"
 									perm="ugo+rx" />
-								<chmod
-									file="${basedir}/target/temp_build/conf/jaws-env.sh"
+								<chmod file="${basedir}/target/temp_build/conf/jaws-env.sh"
 									perm="ugo+rx" />
-									
-								<chmod
-									file="${basedir}/src/main/scripts/start-jaws.sh"
+
+								<chmod file="${basedir}/src/main/scripts/start-jaws.sh"
 									perm="ugo+rx" />
 
 							</tasks>
@@ -419,6 +419,34 @@
 						<phase>package</phase>
 						<goals>
 							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.7</version>
+				<configuration>
+					<skipTests>true</skipTests>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.scalatest</groupId>
+				<artifactId>scalatest-maven-plugin</artifactId>
+				<version>1.0</version>
+				<configuration>
+					<reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+					<junitxml>.</junitxml>
+					<filereports>WDF TestSuite.txt</filereports>
+				</configuration>
+				<executions>
+					<execution>
+						<id>test</id>
+						<goals>
+							<goal>test</goal>
 						</goals>
 					</execution>
 				</executions>

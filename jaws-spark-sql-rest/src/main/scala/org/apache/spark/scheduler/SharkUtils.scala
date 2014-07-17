@@ -59,6 +59,7 @@ object SharkUtils {
     return result
   }
 
+  
   def runCmd(cmd: String, sharkContext: SharkContext, uuid: String, loggingDal: IJawsLogging): Result = {
     Configuration.log4j.info("[SharkUtils]: execute the following command:" + cmd)
     val prefix = "--" + uuid + "\n"
@@ -166,7 +167,7 @@ object SharkUtils {
     loggingDal.setMetaInfo(uuid, new ScriptMetaDTO(nbOfResults, maxNumberOfResults, false, isLimited))
 
     // write schema on hdfs
-    Utils.rewriteFile(getSchema(selectRdd), conf, Configuration.schemaFolder + "/" + uuid)
+    Utils.rewriteFile(getSchema(selectRdd), conf, Configuration.schemaFolder.getOrElse("jawsSchemaFolder") + "/" + uuid)
     // save rdd on hdfs
     indexedRdd.saveAsObjectFile(getHDFSRddPath(uuid, hdfsNamenode))
     return null
