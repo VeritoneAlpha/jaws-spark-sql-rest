@@ -1,6 +1,5 @@
 package implementation
 
-import org.apache.spark.scheduler.CustomJobLogger
 import org.apache.spark.scheduler.LoggingListener
 import org.apache.spark.scheduler.SharkUtils
 
@@ -23,7 +22,6 @@ class CustomSharkContextCreator(dals: DAL) extends CustomSharkContext with MainA
     var shContext = new SharkContext(Configuration.sparkMaster.get, Configuration.applicationName.getOrElse("Jaws"), Configuration.sparkPath.get, jars.toSeq, Map.empty)
     shContext = SharkEnv.initWithSharkContext(shContext)
     shContext.addSparkListener(new LoggingListener(dals))
-    shContext.addSparkListener(new CustomJobLogger(dals))
 
     SharkUtils.setSharkProperties(shContext, this.getClass().getClassLoader().getResourceAsStream("sharkSettings.txt"))
 

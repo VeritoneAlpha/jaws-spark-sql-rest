@@ -62,7 +62,7 @@
 			<artifactId>spray-client</artifactId>
 			<version>${spray.io.version}</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.scalamock</groupId>
 			<artifactId>scalamock-scalatest-support_2.10</artifactId>
@@ -111,7 +111,7 @@
 		<dependency>
 			<groupId>org.apache.spark</groupId>
 			<artifactId>spark-core_2.10</artifactId>
-			<version>0.9.1</version>
+			<version>1.0.1</version>
 			<exclusions>
 				<!-- <exclusion> <groupId>org.spark-project.akka</groupId> <artifactId>akka-actor_2.10</artifactId> 
 					</exclusion> <exclusion> <groupId>org.spark-project.akka</groupId> <artifactId>akka-remote_2.10</artifactId> 
