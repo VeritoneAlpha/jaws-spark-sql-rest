@@ -83,9 +83,10 @@ class RunSharkScriptTask(dals: DAL, hqlScript: String, sharkContext: SharkContex
       return result
     } catch {
       case e: Exception => {
-        Configuration.log4j.error(e.getMessage())
-        dals.loggingDal.addLog(uuid, "hql", System.currentTimeMillis(), e.getMessage())
-        logsActor ! PushLogs(uuid, e.getMessage())
+        val errorMessage = e.getMessage() + "\n" + e.getStackTraceString
+        Configuration.log4j.error(errorMessage)
+        dals.loggingDal.addLog(uuid, "hql", System.currentTimeMillis(), errorMessage)
+        logsActor ! PushLogs(uuid, errorMessage)
         dals.loggingDal.setState(uuid, QueryState.FAILED)
         throw new RuntimeException(e)
       }
