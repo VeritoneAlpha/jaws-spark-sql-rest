@@ -6,24 +6,30 @@ import scala.Array.canBuildFrom
 import shark.api.ResultSet
 import shapeless.ToList
 import actors.Configuration
+import com.xpatterns.jaws.data.DTO.ResultDTO
+import com.xpatterns.jaws.data.DTO.ResultDTO
+import org.apache.spark.sql.catalyst.expressions.Attribute
+import com.xpatterns.jaws.data.DTO.ResultDTO
+import com.xpatterns.jaws.data.DTO.ResultDTO
+import com.xpatterns.jaws.data.DTO.ResultDTO
+import com.xpatterns.jaws.data.DTO.ResultDTO
+import org.apache.spark.sql.catalyst.expressions.Row
+import com.xpatterns.jaws.data.DTO.ResultDTO
 
 /**
  * Created by emaorhian
  */
-case class Result(schema: List[String], results: Array[Array[String]]) {
-  def getSchema(): List[String] = {
-    schema
-  }
-
-  def getResults(): Array[Array[String]] = {
-    results
-  }
-
+case class Result(schema : Set[Column], results : Array[Row]) {
+ 
   def toDTO(): ResultDTO = {
     val js = schema.asJava
     val result = results.map(_.toList.asJava).toList.asJava
     
     return new ResultDTO(js, result)
+  }
+  
+  def this(schema : Set[Attribute], result : Array[Row]){
+    
   }
 }
 

@@ -21,7 +21,6 @@ import api.GetTablesApiActor
 import api.RunScriptApiActor
 import customs.CORSDirectives
 import implementation.CassandraDal
-import implementation.CustomSharkContextCreator
 import implementation.HdfsDal
 import messages._
 import model.Queries
@@ -40,13 +39,15 @@ import traits.CustomSharkContext
 import traits.DAL
 import messages.GetResultsMessage
 import model.QueryInfo
+import implementation.CustomHiveContextCreator
+import implementation.CustomHiveContextCreator
 
 /**
  * Created by emaorhian
  */
 object JawsController extends App with SimpleRoutingApp with MainActors with Systems with CORSDirectives {
   var hdfsConf: org.apache.hadoop.conf.Configuration = _
-  var customSharkContext: CustomSharkContext = _
+  var customSharkContext: CustomHiveContextCreator = _
   var dals: DAL = _
 
   def initialize() = {
@@ -78,7 +79,7 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
       case _ => dals = new HdfsDal(hdfsConf)
     }
 
-    customSharkContext = new CustomSharkContextCreator(dals)
+    customSharkContext = new CustomHiveContextCreator(dals)
   }
 
   def getHadoopConf(): org.apache.hadoop.conf.Configuration = {

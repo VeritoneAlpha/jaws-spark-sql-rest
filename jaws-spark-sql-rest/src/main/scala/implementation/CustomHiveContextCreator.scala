@@ -11,6 +11,7 @@ import traits.CustomSharkContext
 import traits.DAL
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.SparkContext
+import org.apache.spark.scheduler.HiveUtils
 
 /**
  * Created by emaorhian

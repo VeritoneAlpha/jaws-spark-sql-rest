@@ -27,11 +27,12 @@ import shark.api.JavaSharkContext
 import messages.CancelMessage
 import org.apache.spark.scheduler.RunSharkScriptTask
 import shapeless.ToInt
+import org.apache.spark.sql.hive.HiveContext
 
 /**
  * Created by emaorhian
  */
-class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, customSharkContext: CustomSharkContext, dals: DAL) extends Actor with MainActors with Systems {
+class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveContext: HiveContext, dals: DAL) extends Actor with MainActors with Systems {
   var taskCache: Cache[String, RunSharkScriptTask] = _
   var threadPool: ThreadPoolTaskExecutor = _
 
@@ -60,7 +61,7 @@ class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, customSh
       Preconditions.checkArgument(message.maxNumberOfResults != null, Configuration.RESULSTS_NUMBER_EXCEPTION_MESSAGE)
 
       val uuid = System.currentTimeMillis() + UUID.randomUUID().toString()
-      val task = new RunSharkScriptTask(dals, message.hqlScript, customSharkContext.sharkContext, uuid, false, message.limited, message.maxNumberOfResults, hdfsConf)
+      val task = new RunSharkScriptTask(dals, message.hqlScript, hiveContext, uuid, false, message.limited, message.maxNumberOfResults, hdfsConf)
       taskCache.put(uuid, task)
       threadPool.execute(task)
 
@@ -82,7 +83,7 @@ class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, customSh
           taskCache.invalidate(message.queryID)
           if (System.getProperty("spark.mesos.coarse").equalsIgnoreCase("true")) {
             Configuration.log4j.info("[RunScriptApiActor]: Jaws is running in coarse grained mode!")
-            customSharkContext.sharkContext.cancelJobGroup(message.queryID)
+            hiveContext.sparkContext.cancelJobGroup(message.queryID)
           } else {
             Configuration.log4j.info("[RunScriptApiActor]: Jaws is running in fine grained mode!")
           }

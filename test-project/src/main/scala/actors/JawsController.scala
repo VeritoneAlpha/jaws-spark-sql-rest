@@ -85,11 +85,16 @@ object JawsController extends App with SimpleRoutingApp {
   hiveContext.hql("use test")
   hiveContext.hql("show tables")
   val resultRdd = hiveContext.hql("select * from varsta")
+  val resultRddSql = hiveContext.sql("select * from varsta")
  
   val result = resultRdd.collect
-  
-   println (resultRdd.schemaString)
+  val resultSql = resultRddSql.collect
+   
+  val schema = resultRdd.queryExecution.analyzed.outputSet
+  println (resultRdd.schemaString)
+  schema.foreach(atr => {println(atr.name + "-------------" + atr.dataType)})
   result.foreach(println)
+  
 
 }
 object Configuration {
