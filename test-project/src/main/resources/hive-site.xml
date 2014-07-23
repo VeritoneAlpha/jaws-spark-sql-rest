@@ -8,7 +8,7 @@
   </property>
   <property>
     <name>hive.metastore.uris</name>
-    <value>thrift://10.0.2.16:9083</value>
+    <value>thrift://192.168.56.102:9083</value>
   </property>
   <property>
     <name>hive.metastore.client.socket.timeout</name>
@@ -44,7 +44,7 @@
   </property>
   <property>
     <name>hive.zookeeper.quorum</name>
-    <value>10.0.2.16,10.0.2.18,10.0.2.17</value>
+    <value>192.168.56.102</value>
   </property>
   <property>
     <name>hive.zookeeper.client.port</name>
@@ -52,7 +52,7 @@
   </property>
   <property>
     <name>hbase.zookeeper.quorum</name>
-    <value>10.0.2.16,10.0.2.18,10.0.2.17</value>
+    <value>192.168.56.102</value>
   </property>
   <property>
     <name>hbase.zookeeper.property.clientPort</name>

@@ -21,6 +21,8 @@ import spray.routing.SimpleRoutingApp
 import spray.routing.directives.ParamDefMagnet.apply
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.hive.HiveContext
+import org.apache.log4j.Logger
+
 
 /**
  * Created by emaorhian
@@ -78,7 +80,15 @@ object JawsController extends App with SimpleRoutingApp {
   var sContext = new SparkContext(Configuration.sparkMaster.get, Configuration.applicationName.getOrElse("Jaws"), Configuration.sparkPath.get, jars.toSeq, Map.empty)
 
   var hiveContext = new HiveContext(sContext)
-  val result = hiveContext.hql("show databases").collect
+  hiveContext.hql("show databases").collect
+  
+  hiveContext.hql("use test")
+  hiveContext.hql("show tables")
+  val resultRdd = hiveContext.hql("select * from varsta")
+ 
+  val result = resultRdd.collect
+  
+   println (resultRdd.schemaString)
   result.foreach(println)
 
 }
