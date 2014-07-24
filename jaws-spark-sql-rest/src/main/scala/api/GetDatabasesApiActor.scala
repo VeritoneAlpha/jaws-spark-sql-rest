@@ -11,7 +11,7 @@ import messages.GetDatabasesMessage
 import java.util.UUID
 import traits.CustomSharkContext
 import actors.Configuration
-import model.Result
+import com.xpatterns.jaws.data.DTO.Result
 import org.apache.spark.scheduler.SharkUtils
 
 /**

@@ -23,8 +23,8 @@ import customs.CORSDirectives
 import implementation.CassandraDal
 import implementation.HdfsDal
 import messages._
-import model.Queries
-import model.Logs
+import com.xpatterns.jaws.data.DTO.Queries
+import com.xpatterns.jawscom.xpatterns.jaws.data.DTO.DTO.Logs
 import model.Result
 import spray.http.HttpHeaders
 import spray.http.HttpMethods
@@ -35,7 +35,7 @@ import spray.json.DefaultJsonProtocol._
 import spray.routing.Directive.pimpApply
 import spray.routing.SimpleRoutingApp
 import spray.routing.directives.ParamDefMagnet.apply
-import traits.CustomSharkContext
+import traits.CustomSharkCcom.xpatterns.jaws.data.DTOt
 import traits.DAL
 import messages.GetResultsMessage
 import model.QueryInfo

@@ -7,8 +7,8 @@ import com.google.common.base.Preconditions
 import actors.LogsActor
 import akka.actor.ActorLogging
 import traits.DAL
-import model.Queries
-import model.Query
+import com.xpatterns.jaws.data.DTO.Queries
+import com.xpatterns.jaws.data.DTO.Query
 import messages.RunScriptMessage
 import java.util.UUID
 import traits.CustomSharkContext

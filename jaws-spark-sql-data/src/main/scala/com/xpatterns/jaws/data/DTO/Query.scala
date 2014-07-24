@@ -1,4 +1,4 @@
-package model
+package com.xpatterns.jaws.data.DTO
 
 import spray.json.DefaultJsonProtocol._
 

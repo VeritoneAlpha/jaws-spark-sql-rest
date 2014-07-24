@@ -13,7 +13,7 @@ import actors.MainActors
 import actors.Systems
 import customs.CustomIndexer
 import customs.CustomIndexer
-import model.Result
+import com.xpatterns.jaws.data.DTO.Result
 import shark.api.ResultSet
 import shark.api.TableRDD
 import org.apache.spark.sql.hive.HiveContext

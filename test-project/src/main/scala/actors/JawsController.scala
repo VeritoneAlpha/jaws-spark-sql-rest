@@ -92,7 +92,8 @@ object JawsController extends App with SimpleRoutingApp {
    
   val schema = resultRdd.queryExecution.analyzed.outputSet
   println (resultRdd.schemaString)
-  schema.foreach(atr => {println(atr.name + "-------------" + atr.dataType)})
+  schema.foreach(atr => {
+    println(atr.name + "-------------" + atr.dataType)})
   result.foreach(println)
   
 

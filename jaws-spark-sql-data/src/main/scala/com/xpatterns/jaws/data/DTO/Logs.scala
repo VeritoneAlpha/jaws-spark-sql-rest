@@ -1,6 +1,4 @@
-package model
-import java.util.Collection
-import com.xpatterns.jaws.data.DTO.LogDTO
+package com.xpatterns.jaws.data.DTO
 import spray.json.DefaultJsonProtocol._
 
 /**
@@ -10,6 +8,4 @@ case class Logs (logs : Array[Log], status: String)
 
 object Logs {
   implicit val logsJson = jsonFormat2(apply)
-  
-  
 }

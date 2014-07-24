@@ -1,6 +1,7 @@
-package model
+package com.xpatterns.jaws.data.DTO
 
-import spray.json.DefaultJsonProtocol._
+import spray.json.DefaultJsonProtocol.arrayFormat
+import spray.json.DefaultJsonProtocol.jsonFormat1
 
 /**
  * Created by emaorhian

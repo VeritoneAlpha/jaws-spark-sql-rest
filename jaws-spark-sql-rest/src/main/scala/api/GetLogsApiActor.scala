@@ -7,12 +7,12 @@ import com.google.common.base.Preconditions
 import actors.LogsActor
 import akka.actor.ActorLogging
 import traits.DAL
-import model.Queries
-import model.Query
+import com.xpatterns.jaws.data.DTO.Queries
+import com.xpatterns.jaws.data.DTO.Query
 import messages.GetLogsMessage
 import org.joda.time.DateTime
 import java.util.Collection
-import model.Logs
+impcom.xpatterns.jaws.data.DTOom.xpatterns.jaws.data.DTO.Logs
 import model.Log
 import actors.Configuration
 /**

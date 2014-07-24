@@ -7,7 +7,7 @@ import shark.SharkContext
 import com.xpatterns.jaws.data.DTO.ResultDTO
 import actors.Configuration
 import actors.LogsActor.PushLogs
-import model.Result
+import com.xpatterns.jaws.data.DTO.Result
 import org.apache.commons.lang.time.DurationFormatUtils
 import com.xpatterns.jaws.data.utils.QueryState
 import org.apache.spark.sql.hive.HiveContext

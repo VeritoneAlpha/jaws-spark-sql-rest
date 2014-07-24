@@ -16,7 +16,7 @@ import actors.MainActors
 import actors.Systems
 import customs.CustomIndexer
 import customs.CustomIndexer
-import model.Result
+import com.xpatterns.jaws.data.DTO.Result
 import shark.SharkContext
 import shark.api.ResultSet
 import shark.api.TableRDD

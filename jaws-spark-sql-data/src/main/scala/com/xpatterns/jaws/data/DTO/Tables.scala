@@ -1,4 +1,4 @@
-package model
+package com.xpatterns.jaws.data.DTO
 
 import scala.collection.JavaConverters._
 import spray.json.DefaultJsonProtocol._

@@ -1,5 +1,11 @@
 package com.xpatterns.jaws.data.contracts
 
-trait TJawsResults {
+import com.xpatterns.jaws.data.DTO.Result
 
+/**
+ * Created by emaorhian
+ */
+trait TJawsResults {
+  def getResults(uuid: String): Result
+  def setResults(uuid: String, resultDTO: Result)
 }

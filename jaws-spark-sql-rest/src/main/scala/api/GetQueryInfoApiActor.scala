@@ -5,7 +5,7 @@ import traits.DAL
 import actors.Configuration
 import akka.actor.Actor
 import com.google.common.base.Preconditions
-import model.QueryInfo
+import com.xpatterns.jaws.data.DTO.QueryInfo
 /**
  * Created by emaorhian
  */

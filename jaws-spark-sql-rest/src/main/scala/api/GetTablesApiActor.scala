@@ -6,8 +6,8 @@ import traits.CustomSharkContext
 import traits.DAL
 import java.util.UUID
 import akka.actor.Actor
-import model.Result
-import akka.util.Timeout
+import com.xpatterns.jaws.data.DTO.Result
+import akkcom.xpatterns.jaws.data.DTOl.Timeout
 import model.Tables
 import actors.Configuration
 import scala.collection.mutable.Map
