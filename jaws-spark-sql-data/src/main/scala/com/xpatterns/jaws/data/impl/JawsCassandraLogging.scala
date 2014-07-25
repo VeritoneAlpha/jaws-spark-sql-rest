@@ -102,7 +102,7 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
     column.setComponent(LEVEL_TIME_STAMP, time, ls);
 
     val mutator = HFactory.createMutator(keyspace, is);
-    mutator.addInsertion(key, CF_SPARK_LOGS, HFactory.createColumn(column, dto.toJson, cs, StringSerializer.get.asInstanceOf[Serializer[Object]]));
+    mutator.addInsertion(key, CF_SPARK_LOGS, HFactory.createColumn(column, dto.toJson.toString(), cs, StringSerializer.get.asInstanceOf[Serializer[Object]]));
     mutator.execute();
 
   }
@@ -303,7 +303,7 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
         columns.foreach(column => {
           val name = column.getName
           if (name.get(LEVEL_TYPE, is) == TYPE_QUERY_STATE) {
-            val query = new Query(column.getValue(), name.get(LEVEL_UUID, ss), getScriptDetails(uuid))
+            val query = new Query(column.getValue(), name.get(LEVEL_UUID, ss), name.get(LEVEL_UUID, ss))
             map.put(name.get(LEVEL_UUID, ss), query);
           }
         })
@@ -342,7 +342,7 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
     column.setComponent(LEVEL_TYPE, TYPE_META, is);
     column.setComponent(LEVEL_UUID, uuid, ss);
 
-    val value = metainfo.toJson;
+    val value = metainfo.toJson.toString;
 
     val mutator = HFactory.createMutator(keyspace, is);
 
