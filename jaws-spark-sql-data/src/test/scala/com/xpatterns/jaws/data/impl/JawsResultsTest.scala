@@ -43,11 +43,11 @@ class JawsResultsTest extends FunSuite with BeforeAndAfter {
   test("testWriteReadResults") {
     val uuid = Randomizer.getRandomString(10)
     val resultDTO = Randomizer.getResult
-    resultsDal.setResults(uuid, resultDTO);
+    resultsDal.setResults(uuid, resultDTO)
 
-    val results = resultsDal.getResults(uuid);
+    val results = resultsDal.getResults(uuid)
 
-    assert(resultDTO === results);
+    assert(resultDTO === results)
 
   }
 

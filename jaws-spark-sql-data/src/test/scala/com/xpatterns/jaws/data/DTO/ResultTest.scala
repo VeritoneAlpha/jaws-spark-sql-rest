@@ -26,8 +26,8 @@ class ResultTest extends FunSuite  {
 		row1 = row1 ++ Array("   bbbb")
 		
 		var row2 = Array [String]()
-		row2 = row2 ++ Array("   ccc   ");
-		row2 = row2 ++ Array("ddd");
+		row2 = row2 ++ Array("   ccc   ")
+		row2 = row2 ++ Array("ddd")
 		
 		results = results ++ Array(row1)
 		results = results ++ Array(row2)
@@ -36,12 +36,12 @@ class ResultTest extends FunSuite  {
 		var value = new Result(schema , results)
 		
 		var expectedRow1 = Array [String]()
-		expectedRow1 = expectedRow1 ++ Array("aaaa");
-		expectedRow1 = expectedRow1 ++ Array("bbbb");
+		expectedRow1 = expectedRow1 ++ Array("aaaa")
+		expectedRow1 = expectedRow1 ++ Array("bbbb")
 		
 		var expectedRow2 = Array [String]()
-		expectedRow2 = expectedRow2 ++ Array("ccc");
-		expectedRow2 = expectedRow2 ++ Array("ddd");
+		expectedRow2 = expectedRow2 ++ Array("ccc")
+		expectedRow2 = expectedRow2 ++ Array("ddd")
 		
 		var expectedResults = Array[Array[String]]()
 		expectedResults = expectedResults ++ Array(expectedRow1)

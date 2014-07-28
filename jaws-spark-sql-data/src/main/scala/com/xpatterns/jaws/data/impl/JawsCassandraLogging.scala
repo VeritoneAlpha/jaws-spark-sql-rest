@@ -34,7 +34,7 @@ import com.xpatterns.jaws.data.DTO.QueryMetaInfo
 
 class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
 
-  val CF_SPARK_LOGS = "logs";
+  val CF_SPARK_LOGS = "logs"
   val CF_SPARK_LOGS_NUMBER_OF_ROWS = 100
 
   val LEVEL_TYPE = 0
@@ -53,35 +53,35 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
   val cs = CompositeSerializer.get.asInstanceOf[Serializer[Composite]]
   val ls = LongSerializer.get.asInstanceOf[Serializer[Long]]
 
-  override def setState(uuid: String, queryState: QueryState.QueryState) {
+  override def setState(queryId: String, queryState: QueryState.QueryState) {
 
-    logger.debug("Writing query state " + queryState.toString() + " to query " + uuid)
+    logger.debug("Writing query state " + queryState.toString() + " to query " + queryId)
 
-    val key = computeRowKey(uuid)
+    val key = computeRowKey(queryId)
 
-    val column = new Composite();
-    column.setComponent(LEVEL_UUID, uuid, ss);
+    val column = new Composite()
+    column.setComponent(LEVEL_UUID, queryId, ss)
     column.setComponent(LEVEL_TYPE, TYPE_QUERY_STATE, is)
 
-    val mutator = HFactory.createMutator(keyspace, is);
-    mutator.addInsertion(key, CF_SPARK_LOGS, HFactory.createColumn(column, queryState.toString(), cs, ss));
-    mutator.execute();
+    val mutator = HFactory.createMutator(keyspace, is)
+    mutator.addInsertion(key, CF_SPARK_LOGS, HFactory.createColumn(column, queryState.toString(), cs, ss))
+    mutator.execute()
 
   }
 
-  override def setScriptDetails(uuid: String, scriptDetails: String) {
+  override def setScriptDetails(queryId: String, scriptDetails: String) {
 
-    logger.debug("Writing script details " + scriptDetails + " to query " + uuid);
+    logger.debug("Writing script details " + scriptDetails + " to query " + queryId)
 
-    val key = computeRowKey(uuid);
+    val key = computeRowKey(queryId)
 
-    val column = new Composite();
-    column.setComponent(LEVEL_TYPE, TYPE_SCRIPT_DETAILS, is);
-    column.setComponent(LEVEL_UUID, uuid, ss);
+    val column = new Composite()
+    column.setComponent(LEVEL_TYPE, TYPE_SCRIPT_DETAILS, is)
+    column.setComponent(LEVEL_UUID, queryId, ss)
 
-    val mutator = HFactory.createMutator(keyspace, is);
-    mutator.addInsertion(key, CF_SPARK_LOGS, HFactory.createColumn(column, scriptDetails, cs, ss));
-    mutator.execute();
+    val mutator = HFactory.createMutator(keyspace, is)
+    mutator.addInsertion(key, CF_SPARK_LOGS, HFactory.createColumn(column, scriptDetails, cs, ss))
+    mutator.execute()
 
   }
 
@@ -89,58 +89,58 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
     Math.abs(uuid.hashCode() % CF_SPARK_LOGS_NUMBER_OF_ROWS)
   }
 
- override def addLog(uuid: String, queryId: String, time: Long, log: String) {
+ override def addLog(queryId: String, jobId: String, time: Long, log: String) {
 
-    logger.debug("Writing log " + log + " to query " + uuid + " at time " + time);
-    val dto = new Log(log, queryId, time);
+    logger.debug("Writing log " + log + " to query " + queryId + " at time " + time)
+    val dto = new Log(log, jobId, time)
 
-    val key = computeRowKey(uuid);
+    val key = computeRowKey(queryId)
 
-    val column = new Composite();
-    column.setComponent(LEVEL_TYPE, TYPE_LOG, is);
-    column.setComponent(LEVEL_UUID, uuid, ss);
-    column.setComponent(LEVEL_TIME_STAMP, time, ls);
+    val column = new Composite()
+    column.setComponent(LEVEL_TYPE, TYPE_LOG, is)
+    column.setComponent(LEVEL_UUID, queryId, ss)
+    column.setComponent(LEVEL_TIME_STAMP, time, ls)
 
-    val mutator = HFactory.createMutator(keyspace, is);
-    mutator.addInsertion(key, CF_SPARK_LOGS, HFactory.createColumn(column, dto.toJson.toString(), cs, StringSerializer.get.asInstanceOf[Serializer[Object]]));
-    mutator.execute();
+    val mutator = HFactory.createMutator(keyspace, is)
+    mutator.addInsertion(key, CF_SPARK_LOGS, HFactory.createColumn(column, dto.toJson.toString(), cs, StringSerializer.get.asInstanceOf[Serializer[Object]]))
+    mutator.execute()
 
   }
 
-  override def getState(uuid: String): QueryState.QueryState = {
+  override def getState(queryId: String): QueryState.QueryState = {
 
-    logger.debug("Reading query state for query: " + uuid);
+    logger.debug("Reading query state for query: " + queryId)
 
-    val key = computeRowKey(uuid);
+    val key = computeRowKey(queryId)
 
-    val column = new Composite();
-    column.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, ComponentEquality.EQUAL);
-    column.addComponent(LEVEL_UUID, uuid, ComponentEquality.EQUAL);
+    val column = new Composite()
+    column.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, ComponentEquality.EQUAL)
+    column.addComponent(LEVEL_UUID, queryId, ComponentEquality.EQUAL)
 
-    val sliceQuery: SliceQuery[Int, Composite, String] = HFactory.createSliceQuery(keyspace, is, cs, ss);
-    sliceQuery.setColumnFamily(CF_SPARK_LOGS).setKey(key).setRange(column, column, false, 1);
+    val sliceQuery: SliceQuery[Int, Composite, String] = HFactory.createSliceQuery(keyspace, is, cs, ss)
+    sliceQuery.setColumnFamily(CF_SPARK_LOGS).setKey(key).setRange(column, column, false, 1)
 
-    val result: QueryResult[ColumnSlice[Composite, String]] = sliceQuery.execute();
+    val result: QueryResult[ColumnSlice[Composite, String]] = sliceQuery.execute()
 
     Option(result) match {
       case None => logger.info("No results found")
       case _ => {
 
-        val columnSlice: ColumnSlice[Composite, String] = result.get();
+        val columnSlice: ColumnSlice[Composite, String] = result.get()
 
         Option(columnSlice) match {
-          case None => return QueryState.NOT_FOUND;
+          case None => return QueryState.NOT_FOUND
           case _ => {
             Option(columnSlice.getColumns()) match {
               case None => return QueryState.NOT_FOUND
               case _ => {
                 if (columnSlice.getColumns().size() == 0) {
-                  return QueryState.NOT_FOUND;
+                  return QueryState.NOT_FOUND
                 }
-                val col = columnSlice.getColumns().get(0);
-                val state = col.getValue();
+                val col = columnSlice.getColumns().get(0)
+                val state = col.getValue()
 
-                return QueryState.withName(state);
+                return QueryState.withName(state)
 
               }
             }
@@ -150,27 +150,27 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
       }
     }
 
-    return QueryState.NOT_FOUND;
+    return QueryState.NOT_FOUND
   }
 
-  override def getScriptDetails(uuid: String): String = {
+  override def getScriptDetails(queryId: String): String = {
 
-    logger.debug("Reading script details for query: " + uuid);
+    logger.debug("Reading script details for query: " + queryId)
 
-    val key = computeRowKey(uuid);
+    val key = computeRowKey(queryId)
 
-    val column = new Composite();
-    column.addComponent(LEVEL_TYPE, TYPE_SCRIPT_DETAILS, ComponentEquality.EQUAL);
-    column.addComponent(LEVEL_UUID, uuid, ComponentEquality.EQUAL);
+    val column = new Composite()
+    column.addComponent(LEVEL_TYPE, TYPE_SCRIPT_DETAILS, ComponentEquality.EQUAL)
+    column.addComponent(LEVEL_UUID, queryId, ComponentEquality.EQUAL)
 
-    val sliceQuery: SliceQuery[Int, Composite, String] = HFactory.createSliceQuery(keyspace, is, cs, ss);
-    sliceQuery.setColumnFamily(CF_SPARK_LOGS).setKey(key).setRange(column, column, false, 1);
+    val sliceQuery: SliceQuery[Int, Composite, String] = HFactory.createSliceQuery(keyspace, is, cs, ss)
+    sliceQuery.setColumnFamily(CF_SPARK_LOGS).setKey(key).setRange(column, column, false, 1)
 
-    val result: QueryResult[ColumnSlice[Composite, String]] = sliceQuery.execute();
+    val result: QueryResult[ColumnSlice[Composite, String]] = sliceQuery.execute()
     Option(result) match {
       case None => return ""
       case _ => {
-        val columnSlice: ColumnSlice[Composite, String] = result.get();
+        val columnSlice: ColumnSlice[Composite, String] = result.get()
         Option(columnSlice) match {
           case None => return ""
           case _ => {
@@ -179,12 +179,12 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
               case _ => {
 
                 if (columnSlice.getColumns().size() == 0) {
-                  return "";
+                  return ""
                 }
-                val col: HColumn[Composite, String] = columnSlice.getColumns().get(0);
-                val description = col.getValue();
+                val col: HColumn[Composite, String] = columnSlice.getColumns().get(0)
+                val description = col.getValue()
 
-                return description;
+                return description
               }
             }
 
@@ -196,42 +196,42 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
 
   }
 
- override def getLogs(uuid: String, time: Long, limit: Int): Logs = {
+ override def getLogs(queryId: String, time: Long, limit: Int): Logs = {
 
-    logger.debug("Reading logs for query: " + uuid + " from date: " + time);
+    logger.debug("Reading logs for query: " + queryId + " from date: " + time)
     var logs = Array[Log]()
 
-    val key = computeRowKey(uuid);
+    val key = computeRowKey(queryId)
 
-    val startColumn = new Composite();
-    startColumn.addComponent(LEVEL_TYPE, TYPE_LOG, ComponentEquality.EQUAL);
-    startColumn.addComponent(LEVEL_UUID, uuid, ComponentEquality.EQUAL);
-    startColumn.addComponent(LEVEL_TIME_STAMP, time, ComponentEquality.EQUAL);
+    val startColumn = new Composite()
+    startColumn.addComponent(LEVEL_TYPE, TYPE_LOG, ComponentEquality.EQUAL)
+    startColumn.addComponent(LEVEL_UUID, queryId, ComponentEquality.EQUAL)
+    startColumn.addComponent(LEVEL_TIME_STAMP, time, ComponentEquality.EQUAL)
 
-    val endColumn = new Composite();
-    endColumn.addComponent(LEVEL_TYPE, TYPE_LOG, ComponentEquality.EQUAL);
-    endColumn.addComponent(LEVEL_UUID, uuid, ComponentEquality.GREATER_THAN_EQUAL);
-    val sliceQuery: SliceQuery[Int, Composite, String] = HFactory.createSliceQuery(keyspace, is, cs, ss);
-    sliceQuery.setColumnFamily(CF_SPARK_LOGS).setKey(key).setRange(startColumn, endColumn, false, limit);
+    val endColumn = new Composite()
+    endColumn.addComponent(LEVEL_TYPE, TYPE_LOG, ComponentEquality.EQUAL)
+    endColumn.addComponent(LEVEL_UUID, queryId, ComponentEquality.GREATER_THAN_EQUAL)
+    val sliceQuery: SliceQuery[Int, Composite, String] = HFactory.createSliceQuery(keyspace, is, cs, ss)
+    sliceQuery.setColumnFamily(CF_SPARK_LOGS).setKey(key).setRange(startColumn, endColumn, false, limit)
 
-    val result: QueryResult[ColumnSlice[Composite, String]] = sliceQuery.execute();
+    val result: QueryResult[ColumnSlice[Composite, String]] = sliceQuery.execute()
 
     Option(result) match {
-      case None => return new Logs(logs, getState(uuid).toString)
+      case None => return new Logs(logs, getState(queryId).toString)
       case _ => {
-        val columnSlice: ColumnSlice[Composite, String] = result.get();
+        val columnSlice: ColumnSlice[Composite, String] = result.get()
         Option(columnSlice) match {
-          case None => return new Logs(logs, getState(uuid).toString)
+          case None => return new Logs(logs, getState(queryId).toString)
           case _ => {
             Option(columnSlice.getColumns()) match {
 
-              case None => return new Logs(logs, getState(uuid).toString)
+              case None => return new Logs(logs, getState(queryId).toString)
               case _ => {
                 if (columnSlice.getColumns().size() == 0) {
-                  return new Logs(logs, getState(uuid).toString)
+                  return new Logs(logs, getState(queryId).toString)
                 }
 
-                val columns = columnSlice.getColumns().asScala;
+                val columns = columnSlice.getColumns().asScala
                 implicit val formats = DefaultFormats
                 columns.foreach(col => {
                   val value = col.getValue()
@@ -239,7 +239,7 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
                   val log = json.extract[Log]
                   logs = logs ++ Array(log)
                 })
-                return return new Logs(logs, getState(uuid).toString)
+                return return new Logs(logs, getState(queryId).toString)
               }
             }
 
@@ -251,42 +251,42 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
 
   }
 
-  override def getQueriesStates(uuid: String, limit: Int): Queries = {
+  override def getQueriesStates(queryId: String, limit: Int): Queries = {
 
-    var skipFirst = false;
-    logger.debug("Reading queries states starting with the query: " + uuid);
+    var skipFirst = false
+    logger.debug("Reading queries states starting with the query: " + queryId)
 
-    val map = new TreeMap[String, Query]();
-    val stateList = Array[Query]();
-    val keysList: java.util.List[Integer] = new ArrayList[Integer]();
+    val map = new TreeMap[String, Query]()
+    val stateList = Array[Query]()
+    val keysList: java.util.List[Integer] = new ArrayList[Integer]()
 
     for (key <- 0 until CF_SPARK_LOGS_NUMBER_OF_ROWS) {
-      keysList.add(key);
+      keysList.add(key)
     }
 
-    val startColumn = new Composite();
-    startColumn.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, ComponentEquality.EQUAL);
-    if (uuid != null && !uuid.isEmpty()) {
-      startColumn.addComponent(LEVEL_UUID, uuid, ComponentEquality.EQUAL);
+    val startColumn = new Composite()
+    startColumn.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, ComponentEquality.EQUAL)
+    if (queryId != null && !queryId.isEmpty()) {
+      startColumn.addComponent(LEVEL_UUID, queryId, ComponentEquality.EQUAL)
     }
 
-    val endColumn = new Composite();
-    if (uuid != null && !uuid.isEmpty()) {
-      endColumn.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, ComponentEquality.LESS_THAN_EQUAL);
+    val endColumn = new Composite()
+    if (queryId != null && !queryId.isEmpty()) {
+      endColumn.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, ComponentEquality.LESS_THAN_EQUAL)
     } else {
-      endColumn.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, ComponentEquality.GREATER_THAN_EQUAL);
+      endColumn.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, ComponentEquality.GREATER_THAN_EQUAL)
     }
 
-    val multiSliceQuery: MultigetSliceQuery[Integer, Composite, String] = HFactory.createMultigetSliceQuery(keyspace, IntegerSerializer.get.asInstanceOf[Serializer[Integer]], cs, ss);
-    if (uuid != null && !uuid.isEmpty()) {
-      multiSliceQuery.setColumnFamily(CF_SPARK_LOGS).setKeys(keysList).setRange(startColumn, endColumn, true, limit + 1);
-      skipFirst = true;
+    val multiSliceQuery: MultigetSliceQuery[Integer, Composite, String] = HFactory.createMultigetSliceQuery(keyspace, IntegerSerializer.get.asInstanceOf[Serializer[Integer]], cs, ss)
+    if (queryId != null && !queryId.isEmpty()) {
+      multiSliceQuery.setColumnFamily(CF_SPARK_LOGS).setKeys(keysList).setRange(startColumn, endColumn, true, limit + 1)
+      skipFirst = true
     } else {
-      multiSliceQuery.setColumnFamily(CF_SPARK_LOGS).setKeys(keysList).setRange(endColumn, startColumn, true, limit);
+      multiSliceQuery.setColumnFamily(CF_SPARK_LOGS).setKeys(keysList).setRange(endColumn, startColumn, true, limit)
     }
 
-    val result: QueryResult[Rows[Integer, Composite, String]] = multiSliceQuery.execute();
-    val rows = result.get();
+    val result: QueryResult[Rows[Integer, Composite, String]] = multiSliceQuery.execute()
+    val rows = result.get()
     if (rows == null || rows.getCount() == 0) {
       return new Queries(stateList)
     }
@@ -295,7 +295,7 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
 
     rrows.foreach(row => {
 
-      val columnSlice = row.getColumnSlice();
+      val columnSlice = row.getColumnSlice()
       if (columnSlice == null || columnSlice.getColumns() == null || columnSlice.getColumns().size() == 0) {
 
       } else {
@@ -303,8 +303,8 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
         columns.foreach(column => {
           val name = column.getName
           if (name.get(LEVEL_TYPE, is) == TYPE_QUERY_STATE) {
-            val query = new Query(column.getValue(), name.get(LEVEL_UUID, ss), name.get(LEVEL_UUID, ss))
-            map.put(name.get(LEVEL_UUID, ss), query);
+            val query = new Query(column.getValue(), name.get(LEVEL_UUID, ss), getScriptDetails(name.get(LEVEL_UUID, ss)))
+            map.put(name.get(LEVEL_UUID, ss), query)
           }
         })
       }
@@ -316,59 +316,59 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
   def getCollectionFromSortedMapWithLimit(map: TreeMap[String, Query], limit: Int, skipFirst: Boolean): Array[Query] = {
 
     var collection = Array[Query]()
-    val iterator = map.descendingKeySet().iterator();
+    val iterator = map.descendingKeySet().iterator()
     var skipFirstMutable = skipFirst
     var limitMutable = limit
 
     while (iterator.hasNext() && limitMutable > 0) {
       if (skipFirstMutable) {
-        skipFirstMutable = false;
-        iterator.next();
+        skipFirstMutable = false
+        iterator.next()
       } else {
         collection = collection ++ Array(map.get(iterator.next()))
         limitMutable = limitMutable - 1
       }
     }
 
-    return collection;
+    return collection
   }
 
- override def setMetaInfo(uuid: String, metainfo: QueryMetaInfo) {
-    logger.debug("Writing script meta info " + metainfo + " to query " + uuid);
+ override def setMetaInfo(queryId: String, metainfo: QueryMetaInfo) {
+    logger.debug("Writing script meta info " + metainfo + " to query " + queryId)
 
-    val key = computeRowKey(uuid);
+    val key = computeRowKey(queryId)
 
-    val column = new Composite();
-    column.setComponent(LEVEL_TYPE, TYPE_META, is);
-    column.setComponent(LEVEL_UUID, uuid, ss);
+    val column = new Composite()
+    column.setComponent(LEVEL_TYPE, TYPE_META, is)
+    column.setComponent(LEVEL_UUID, queryId, ss)
 
-    val value = metainfo.toJson.toString;
+    val value = metainfo.toJson.toString
 
-    val mutator = HFactory.createMutator(keyspace, is);
+    val mutator = HFactory.createMutator(keyspace, is)
 
-    mutator.addInsertion(key, CF_SPARK_LOGS, HFactory.createColumn(column, value, cs, StringSerializer.get.asInstanceOf[Serializer[Object]]));
-    mutator.execute();
+    mutator.addInsertion(key, CF_SPARK_LOGS, HFactory.createColumn(column, value, cs, StringSerializer.get.asInstanceOf[Serializer[Object]]))
+    mutator.execute()
 
   }
 
- override def getMetaInfo(uuid: String): QueryMetaInfo = {
-    logger.debug("Reading meta info for for query: " + uuid);
+ override def getMetaInfo(queryId: String): QueryMetaInfo = {
+    logger.debug("Reading meta info for for query: " + queryId)
 
-    val key = computeRowKey(uuid);
+    val key = computeRowKey(queryId)
 
-    val column = new Composite();
-    column.addComponent(LEVEL_TYPE, TYPE_META, ComponentEquality.EQUAL);
-    column.addComponent(LEVEL_UUID, uuid, ComponentEquality.EQUAL);
+    val column = new Composite()
+    column.addComponent(LEVEL_TYPE, TYPE_META, ComponentEquality.EQUAL)
+    column.addComponent(LEVEL_UUID, queryId, ComponentEquality.EQUAL)
 
-    val columnQuery = HFactory.createColumnQuery(keyspace, is, cs, ss);
-    columnQuery.setColumnFamily(CF_SPARK_LOGS).setKey(key).setName(column);
+    val columnQuery = HFactory.createColumnQuery(keyspace, is, cs, ss)
+    columnQuery.setColumnFamily(CF_SPARK_LOGS).setKey(key).setName(column)
 
-    val result = columnQuery.execute();
+    val result = columnQuery.execute()
     if (result != null) {
-      val col = result.get();
+      val col = result.get()
 
       if (col == null) {
-        return new QueryMetaInfo();
+        return new QueryMetaInfo()
       }
       implicit val formats = DefaultFormats
       val value = col.getValue()
@@ -376,7 +376,7 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
       return json.extract[QueryMetaInfo]
     }
 
-    return new QueryMetaInfo();
+    return new QueryMetaInfo()
   }
 
 }

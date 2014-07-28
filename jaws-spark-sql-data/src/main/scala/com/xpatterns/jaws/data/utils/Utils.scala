@@ -17,87 +17,87 @@ import java.util.TreeSet
 class Utils{}
 
 object Utils {
-  val NAMENODE = "namenode";
-  val FORCED_MODE = "forcedMode";
-  val LOGGING_FOLDER = "loggingFolder";
-  val STATUS_FOLDER = "stateFolder";
-  val METAINFO_FOLDER = "metaInfoFolder";
-  val DETAILS_FOLDER = "detailsFolder";
-  val RESULTS_FOLDER = "resultsFolder";
-  val SCHEMA_FOLDER = "schemaFolder";
-  val REPLICATION_FACTOR = "replicationFactor";
+  val NAMENODE = "namenode"
+  val FORCED_MODE = "forcedMode"
+  val LOGGING_FOLDER = "loggingFolder"
+  val STATUS_FOLDER = "stateFolder"
+  val METAINFO_FOLDER = "metaInfoFolder"
+  val DETAILS_FOLDER = "detailsFolder"
+  val RESULTS_FOLDER = "resultsFolder"
+  val SCHEMA_FOLDER = "schemaFolder"
+  val REPLICATION_FACTOR = "replicationFactor"
 
-  private val log = Logger.getLogger("Utils");
+  private val log = Logger.getLogger("Utils")
 
   def createFolderIfDoesntExist(configuration: Configuration, folder: String, forcedMode: Boolean) {
-    log.info("[createFolderIfDoesntExist] forcedMode: " + forcedMode);
+    log.info("[createFolderIfDoesntExist] forcedMode: " + forcedMode)
 
-    var fs: FileSystem = null;
+    var fs: FileSystem = null
     try {
-      fs = FileSystem.newInstance(configuration);
-      val path = new Path(folder);
+      fs = FileSystem.newInstance(configuration)
+      val path = new Path(folder)
       if (fs.exists(path)) {
-        log.info("[createFolderIfDoesntExist] The folder " + folder + " exists!");
+        log.info("[createFolderIfDoesntExist] The folder " + folder + " exists!")
         if (forcedMode) {
-          log.info("[createFolderIfDoesntExist] We are in forced mode so the folder will be recreated");
+          log.info("[createFolderIfDoesntExist] We are in forced mode so the folder will be recreated")
           // Delete folder
-          fs.delete(path, true);
-          createFolder(fs, folder);
+          fs.delete(path, true)
+          createFolder(fs, folder)
         } else {
-          log.info("[createFolderIfDoesntExist] We won't recreate the folder!");
+          log.info("[createFolderIfDoesntExist] We won't recreate the folder!")
         }
       } else {
-        createFolder(fs, folder);
+        createFolder(fs, folder)
       }
 
     } catch {
       case e: Exception => {
-        log.error(e.getMessage());
-        throw e;
+        log.error(e.getMessage())
+        throw e
       }
     } finally {
       if (fs != null) {
-        fs.close();
+        fs.close()
       }
 
     }
   }
 
   def createFolder(fs: FileSystem, path: String) {
-    val temPath = new Path(path);
+    val temPath = new Path(path)
     if (!fs.exists(temPath))
-      fs.mkdirs(temPath);
+      fs.mkdirs(temPath)
   }
 
   def rewriteFile(message: String, configuration: Configuration, filename: String) {
-    var fs: FileSystem = null;
-    val in: InputStream = new BufferedInputStream(new ByteArrayInputStream(message.getBytes()));
-    val temporaryFileName = filename + "_temp";
+    var fs: FileSystem = null
+    val in: InputStream = new BufferedInputStream(new ByteArrayInputStream(message.getBytes()))
+    val temporaryFileName = filename + "_temp"
 
     try {
       // failover mechanism
-      val file = new Path(filename);
-      val temporaryFile = new Path(temporaryFileName);
+      val file = new Path(filename)
+      val temporaryFile = new Path(temporaryFileName)
 
-      fs = FileSystem.newInstance(configuration);
-      val fileOutputStream = fs.create(temporaryFile, true);
+      fs = FileSystem.newInstance(configuration)
+      val fileOutputStream = fs.create(temporaryFile, true)
 
       // write into temporary file
-      IOUtils.copyBytes(in, fileOutputStream, configuration, true);
+      IOUtils.copyBytes(in, fileOutputStream, configuration, true)
 
       // delete the old file and rename the temporary file
       if (fs.exists(file)) {
-        fs.delete(file, true);
+        fs.delete(file, true)
       }
-      fs.rename(temporaryFile, file);
+      fs.rename(temporaryFile, file)
     } catch {
       case ex: Exception => {
-        log.error(ex.getMessage());
-        throw ex;
+        log.error(ex.getMessage())
+        throw ex
       }
     } finally {
       if (fs != null) {
-        fs.close();
+        fs.close()
       }
 
     }
@@ -106,24 +106,24 @@ object Utils {
   	def readFile( configuration : Configuration,  filename : String) : String =  {
   		var content = ""
   		var br : BufferedReader = null
-  		var fs : FileSystem = null;
+  		var fs : FileSystem = null
   		try {
-  			val filePath = new Path(filename);
-  			fs = FileSystem.get(configuration);
-  			br = new BufferedReader(new InputStreamReader(fs.open(filePath)));
+  			val filePath = new Path(filename)
+  			fs = FileSystem.get(configuration)
+  			br = new BufferedReader(new InputStreamReader(fs.open(filePath)))
   
-  			var line = br.readLine();
+  			var line = br.readLine()
   			while (line != null) {
   				content = content + line + "\n"
-  				line = br.readLine();
+  				line = br.readLine()
   			}
-  			return content.toString().trim();
+  			return content.toString().trim()
   		} finally {
   			if (br != null) {
-  				br.close();
+  				br.close()
   			}
   			if (fs != null) {
-  				fs.close();
+  				fs.close()
   			}
   		}
   
@@ -134,35 +134,41 @@ object Utils {
   		var name = ""
   		var mutablePath = path
   		if (mutablePath.charAt(path.length() - 1) == '/')
-  			mutablePath = mutablePath.substring(0, mutablePath.length() - 1);
+  			mutablePath = mutablePath.substring(0, mutablePath.length() - 1)
   
   		if (mutablePath.contains("/"))
-  			name = mutablePath.substring(path.lastIndexOf("/") + 1, mutablePath.length());
+  			name = mutablePath.substring(path.lastIndexOf("/") + 1, mutablePath.length())
   		else
-  			name = mutablePath;
-  		return name;
+  			name = mutablePath
+  		return name
   	}
   
   	def listFiles( configuration : Configuration,  folderName : String,  comparator : Comparator[String]) : SortedSet[String] = {
-  		var fs : FileSystem = null;
-  		val allFiles : SortedSet[String]= new TreeSet[String](comparator);
+  		var fs : FileSystem = null
+  		val allFiles : SortedSet[String]= new TreeSet[String](comparator)
   		try {
-  			val folderPath = new Path(folderName);
-  			fs = FileSystem.get(configuration);
-  			val files = fs.listFiles(folderPath, false);
+  			val folderPath = new Path(folderName)
+  			fs = FileSystem.get(configuration)
+  			val files = fs.listFiles(folderPath, false)
   			while (files.hasNext()) {
-  				val file = files.next();
-  				allFiles.add(file.getPath().getName());
+  				val file = files.next()
+  				allFiles.add(file.getPath().getName())
   			}
   
-  			return allFiles;
+  			return allFiles
   
   		} finally {
   			if (fs != null) {
-  				fs.close();
+  				fs.close()
   			}
   		}
   	}
-  
+
+  def checkFileExistence(filename : String, configuration : Configuration) : Boolean = {
+    val file = new Path(filename)
+    val fs = FileSystem.newInstance(configuration)
+
+    fs.exists(file)
+  }
 
 }

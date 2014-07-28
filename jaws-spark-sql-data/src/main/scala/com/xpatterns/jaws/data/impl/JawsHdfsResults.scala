@@ -16,20 +16,20 @@ import com.xpatterns.jaws.data.utils.Utils
 
 class JawsHdfsResults(configuration: Configuration) extends TJawsResults {
 
-  val logger = Logger.getLogger("JawsHdfsResults");
-  val forcedMode = configuration.getBoolean(Utils.FORCED_MODE, false);
-  Utils.createFolderIfDoesntExist(configuration, configuration.get(Utils.RESULTS_FOLDER), forcedMode);
+  val logger = Logger.getLogger("JawsHdfsResults")
+  val forcedMode = configuration.getBoolean(Utils.FORCED_MODE, false)
+  Utils.createFolderIfDoesntExist(configuration, configuration.get(Utils.RESULTS_FOLDER), forcedMode)
 
   override def setResults(uuid: String, resultDTO: Result) {
-	  logger.debug("Writing results to query " + uuid);
-	  Utils.rewriteFile(resultDTO.toJson.toString, configuration, configuration.get(Utils.RESULTS_FOLDER) + "/" + uuid);
+	  logger.debug("Writing results to query " + uuid)
+	  Utils.rewriteFile(resultDTO.toJson.toString, configuration, configuration.get(Utils.RESULTS_FOLDER) + "/" + uuid)
   }
 
   override def getResults(uuid: String): Result = {
-    logger.debug("Reading results for query: " + uuid);
+    logger.debug("Reading results for query: " + uuid)
     implicit val formats = DefaultFormats
 
-    val resultsString = Utils.readFile(configuration, configuration.get(Utils.METAINFO_FOLDER) + "/" + uuid);
+    val resultsString = Utils.readFile(configuration, configuration.get(Utils.RESULTS_FOLDER) + "/" + uuid)
     val json = parse(resultsString)
     return json.extract[Result]
 

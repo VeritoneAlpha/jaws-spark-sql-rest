@@ -12,11 +12,11 @@ import com.xpatterns.jaws.data.DTO.QueryMetaInfo
 object Randomizer {
 
 	def  getRandomString(nr : Int) : String = {
-		return RandomStringUtils.randomAlphabetic(nr);
+		return RandomStringUtils.randomAlphabetic(nr)
 	}
 
 	def getRandomLong : Long = {
-		return RandomUtils.nextLong();
+		return RandomUtils.nextLong()
 	}
 
 	def getResult : Result = {
@@ -39,10 +39,10 @@ object Randomizer {
 	}
 
 	def getLogDTO: Log = {
-		return new Log(Randomizer.getRandomString(5000), Randomizer.getRandomString(10), Randomizer.getRandomLong);
+		return new Log(Randomizer.getRandomString(5000), Randomizer.getRandomString(10), Randomizer.getRandomLong)
 	}
 
 	def createQueryMetainfo  : QueryMetaInfo =  {
-		return new QueryMetaInfo(RandomUtils.nextLong(), RandomUtils.nextLong(), RandomUtils.nextBoolean(), RandomUtils.nextBoolean());
+		return new QueryMetaInfo(RandomUtils.nextLong(), RandomUtils.nextLong(), RandomUtils.nextBoolean(), RandomUtils.nextBoolean())
 	}
 }

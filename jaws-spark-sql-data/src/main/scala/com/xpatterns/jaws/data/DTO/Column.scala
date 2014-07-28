@@ -7,8 +7,8 @@ import spray.json.DefaultJsonProtocol._
 case class Column(name: String, dataType: String) {
 
   override def hashCode(): Int = {
-    val prime = 31;
-    var result = 1;
+    val prime = 31
+    var result = 1
     Option(name) match {
       case None => result = prime * result + 0
       case _ => result = prime * result + name.hashCode()
