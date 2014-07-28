@@ -80,6 +80,7 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
 
     logger.debug("Reading logs for query: " + queryId + " from date: " + time)
 
+    val state = getState(queryId).toString
     val folderName = configuration.get(Utils.LOGGING_FOLDER) + "/" + queryId
     var logs = Array[Log]()
     var files = Utils.listFiles(configuration, folderName, new Comparator[String]() {
@@ -104,7 +105,7 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
       }
     })
 
-    return new Logs(logs, getState(queryId).toString)
+    return new Logs(logs, state)
   }
 
   def getSubset(limit: Int, files: SortedSet[String]): List[String] = {

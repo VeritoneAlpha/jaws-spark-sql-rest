@@ -200,7 +200,7 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
 
     logger.debug("Reading logs for query: " + queryId + " from date: " + time)
     var logs = Array[Log]()
-
+    val state = getState(queryId).toString
     val key = computeRowKey(queryId)
 
     val startColumn = new Composite()
@@ -239,7 +239,7 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
                   val log = json.extract[Log]
                   logs = logs ++ Array(log)
                 })
-                return return new Logs(logs, getState(queryId).toString)
+                return return new Logs(logs, state)
               }
             }
 

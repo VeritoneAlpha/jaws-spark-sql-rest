@@ -1,13 +1,13 @@
 package traits
 
-import com.xpatterns.jaws.data.contracts.IJawsLogging
-import com.xpatterns.jaws.data.contracts.IJawsResults
+import com.xpatterns.jaws.data.contracts.TJawsLogging
+import com.xpatterns.jaws.data.contracts.TJawsResults
 
 /**
  * Created by emaorhian
  */
 trait DAL {
 
-  def loggingDal : IJawsLogging
-  def resultsDal : IJawsResults
+  def loggingDal : TJawsLogging
+  def resultsDal : TJawsResults
 }

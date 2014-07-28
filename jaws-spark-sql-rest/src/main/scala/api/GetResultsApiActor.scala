@@ -1,33 +1,26 @@
 package api
 
-import akka.actor.Actor
-import akka.actor.actorRef2Scala
-import messages.GetQueriesMessage
-import com.google.common.base.Preconditions
-import actors.LogsActor
-import akka.actor.ActorLogging
-import traits.DAL
-import com.xpatterns.jaws.data.DTO.Queries
-import com.xpatterns.jaws.data.DTO.Query
-import messages.GetLogsMessage
-import org.joda.time.DateTime
-import java.util.Collection
-impcom.xpatterns.jaws.data.DTOom.xpatterns.jaws.data.DTO.Logs
-import model.Log
-import messages.GetResultsMessage
-import com.xpatterns.jaws.data.DTO.com.xpatterns.jaws.data.DTOtMetaDTO
-import com.xpatterns.jaws.data.DTO.ResultDTO
-import model.Result
-import com.xpatterns.jaws.data.utils.Utils
-import traits.CustomSharkContext
-import actors.Configuration
-import org.apache.spark.scheduler.SharkUtils
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.hive.HiveContext
+import com.google.common.base.Preconditions
+import com.xpatterns.jaws.data.DTO.Column
+import com.xpatterns.jaws.data.DTO.Result
+import com.xpatterns.jaws.data.utils.Utils
+import actors.Configuration
+import akka.actor.Actor
+import akka.actor.ActorLogging
+import akka.actor.actorRef2Scala
+import messages.GetResultsMessage
+import net.liftweb.json._
+import net.liftweb.json.DefaultFormats
+import traits.DAL
+import org.apache.spark.scheduler.HiveUtils
+
 /**
  * Created by emaorhian
  */
-class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, customSharkContext: CustomSharkContext, dals: DAL) extends Actor {
-
+class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveContext: HiveContext, dals: DAL) extends Actor {
+ implicit val formats = DefaultFormats
   override def receive = {
 
     case message: GetResultsMessage => {
@@ -58,19 +51,22 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, customS
 
       val metaInfo = dals.loggingDal.getMetaInfo(message.queryID)
       if (metaInfo.resultsInCassandra == true) {
-        val result = dals.resultsDal.getResults(message.queryID)
+        var result = dals.resultsDal.getResults(message.queryID)
         var endIndex = offset + limit
-        if (endIndex > result.results.size()) {
-          endIndex = result.results.size()
+        if (endIndex > result.results.length) {
+          endIndex = result.results.length
         }
-        result.results = result.results.subList(offset, endIndex)
-        sender ! Result.fromResultDTO(result)
+        val res = result.results.slice(offset, endIndex)
+        sender ! new Result(result.schema, res)
 
       } else {
 
-        val schema = SharkUtils.getSchema(Utils.readFile(hdfsConf, Configuration.schemaFolder.getOrElse("jawsSchemaFolder") + "/" + message.queryID))
+        
+        val schemaString = Utils.readFile(hdfsConf, Configuration.schemaFolder.getOrElse("jawsSchemaFolder") + "/" + message.queryID)
+        val json = parse(schemaString)
+        val schema = json.extract[Array[Column]]
 
-        val resultsRDD: RDD[Tuple2[Object, Array[Object]]] = customSharkContext.sharkContext.objectFile(SharkUtils.getHDFSRddPath(message.queryID, Configuration.jawsNamenode.get))
+        val resultsRDD: RDD[Tuple2[Object, Array[Object]]] = hiveContext.sparkContext.objectFile(HiveUtils.getHDFSRddPath(message.queryID, Configuration.jawsNamenode.get))
         val filteredResults = resultsRDD.filter(tuple => tuple._1.asInstanceOf[Long] >= offset && tuple._1.asInstanceOf[Long] < offset + limit).collect()
 
         sender ! Result.fromTuples(schema, filteredResults)

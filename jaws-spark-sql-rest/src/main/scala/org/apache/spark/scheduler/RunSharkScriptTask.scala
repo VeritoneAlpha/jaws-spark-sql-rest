@@ -4,7 +4,6 @@ import traits.DAL
 import actors.Systems
 import actors.MainActors
 import shark.SharkContext
-import com.xpatterns.jaws.data.DTO.ResultDTO
 import actors.Configuration
 import actors.LogsActor.PushLogs
 import com.xpatterns.jaws.data.DTO.Result
@@ -23,7 +22,7 @@ class RunSharkScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContext,
       dals.loggingDal.setScriptDetails(uuid, hqlScript)
 
       // parse the hql into independent commands
-      val commands = SharkUtils.parseHql(hqlScript)
+      val commands = HiveUtils.parseHql(hqlScript)
       var result: Result = null
       val nrOfCommands = commands.size
 
@@ -56,7 +55,7 @@ class RunSharkScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContext,
 
       Option(result) match {
         case None => Configuration.log4j.info("[RunSharkScriptTask] result is null")
-        case _ => dals.resultsDal.setResults(uuid, result.toDTO)
+        case _ => dals.resultsDal.setResults(uuid, result)
       }
 
       message = "The total execution time was: " + formattedDuration + "!"

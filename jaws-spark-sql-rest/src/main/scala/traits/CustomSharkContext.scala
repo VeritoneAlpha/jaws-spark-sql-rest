@@ -6,6 +6,6 @@ import shark.api.JavaSharkContext
 /**
  * Created by emaorhian
  */
-trait CustomSharkContext {
+trait HiveContext {
   def sharkContext : SharkContext
 }

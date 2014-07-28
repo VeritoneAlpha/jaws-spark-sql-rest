@@ -9,22 +9,22 @@ import akka.actor.ActorLogging
 import traits.DAL
 import messages.GetDatabasesMessage
 import java.util.UUID
-import traits.CustomSharkContext
 import actors.Configuration
 import com.xpatterns.jaws.data.DTO.Result
-import org.apache.spark.scheduler.SharkUtils
+import org.apache.spark.sql.hive.HiveContext
+import org.apache.spark.scheduler.HiveUtils
 
 /**
  * Created by emaorhian
  */
-class GetDatabasesApiActor(customSharkContext: CustomSharkContext, dals: DAL) extends Actor{
+class GetDatabasesApiActor(hiveContext: HiveContext, dals: DAL) extends Actor{
 
   override def receive = {
 
     case message: GetDatabasesMessage => {
       Configuration.log4j.info("[GetDatabasesApiActor]: showing databases")
       val uuid = System.currentTimeMillis() + UUID.randomUUID().toString()
-      val databases = SharkUtils.runCmd("show databases", customSharkContext.sharkContext, uuid, dals.loggingDal)
+      val databases = HiveUtils.runCmd("show databases", hiveContext, uuid, dals.loggingDal)
 
       sender ! Result.trimResults(databases)
     }

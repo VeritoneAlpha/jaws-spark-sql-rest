@@ -24,8 +24,6 @@ import implementation.CassandraDal
 import implementation.HdfsDal
 import messages._
 import com.xpatterns.jaws.data.DTO.Queries
-import com.xpatterns.jawscom.xpatterns.jaws.data.DTO.DTO.Logs
-import model.Result
 import spray.http.HttpHeaders
 import spray.http.HttpMethods
 import spray.httpx.SprayJsonSupport._
@@ -35,12 +33,13 @@ import spray.json.DefaultJsonProtocol._
 import spray.routing.Directive.pimpApply
 import spray.routing.SimpleRoutingApp
 import spray.routing.directives.ParamDefMagnet.apply
-import traits.CustomSharkCcom.xpatterns.jaws.data.DTOt
 import traits.DAL
 import messages.GetResultsMessage
-import model.QueryInfo
 import implementation.CustomHiveContextCreator
 import implementation.CustomHiveContextCreator
+import com.xpatterns.jaws.data.DTO.Logs
+import com.xpatterns.jaws.data.DTO.Result
+import com.xpatterns.jaws.data.DTO.Query
 
 /**
  * Created by emaorhian
@@ -99,11 +98,11 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
 
     configuration.set("dfs.replication", Configuration.replicationFactor.getOrElse("1"))
 
-    configuration.set(Utils.LOGGING_FOLDER, Configuration.loggingFolder.getOrElse("jawsLogs"));
-    configuration.set(Utils.STATUS_FOLDER, Configuration.stateFolder.getOrElse("jawsStates"));
-    configuration.set(Utils.DETAILS_FOLDER, Configuration.detailsFolder.getOrElse("jawsDetails"));
-    configuration.set(Utils.METAINFO_FOLDER, Configuration.metaInfoFolder.getOrElse("jawsMetainfoFolder"));
-    configuration.set(Utils.RESULTS_FOLDER, Configuration.resultsFolder.getOrElse("jawsResultsFolder"));
+    configuration.set(Utils.LOGGING_FOLDER, Configuration.loggingFolder.getOrElse("jawsLogs"))
+    configuration.set(Utils.STATUS_FOLDER, Configuration.stateFolder.getOrElse("jawsStates"))
+    configuration.set(Utils.DETAILS_FOLDER, Configuration.detailsFolder.getOrElse("jawsDetails"))
+    configuration.set(Utils.METAINFO_FOLDER, Configuration.metaInfoFolder.getOrElse("jawsMetainfoFolder"))
+    configuration.set(Utils.RESULTS_FOLDER, Configuration.resultsFolder.getOrElse("jawsResultsFolder"))
 
     return configuration
   }
@@ -112,13 +111,13 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
   implicit val timeout = Timeout(Configuration.timeout.toInt)
 
   val getQueriesActor = createActor(Props(new GetQueriesApiActor(dals)), "GetQueries", system)
-  val runScriptActor = createActor(Props(new RunScriptApiActor(hdfsConf, customSharkContext, dals)), "RunScript", domainSystem)
+  val runScriptActor = createActor(Props(new RunScriptApiActor(hdfsConf, customSharkContext.hiveContext, dals)), "RunScript", domainSystem)
   val getLogsActor = createActor(Props(new GetLogsApiActor(dals)), "GetLogs", system)
-  val getResultsActor = createActor(Props(new GetResultsApiActor(hdfsConf, customSharkContext, dals)), "GetResults", system)
+  val getResultsActor = createActor(Props(new GetResultsApiActor(hdfsConf, customSharkContext.hiveContext, dals)), "GetResults", system)
   val getQueryInfoActor = createActor(Props(new GetQueryInfoApiActor(dals)), "GetQueryInfo", system)
-  val getDatabasesActor = createActor(Props(new GetDatabasesApiActor(customSharkContext, dals)), "GetDatabases", system)
+  val getDatabasesActor = createActor(Props(new GetDatabasesApiActor(customSharkContext.hiveContext, dals)), "GetDatabases", system)
   val cancelActor = createActor(Props(classOf[CancelActor], runScriptActor), "Cancel", cancelSystem)
-  val getTablesActor = createActor(Props(new GetTablesApiActor(customSharkContext, dals)), "GetTables", system)
+  val getTablesActor = createActor(Props(new GetTablesApiActor(customSharkContext.hiveContext, dals)), "GetTables", system)
 
   val gson = new Gson()
   val pathPrefix = "jaws"
@@ -212,7 +211,7 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
           parameters('queryID) { queryID =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
               complete {
-                val future = ask(getQueryInfoActor, GetQueryInfoMessage(queryID)).mapTo[QueryInfo]
+                val future = ask(getQueryInfoActor, GetQueryInfoMessage(queryID)).mapTo[Query]
                 future
               }
             }

@@ -7,14 +7,12 @@ import com.google.common.base.Preconditions
 import actors.LogsActor
 import akka.actor.ActorLogging
 import traits.DAL
-import com.xpatterns.jaws.data.DTO.Queries
-import com.xpatterns.jaws.data.DTO.Query
 import messages.GetLogsMessage
 import org.joda.time.DateTime
 import java.util.Collection
-impcom.xpatterns.jaws.data.DTOom.xpatterns.jaws.data.DTO.Logs
-import model.Log
 import actors.Configuration
+import com.xpatterns.jaws.data.DTO.Logs
+import com.xpatterns.jaws.data.DTO.Log
 /**
  * Created by emaorhian
  */
@@ -40,13 +38,8 @@ class GetLogsApiActor(dals: DAL) extends Actor {
         case None => limit = 100
         case _ => Configuration.log4j.debug("[GetLogsApiActor]: Limit = " + limit)
       }
-      
-      // retrieving the status earlier because otherwise we might lose the
-      // last logs
-      val status = dals.loggingDal.getState(message.queryID).name()
-      val logs = dals.loggingDal.getLogs(message.queryID, startDate, limit)
 
-      sender ! Logs(Log.getLogArray(logs), status)
+      sender ! dals.loggingDal.getLogs(message.queryID, startDate, limit)
 
     }
   }

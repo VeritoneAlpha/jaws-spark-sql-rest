@@ -11,7 +11,6 @@ import com.xpatterns.jaws.data.DTO.Queries
 import com.xpatterns.jaws.data.DTO.Query
 import messages.RunScriptMessage
 import java.util.UUID
-import traits.CustomSharkContext
 import actors.Configuration
 import akka.actor.ActorRef
 import com.google.common.cache.LoadingCache

@@ -2,24 +2,24 @@ package api
 
 import messages.GetTablesMessage
 import scala.concurrent.Await
-import traits.CustomSharkContext
 import traits.DAL
 import java.util.UUID
 import akka.actor.Actor
 import com.xpatterns.jaws.data.DTO.Result
-import akkcom.xpatterns.jaws.data.DTOl.Timeout
-import model.Tables
+import akka.util.Timeout
 import actors.Configuration
 import scala.collection.mutable.Map
 import akka.pattern.ask
 import messages.GetDatabasesMessage
-import org.apache.spark.scheduler.SharkUtils
 import messages.GetExtendedTablesMessage
+import com.xpatterns.jaws.data.DTO.Tables
+import org.apache.spark.sql.hive.HiveContext
+import org.apache.spark.scheduler.HiveUtils
 
 /**
  * Created by emaorhian
  */
-class GetTablesApiActor(customSharkContext: CustomSharkContext, dals: DAL) extends Actor {
+class GetTablesApiActor(hiveContext: HiveContext, dals: DAL) extends Actor {
   val databasesActor = context.actorSelection("/user/GetDatabases")
   implicit val timeout = Timeout(Configuration.timeout)
 
@@ -30,9 +30,9 @@ class GetTablesApiActor(customSharkContext: CustomSharkContext, dals: DAL) exten
     val useCommand = "use " + database
     val uuid = System.currentTimeMillis() + UUID.randomUUID().toString()
 
-    SharkUtils.runCmd(useCommand, customSharkContext.sharkContext, uuid, dals.loggingDal)
-    val tables = Result.trimResults(SharkUtils.runCmd("show tables", customSharkContext.sharkContext, uuid, dals.loggingDal))
-    tables.getResults.foreach(table => {
+    HiveUtils.runCmd(useCommand, hiveContext, uuid, dals.loggingDal)
+    val tables = Result.trimResults(HiveUtils.runCmd("show tables", hiveContext, uuid, dals.loggingDal))
+    tables.results.foreach(table => {
       results = results ++ getTableDescription(database, table(0), isExtended)
     })
 
@@ -44,12 +44,12 @@ class GetTablesApiActor(customSharkContext: CustomSharkContext, dals: DAL) exten
 
     val useCommand = "use " + database
     val uuid = System.currentTimeMillis() + UUID.randomUUID().toString()
-    SharkUtils.runCmd(useCommand, customSharkContext.sharkContext, uuid, dals.loggingDal)
+    HiveUtils.runCmd(useCommand, hiveContext, uuid, dals.loggingDal)
 
     Configuration.log4j.info("[GetTablesApiActor]: describing table " + table + " from database " + database)
 
     val cmd = if (isExtended) "describe extended " + table else "describe " + table
-    val description = Result.trimResults(SharkUtils.runCmd(cmd, customSharkContext.sharkContext, uuid, dals.loggingDal))
+    val description = Result.trimResults(HiveUtils.runCmd(cmd, hiveContext, uuid, dals.loggingDal))
     results.put(table, description)
 
     results
@@ -66,7 +66,7 @@ class GetTablesApiActor(customSharkContext: CustomSharkContext, dals: DAL) exten
         val future = ask(databasesActor, GetDatabasesMessage())
         val allDatabases = Await.result(future, timeout.duration).asInstanceOf[Result]
 
-        allDatabases.getResults.foreach(fields => results.put(fields(0), getTablesForDatabase(fields(0), false)))
+        allDatabases.results.foreach(fields => results.put(fields(0), getTablesForDatabase(fields(0), false)))
 
       } else {
         results.put(message.database, getTablesForDatabase(message.database, false))

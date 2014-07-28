@@ -9,7 +9,7 @@ import actors.Configuration
  */
 class CustomIndexer {
 
-  def indexRdd(rdd: RDD[Array[Object]]): RDD[Tuple2[Long, Array[Object]]] = {
+  def indexRdd(rdd: RDD[Array[String]]): RDD[Tuple2[Long, Array[String]]] = {
     val partitionCount = rdd.mapPartitionsWithIndex { (pid, iter) => Iterator((pid, iter.size)) }.collect
 
     var numberOfPartitions = partitionCount.size
@@ -31,7 +31,7 @@ class CustomIndexer {
 
     //index each row
     val indexedRdd = rdd.mapPartitionsWithIndex { (index, iterator) =>
-      var z = Array[Tuple2[Long, Array[Object]]]()
+      var z = Array[Tuple2[Long, Array[String]]]()
       var startIndex: Long = broadcastedIndexes.value(index)
       for (element <- iterator) {
         z = z ++ Array((startIndex, element))
