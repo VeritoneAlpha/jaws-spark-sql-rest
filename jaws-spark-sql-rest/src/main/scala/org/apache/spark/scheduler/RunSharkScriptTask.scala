@@ -3,7 +3,6 @@ package org.apache.spark.scheduler
 import traits.DAL
 import actors.Systems
 import actors.MainActors
-import shark.SharkContext
 import actors.Configuration
 import actors.LogsActor.PushLogs
 import com.xpatterns.jaws.data.DTO.Result
@@ -54,7 +53,7 @@ class RunSharkScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContext,
       var formattedDuration = DurationFormatUtils.formatDurationHMS(executionTime)
 
       Option(result) match {
-        case None => Configuration.log4j.info("[RunSharkScriptTask] result is null")
+        case None => Configuration.log4j.debug("[RunSharkScriptTask] result is null")
         case _ => dals.resultsDal.setResults(uuid, result)
       }
 

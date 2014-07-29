@@ -4,8 +4,6 @@ import org.apache.spark.scheduler.LoggingListener
 import actors.Configuration
 import actors.MainActors
 import actors.Systems
-import shark.SharkContext
-import shark.SharkEnv
 import traits.DAL
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.SparkContext
@@ -23,8 +21,12 @@ class CustomHiveContextCreator(dals: DAL) extends MainActors with Systems {
     sContext.addSparkListener(new LoggingListener(dals))
 
     var hiveContext = new HiveContext(sContext)
-    
+
     HiveUtils.setSharkProperties(hiveContext, this.getClass().getClassLoader().getResourceAsStream("sharkSettings.txt"))
+     
+//    var x = hiveContext.hql("show databases").collect
+//    x.foreach(println)
+   
 
     hiveContext
   }

@@ -9,6 +9,5 @@ case class Query(state: String, queryID: String, query: String)
 
 object Query {
   implicit val logJson = jsonFormat3(apply)
-  
-  
+
 }

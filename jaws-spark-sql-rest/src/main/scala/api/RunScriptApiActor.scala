@@ -22,7 +22,6 @@ import actors.MainActors
 import actors.Systems
 import scala.collection.immutable.Nil
 import com.google.common.cache.Cache
-import shark.api.JavaSharkContext
 import messages.CancelMessage
 import org.apache.spark.scheduler.RunSharkScriptTask
 import shapeless.ToInt

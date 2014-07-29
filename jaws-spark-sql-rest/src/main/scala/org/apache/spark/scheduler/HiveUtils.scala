@@ -12,8 +12,6 @@ import actors.Systems
 import customs.CustomIndexer
 import customs.CustomIndexer
 import com.xpatterns.jaws.data.DTO.Result
-import shark.api.ResultSet
-import shark.api.TableRDD
 import org.apache.spark.sql.hive.HiveContext
 import com.xpatterns.jaws.data.contracts.TJawsLogging
 import com.xpatterns.jaws.data.DTO.QueryMetaInfo
@@ -189,7 +187,7 @@ object HiveUtils {
       returnHdfsNamenode = hdfsNamenode + "/"
     }
 
-    return returnHdfsNamenode + "user/" + System.getProperty("user.name") + "/" + uuid
+    return returnHdfsNamenode + "user/" + System.getProperty("user.name") + "/" + Configuration.resultsFolder.getOrElse("jawsResultsFolder") + "/"+ uuid
   }
 
   def run(HiveContext: HiveContext, cmd: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: TJawsLogging, uuid: String): Result = {
@@ -215,9 +213,5 @@ object HiveUtils {
       }
     }
   }
-
-  //  def getSchema(schemaString: String): List[String] = {
-  //    return schemaString.split(COLUMN_SEPARATOR).toList
-  //  }
 
 }

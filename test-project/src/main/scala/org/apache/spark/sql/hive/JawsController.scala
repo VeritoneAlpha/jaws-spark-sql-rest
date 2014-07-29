@@ -1,4 +1,4 @@
-package actors
+package org.apache.spark.sql.hive
 
 import java.net.InetAddress
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -22,6 +22,7 @@ import spray.routing.directives.ParamDefMagnet.apply
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.log4j.Logger
+import org.apache.spark.sql.SchemaRDD
 
 
 /**
@@ -53,6 +54,16 @@ object JawsController extends App with SimpleRoutingApp {
 
   }
 
+    def getHDFSRddPath(uuid: String, hdfsNamenode: String): String = {
+    var returnHdfsNamenode = hdfsNamenode
+    if (hdfsNamenode.endsWith("/") == false) {
+      returnHdfsNamenode = hdfsNamenode + "/"
+    }
+
+    return returnHdfsNamenode + "user/" + System.getProperty("user.name") + "/" + uuid
+  }
+  
+  
   def getHadoopConf(): org.apache.hadoop.conf.Configuration = {
     val configuration = new org.apache.hadoop.conf.Configuration()
     
@@ -80,22 +91,28 @@ object JawsController extends App with SimpleRoutingApp {
   var sContext = new SparkContext(Configuration.sparkMaster.get, Configuration.applicationName.getOrElse("Jaws"), Configuration.sparkPath.get, jars.toSeq, Map.empty)
 
   var hiveContext = new HiveContext(sContext)
-  hiveContext.hql("show databases").collect
+//  hiveContext.hql("show databases").collect
+//  
+//  hiveContext.hql("use test")
   
-  hiveContext.hql("use test")
-  hiveContext.hql("show tables")
-  val resultRdd = hiveContext.hql("select * from varsta")
-  val resultRddSql = hiveContext.sql("select * from varsta")
- 
-  val result = resultRdd.collect
-  val resultSql = resultRddSql.collect
-   
-  val schema = resultRdd.queryExecution.analyzed.outputSet
-  println (resultRdd.schemaString)
-  schema.foreach(atr => {
-    println(atr.name + "-------------" + atr.dataType)})
+  val result = hiveContext.hql("-- uuid \n show databases").collect
+  
+//  val result = hiveContext.runSqlHive("show databases")
+  
+//  val x = hiveContext.hql("set mapreduce.job.reduces=128")
+//  val resultRdd = hiveContext.hql("select * from varsta")
+//  val resultRddSql = hiveContext.sql("select * from varsta")
+// 
+//  val result = resultRdd.collect
+//  val resultSql = resultRddSql.collect
+//   
+//  val schema = resultRdd.queryExecution.analyzed.outputSet
+//  println (resultRdd.schemaString)
+//  schema.foreach(atr => {
+//    println(atr.name + "-------------" + atr.dataType)})
   result.foreach(println)
   
+
 
 }
 object Configuration {
