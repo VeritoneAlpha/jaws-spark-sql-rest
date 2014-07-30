@@ -18,16 +18,13 @@ class CustomHiveContextCreator(dals: DAL) extends MainActors with Systems {
   val hiveContext: HiveContext = {
 
     var sContext = new SparkContext(Configuration.sparkMaster.get, Configuration.applicationName.getOrElse("Jaws"), Configuration.sparkPath.get, jars.toSeq, Map.empty)
-    sContext.addSparkListener(new LoggingListener(dals))
+//    sContext.addSparkListener(new LoggingListener(dals))
 
     var hiveContext = new HiveContext(sContext)
+    hiveContext.sparkContext.addSparkListener(new LoggingListener(dals))
 
     HiveUtils.setSharkProperties(hiveContext, this.getClass().getClassLoader().getResourceAsStream("sharkSettings.txt"))
      
-//    var x = hiveContext.hql("show databases").collect
-//    x.foreach(println)
-   
-
     hiveContext
   }
 

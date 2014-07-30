@@ -69,15 +69,13 @@ class LoggingListener(dals: DAL) extends SparkListener with MainActors with Syst
     Option(properties) match {
       case None => Configuration.log4j.info("[LoggingListener - onJobStart] properties file is null")
       case _ => {
-        val command = properties.getProperty("spark.job.description")
+        val uuid = properties.getProperty("spark.jobGroup.id")
         val jobId = arg0.jobId
         arg0.properties.setProperty(JOB_ID, jobId.toString())
-
-        // extract the uuid from comment
-        val index = command.indexOf("\n")
-        if (index >= 0) {
-          val uuid = command.substring(commentSize, index)
-          val message = "The job " + jobId + " has started. Executing command " + command
+      
+        if (!uuid.isEmpty()) {
+          
+          val message = "The job " + jobId + " has started. Executing command."
 
           jobIdToStartTimestamp.put(jobId, System.currentTimeMillis())
           jobIdToUUID.put(jobId, uuid)
@@ -214,10 +212,6 @@ class LoggingListener(dals: DAL) extends SparkListener with MainActors with Syst
     }
 
   }
-
-  //  override def onTaskGettingResult(arg0: SparkListenerTaskGettingResult) {
-  //    
-  //  }
 
   override def onStageCompleted(arg0: SparkListenerStageCompleted) {
 

@@ -63,7 +63,7 @@ object HiveUtils {
     
     def runCmd(cmd: String, hiveContext: HiveContext, uuid: String, loggingDal: TJawsLogging): Result = {
       Configuration.log4j.info("[SharkUtils]: execute the following command:" + cmd)
-      val prefix = "--" + uuid + "\n"
+      
       var cmd_trimmed: String = cmd.trim()
       val tokens = cmd_trimmed.split("\\s+")
   
@@ -82,14 +82,13 @@ object HiveUtils {
         return null
       }
   
-      cmd_trimmed = prefix + cmd_trimmed
       Configuration.log4j.info("[SharkUtils]: the command is a different command")
       return run(hiveContext, cmd_trimmed, 0, false, loggingDal, uuid)
     }
 
   def runCmdRdd(cmd: String, hiveContext: HiveContext, defaultNumberOfResults: Int, uuid: String, isLimited: Boolean, maxNumberOfResults: Long, isLastCommand: Boolean, hdfsNamenode: String, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration): Result = {
     Configuration.log4j.info("[SharkUtils]: execute the following command:" + cmd)
-    val prefix = "--" + uuid + "\n"
+
     var cmd_trimmed = cmd.trim()
     val tokens = cmd_trimmed.split("\\s+")
 
@@ -101,13 +100,11 @@ object HiveUtils {
       // ***** limited and few results -> cassandra
       if (isLimited && maxNumberOfResults <= defaultNumberOfResults) {
         cmd_trimmed = limitQuery(maxNumberOfResults, cmd_trimmed)
-        cmd_trimmed = prefix + cmd_trimmed
         return run(hiveContext, cmd_trimmed, maxNumberOfResults, isLimited, loggingDal, uuid)
       }
       // ***** limited, lots of results and last command -> hdfs
       if (isLimited && isLastCommand) {
         cmd_trimmed = limitQuery(maxNumberOfResults, cmd_trimmed)
-        cmd_trimmed = prefix + cmd_trimmed
         return runRdd(hiveContext, uuid, cmd_trimmed, hdfsNamenode, maxNumberOfResults, isLimited, loggingDal, conf)
       }
 
@@ -115,18 +112,15 @@ object HiveUtils {
       // number and cassandra
       if (isLimited) {
         cmd_trimmed = limitQuery(defaultNumberOfResults, cmd_trimmed)
-        cmd_trimmed = prefix + cmd_trimmed
         return run(hiveContext, cmd_trimmed, maxNumberOfResults, isLimited, loggingDal, uuid)
       }
 
       // ***** not limited and last command -> hdfs and not a limit
       if (isLastCommand) {
-        cmd_trimmed = prefix + cmd_trimmed
         return runRdd(hiveContext, uuid, cmd_trimmed, hdfsNamenode, maxNumberOfResults, isLimited, loggingDal, conf)
       }
       // ***** not limited and not last command -> cassandra and default
       cmd_trimmed = limitQuery(defaultNumberOfResults, cmd_trimmed)
-      cmd_trimmed = prefix + cmd_trimmed
       return run(hiveContext, cmd_trimmed, maxNumberOfResults, isLimited, loggingDal, uuid)
 
     }
@@ -138,7 +132,6 @@ object HiveUtils {
       return null
     }
 
-    cmd_trimmed = prefix + cmd_trimmed
     Configuration.log4j.info("[SharkUtils]: the command is a different command")
     return run(hiveContext, cmd_trimmed, maxNumberOfResults, isLimited, loggingDal, uuid)
   }
