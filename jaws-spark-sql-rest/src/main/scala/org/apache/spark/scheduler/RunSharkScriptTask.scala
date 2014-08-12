@@ -9,11 +9,12 @@ import com.xpatterns.jaws.data.DTO.Result
 import org.apache.commons.lang.time.DurationFormatUtils
 import com.xpatterns.jaws.data.utils.QueryState
 import org.apache.spark.sql.hive.HiveContext
+import implementation.HiveContextWrapper
 
 /**
  * Created by emaorhian
  */
-class RunSharkScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContext, uuid: String, var isCanceled: Boolean, isLimited: Boolean, maxNumberOfResults: Long, hdfsConf: org.apache.hadoop.conf.Configuration) extends Runnable with MainActors with Systems {
+class RunSharkScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrapper, uuid: String, var isCanceled: Boolean, isLimited: Boolean, maxNumberOfResults: Long, hdfsConf: org.apache.hadoop.conf.Configuration) extends Runnable with MainActors with Systems {
 
   override def run() {
     try {

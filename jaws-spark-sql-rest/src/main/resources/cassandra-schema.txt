@@ -1,6 +1,6 @@
 create keyspace xpatterns_jaws
     with strategy_options={replication_factor:1}
-    placement_strategy = 'NetworkTopologyStrategy'
+    and placement_strategy = 'NetworkTopologyStrategy'
     and strategy_options = {DC1:2,DC2:2};
 
 use xpatterns_jaws;
@@ -15,3 +15,4 @@ create column family results
 with comparator = 'UTF8Type'
 AND key_validation_class = 'Int32Type'
 AND default_validation_class = 'BytesType';
+	

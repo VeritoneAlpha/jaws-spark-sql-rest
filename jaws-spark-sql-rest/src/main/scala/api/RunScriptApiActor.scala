@@ -26,11 +26,12 @@ import messages.CancelMessage
 import org.apache.spark.scheduler.RunSharkScriptTask
 import shapeless.ToInt
 import org.apache.spark.sql.hive.HiveContext
+import implementation.HiveContextWrapper
 
 /**
  * Created by emaorhian
  */
-class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveContext: HiveContext, dals: DAL) extends Actor with MainActors with Systems {
+class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveContext: HiveContextWrapper, dals: DAL) extends Actor with MainActors with Systems {
   var taskCache: Cache[String, RunSharkScriptTask] = _
   var threadPool: ThreadPoolTaskExecutor = _
 

@@ -15,11 +15,12 @@ import messages.GetExtendedTablesMessage
 import com.xpatterns.jaws.data.DTO.Tables
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.scheduler.HiveUtils
+import implementation.HiveContextWrapper
 
 /**
  * Created by emaorhian
  */
-class GetTablesApiActor(hiveContext: HiveContext, dals: DAL) extends Actor {
+class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Actor {
   val databasesActor = context.actorSelection("/user/GetDatabases")
   implicit val timeout = Timeout(Configuration.timeout)
 
@@ -30,8 +31,8 @@ class GetTablesApiActor(hiveContext: HiveContext, dals: DAL) extends Actor {
     val useCommand = "use " + database
     val uuid = System.currentTimeMillis() + UUID.randomUUID().toString()
 
-    HiveUtils.runCmd(useCommand, hiveContext, uuid, dals.loggingDal)
-    val tables = Result.trimResults(HiveUtils.runCmd("show tables", hiveContext, uuid, dals.loggingDal))
+    HiveUtils.runMetadataCmd(hiveContext, useCommand, dals.loggingDal, uuid)
+    val tables = Result.trimResults(HiveUtils.runMetadataCmd(hiveContext, "show tables", dals.loggingDal, uuid))
     tables.results.foreach(table => {
       results = results ++ getTableDescription(database, table(0), isExtended)
     })
@@ -44,12 +45,12 @@ class GetTablesApiActor(hiveContext: HiveContext, dals: DAL) extends Actor {
 
     val useCommand = "use " + database
     val uuid = System.currentTimeMillis() + UUID.randomUUID().toString()
-    HiveUtils.runCmd(useCommand, hiveContext, uuid, dals.loggingDal)
+    HiveUtils.runMetadataCmd(hiveContext, useCommand, dals.loggingDal, uuid)
 
     Configuration.log4j.info("[GetTablesApiActor]: describing table " + table + " from database " + database)
 
     val cmd = if (isExtended) "describe extended " + table else "describe " + table
-    val description = Result.trimResults(HiveUtils.runCmd(cmd, hiveContext, uuid, dals.loggingDal))
+    val description = Result.trimResults(HiveUtils.runMetadataCmd(hiveContext, cmd, dals.loggingDal, uuid))
     results.put(table, description)
 
     results

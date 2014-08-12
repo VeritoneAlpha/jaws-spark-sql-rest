@@ -15,14 +15,14 @@ import org.apache.spark.scheduler.HiveUtils
 class CustomHiveContextCreator(dals: DAL) extends MainActors with Systems {
   val jars = Array(Configuration.jarPath.get)
 
-  val hiveContext: HiveContext = {
+  val hiveContext: HiveContextWrapper = {
 
     var sContext = new SparkContext(Configuration.sparkMaster.get, Configuration.applicationName.getOrElse("Jaws"), Configuration.sparkPath.get, jars.toSeq, Map.empty)
 //    sContext.addSparkListener(new LoggingListener(dals))
 
-    var hiveContext = new HiveContext(sContext)
+    var hiveContext = new HiveContextWrapper(sContext)
     hiveContext.sparkContext.addSparkListener(new LoggingListener(dals))
-
+    
     HiveUtils.setSharkProperties(hiveContext, this.getClass().getClassLoader().getResourceAsStream("sharkSettings.txt"))
      
     hiveContext

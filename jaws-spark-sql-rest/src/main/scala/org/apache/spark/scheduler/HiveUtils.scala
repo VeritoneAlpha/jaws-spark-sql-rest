@@ -18,9 +18,11 @@ import com.xpatterns.jaws.data.DTO.QueryMetaInfo
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import net.liftweb.json._
 import spray.json._
-
 import spray.httpx.SprayJsonSupport._
 import spray.json.DefaultJsonProtocol._
+import implementation.HiveContextWrapper
+import com.xpatterns.jaws.data.DTO.Column
+import implementation.HiveContextWrapper
 
 /**
  * Created by emaorhian
@@ -86,7 +88,7 @@ object HiveUtils {
       return run(hiveContext, cmd_trimmed, 0, false, loggingDal, uuid)
     }
 
-  def runCmdRdd(cmd: String, hiveContext: HiveContext, defaultNumberOfResults: Int, uuid: String, isLimited: Boolean, maxNumberOfResults: Long, isLastCommand: Boolean, hdfsNamenode: String, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration): Result = {
+  def runCmdRdd(cmd: String, hiveContext: HiveContextWrapper, defaultNumberOfResults: Int, uuid: String, isLimited: Boolean, maxNumberOfResults: Long, isLastCommand: Boolean, hdfsNamenode: String, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration): Result = {
     Configuration.log4j.info("[SharkUtils]: execute the following command:" + cmd)
 
     var cmd_trimmed = cmd.trim()
@@ -130,12 +132,33 @@ object HiveUtils {
       Configuration.log4j.info("[SharkUtils]: the command is a set or add")
       val resultSet = hiveContext.sql(cmd_trimmed)
       return null
-    }
+    }   
+    
+     if (tokens(0).equalsIgnoreCase("drop")) {
+       Configuration.log4j.info("[SharkUtils]: the command is a drop")
+       hiveContext.runMetadataSql(cmd_trimmed)
+       return null
+     }
+     
+     if (tokens(0).equalsIgnoreCase("create")) {
+       Configuration.log4j.info("[SharkUtils]: the command is a create")
+       hiveContext.runMetadataSql(cmd_trimmed)
+       return null
+     }
 
     Configuration.log4j.info("[SharkUtils]: the command is a different command")
     return run(hiveContext, cmd_trimmed, maxNumberOfResults, isLimited, loggingDal, uuid)
   }
 
+  def runMetadataCmd(hiveContext: HiveContextWrapper, cmd: String, loggingDal: TJawsLogging, uuid: String): Result = {
+//  Configuration.log4j.info("[SharkUtils]: the command is a " + tokens(0))
+  val result = new Array[Array[String]](1)
+  result(0) = hiveContext.runMetadataSql(cmd).toArray
+  val schema = new Array[Column](1)
+  schema(0) = new Column("result","stringType")
+  return new Result(schema, result)
+  }
+  
   def runRdd(hiveContext: HiveContext, uuid: String, cmd: String, hdfsNamenode: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration): Result = {
     // we need to run sqlToRdd. Needed for pagination
     Configuration.log4j.info("[SharkUtils]: we will execute sqlToRdd command")
