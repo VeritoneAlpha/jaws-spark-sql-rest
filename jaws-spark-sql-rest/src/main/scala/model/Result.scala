@@ -68,7 +68,7 @@ object Result {
       case None => Configuration.log4j.info("Result set is null")
       case _ => {
         // add schema
-        resultSet.schema.foreach(desc => schema = schema ++ List(desc.name))
+        resultSet.schema.foreach(desc => schema = schema ++ List(desc.name + ":" + desc.dataType))
         // add results
         resultSet.results.foreach(res => results = results ++ Array(res.map(value => {
           Option(value) match {
