@@ -1,7 +1,7 @@
 package implementation
 
-import com.xpatterns.jaws.data.contracts.IJawsLogging
-import com.xpatterns.jaws.data.contracts.IJawsResults
+import com.xpatterns.jaws.data.contracts.TJawsLogging
+import com.xpatterns.jaws.data.contracts.TJawsResults
 import com.xpatterns.jaws.data.impl.JawsCassandraLogging
 import com.xpatterns.jaws.data.impl.JawsCassandraResults
 
@@ -20,7 +20,7 @@ class CassandraDal extends DAL {
   val cluster = new ThriftCluster(Configuration.cassandraClusterName.get, cassandraHostConfigurator)
   val keyspace = HFactory.createKeyspace(Configuration.cassandraKeyspace.get, cluster, new AllOneConsistencyLevelPolicy)
 
-  val loggingDal: IJawsLogging = new JawsCassandraLogging(keyspace)
-  val resultsDal: IJawsResults = new JawsCassandraResults(keyspace)
+  val loggingDal: TJawsLogging = new JawsCassandraLogging(keyspace)
+  val resultsDal: TJawsResults = new JawsCassandraResults(keyspace)
 
 }

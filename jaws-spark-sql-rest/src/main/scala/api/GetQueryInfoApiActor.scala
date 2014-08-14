@@ -16,7 +16,7 @@ class GetQueryInfoApiActor (dals: DAL) extends Actor{
   	case message : GetQueryInfoMessage => {
       Configuration.log4j.info("[GetQueryInfoApiActor]: retrieving the query information for " + message.queryID)
 		Preconditions.checkArgument(message.queryID != null && !message.queryID.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE)
-		sender ! new QueryInfo(dals.loggingDal.getState(message.queryID).name(), message.queryID, dals.loggingDal.getScriptDetails(message.queryID))
+		sender ! new QueryInfo(dals.loggingDal.getState(message.queryID).toString(), message.queryID, dals.loggingDal.getScriptDetails(message.queryID))
     }
   }
 }

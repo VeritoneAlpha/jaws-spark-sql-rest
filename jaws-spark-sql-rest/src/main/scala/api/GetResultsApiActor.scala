@@ -13,9 +13,8 @@ import messages.GetLogsMessage
 import org.joda.time.DateTime
 import java.util.Collection
 import model.Logs
-import model.Log
 import messages.GetResultsMessage
-import com.xpatterns.jaws.data.DTO.ScriptMetaDTO
+import com.xpatterns.jaws.data.DTO.QueryMetaInfo
 import com.xpatterns.jaws.data.DTO.ResultDTO
 import model.Result
 import com.xpatterns.jaws.data.utils.Utils
@@ -60,10 +59,14 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, customS
       if (metaInfo.resultsInCassandra == true) {
         val result = dals.resultsDal.getResults(message.queryID)
         var endIndex = offset + limit
-        if (endIndex > result.results.size()) {
-          endIndex = result.results.size()
+        if (endIndex > result.results.length) {
+          endIndex = result.results.length
         }
-        result.results = result.results.subList(offset, endIndex)
+        
+//        val res = new Array[Array[String]](endIndex - offset + 1)
+        val res = new Array[Array[String]](endIndex - offset)
+        result.results.copyToArray(res, offset, endIndex)
+        result.results = res
         sender ! Result.fromResultDTO(result)
 
       } else {

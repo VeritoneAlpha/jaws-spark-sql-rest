@@ -11,6 +11,7 @@ target/*
 *.iml
 *.orig
 *.txt~
+*.dat
 src/main/webapp/resources/node_modules/
 xpatterns-data-init/application-context.xml
 atlassian-ide-plugin.xml
@@ -44,3 +45,4 @@ dependency-reduced-pom.xml
 test_warehouses
 localhost
 jawsSchemaFolder
+metastore_db

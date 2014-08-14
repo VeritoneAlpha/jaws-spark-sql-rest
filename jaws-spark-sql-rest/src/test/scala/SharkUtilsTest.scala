@@ -5,7 +5,7 @@ import org.scalatest.BeforeAndAfter
 import shark.SharkContext
 import shark.SharkEnv
 import utils.TestUtils
-import com.xpatterns.jaws.data.contracts.IJawsLogging
+import com.xpatterns.jaws.data.contracts.TJawsLogging
 import org.scalatest.FunSuite
 import org.scalamock.proxy.ProxyMockFactory
 import org.scalatest.matchers.ShouldMatchers
@@ -76,7 +76,7 @@ class SharkUtilsTest extends FunSuite with MockFactory with BeforeAndAfter with 
   }
 
   test("runCmd_test1") {
-    val loging = mock[IJawsLogging]
+    val loging = mock[TJawsLogging]
     loging.expects('setMetaInfo)(*, *)
 
     val result = SharkUtils.runCmd("show databases", sc, "uuid", loging)
@@ -87,7 +87,7 @@ class SharkUtilsTest extends FunSuite with MockFactory with BeforeAndAfter with 
   }
 
   test("runCmdRdd_test_limited and few results") {
-    val loging = mock[IJawsLogging]
+    val loging = mock[TJawsLogging]
     loging.expects('setMetaInfo)(*, *)
 
     val result = SharkUtils.runCmdRdd("select * from test", sc, 100, "uuid", true, 2, false, "localhost", loging, getHadoopConf)
@@ -98,7 +98,7 @@ class SharkUtilsTest extends FunSuite with MockFactory with BeforeAndAfter with 
   
  
    test("runCmdRdd_test_limited, lots of results and last command") {
-    val loging = mock[IJawsLogging]
+    val loging = mock[TJawsLogging]
     loging.expects('setMetaInfo)(*, *)
 
     val result = SharkUtils.runCmdRdd("select * from test", sc, 100, "uuid", true, 1000, true, "localhost", loging, getHadoopConf)
@@ -108,7 +108,7 @@ class SharkUtilsTest extends FunSuite with MockFactory with BeforeAndAfter with 
   }
    
     test("runCmdRdd_test_limited, lots of results and not last command") {
-    val loging = mock[IJawsLogging]
+    val loging = mock[TJawsLogging]
     loging.expects('setMetaInfo)(*, *)
 
     val result = SharkUtils.runCmdRdd("select * from test", sc, 3, "uuid", true, 1000, false, "localhost", loging, getHadoopConf)
@@ -119,7 +119,7 @@ class SharkUtilsTest extends FunSuite with MockFactory with BeforeAndAfter with 
   
    
    test("runCmdRdd_test_not limited and last command") {
-    val loging = mock[IJawsLogging]
+    val loging = mock[TJawsLogging]
     loging.expects('setMetaInfo)(*, *)
 
     val result = SharkUtils.runCmdRdd("select * from test", sc, 100, "uuid", false, 1000, true, "localhost", loging, getHadoopConf)
@@ -129,7 +129,7 @@ class SharkUtilsTest extends FunSuite with MockFactory with BeforeAndAfter with 
   }
    
     test("runCmdRdd_test_not limited and not last command") {
-    val loging = mock[IJawsLogging]
+    val loging = mock[TJawsLogging]
     loging.expects('setMetaInfo)(*, *)
 
     val result = SharkUtils.runCmdRdd("select * from test", sc, 2, "uuid", false, 1000, false, "localhost", loging, getHadoopConf)
@@ -139,7 +139,7 @@ class SharkUtilsTest extends FunSuite with MockFactory with BeforeAndAfter with 
   }
     
     test("runCmdRdd_test_set") {
-    val loging = mock[IJawsLogging]
+    val loging = mock[TJawsLogging]
    
     val result = SharkUtils.runCmdRdd("set test.val=1", sc, 2, "uuid", false, 1000, false, "localhost", loging, getHadoopConf)
    

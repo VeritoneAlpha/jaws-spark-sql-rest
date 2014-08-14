@@ -13,8 +13,8 @@ import messages.GetLogsMessage
 import org.joda.time.DateTime
 import java.util.Collection
 import model.Logs
-import model.Log
 import actors.Configuration
+import com.xpatterns.jaws.data.DTO.Log
 /**
  * Created by emaorhian
  */
@@ -43,10 +43,10 @@ class GetLogsApiActor(dals: DAL) extends Actor {
       
       // retrieving the status earlier because otherwise we might lose the
       // last logs
-      val status = dals.loggingDal.getState(message.queryID).name()
+      val status = dals.loggingDal.getState(message.queryID).toString()
       val logs = dals.loggingDal.getLogs(message.queryID, startDate, limit)
 
-      sender ! Logs(Log.getLogArray(logs), status)
+      sender ! Logs(logs.logs, status)
 
     }
   }

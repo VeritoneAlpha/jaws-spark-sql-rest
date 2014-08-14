@@ -1,6 +1,6 @@
 package org.apache.spark.scheduler
 
-import com.xpatterns.jaws.data.contracts.IJawsLogging
+import com.xpatterns.jaws.data.contracts.TJawsLogging
 import akka.actor.ActorRef
 import actors.Systems
 import actors.MainActors

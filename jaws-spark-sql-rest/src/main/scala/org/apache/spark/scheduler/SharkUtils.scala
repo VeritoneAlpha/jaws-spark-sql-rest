@@ -3,14 +3,11 @@ package org.apache.spark.scheduler
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
-
 import org.apache.commons.lang.RandomStringUtils
 import org.apache.commons.lang.StringUtils
-
-import com.xpatterns.jaws.data.DTO.ScriptMetaDTO
-import com.xpatterns.jaws.data.contracts.IJawsLogging
+import com.xpatterns.jaws.data.DTO.QueryMetaInfo
+import com.xpatterns.jaws.data.contracts.TJawsLogging
 import com.xpatterns.jaws.data.utils.Utils
-
 import actors.Configuration
 import actors.MainActors
 import actors.Systems
@@ -20,6 +17,8 @@ import model.Result
 import shark.SharkContext
 import shark.api.ResultSet
 import shark.api.TableRDD
+import com.xpatterns.jaws.data.DTO.Column
+import org.apache.velocity.runtime.directive.Foreach
 
 /**
  * Created by emaorhian
@@ -30,6 +29,7 @@ class SharkUtils extends MainActors with Systems {
 
 object SharkUtils {
   val COLUMN_SEPARATOR = "###"
+  val COLUMN_VALUE_SEPARATOR = "#,#"
 
   def parseHql(hql: String): List[String] = {
     var result = List[String]()
@@ -60,7 +60,7 @@ object SharkUtils {
   }
 
   
-  def runCmd(cmd: String, sharkContext: SharkContext, uuid: String, loggingDal: IJawsLogging): Result = {
+  def runCmd(cmd: String, sharkContext: SharkContext, uuid: String, loggingDal: TJawsLogging): Result = {
     Configuration.log4j.info("[SharkUtils]: execute the following command:" + cmd)
     val prefix = "--" + uuid + "\n"
     var cmd_trimmed: String = cmd.trim()
@@ -84,7 +84,7 @@ object SharkUtils {
     return run(sharkContext, cmd_trimmed, 0, false, loggingDal, uuid)
   }
 
-  def runCmdRdd(cmd: String, sharkContext: SharkContext, defaultNumberOfResults: Int, uuid: String, isLimited: Boolean, maxNumberOfResults: Long, isLastCommand: Boolean, hdfsNamenode: String, loggingDal: IJawsLogging, conf: org.apache.hadoop.conf.Configuration): Result = {
+  def runCmdRdd(cmd: String, sharkContext: SharkContext, defaultNumberOfResults: Int, uuid: String, isLimited: Boolean, maxNumberOfResults: Long, isLastCommand: Boolean, hdfsNamenode: String, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration): Result = {
     Configuration.log4j.info("[SharkUtils]: execute the following command:" + cmd)
     val prefix = "--" + uuid + "\n"
     var cmd_trimmed = cmd.trim()
@@ -140,7 +140,7 @@ object SharkUtils {
     return run(sharkContext, cmd_trimmed, maxNumberOfResults, isLimited, loggingDal, uuid)
   }
 
-  def runRdd(sharkContext: SharkContext, uuid: String, cmd: String, hdfsNamenode: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: IJawsLogging, conf: org.apache.hadoop.conf.Configuration): Result = {
+  def runRdd(sharkContext: SharkContext, uuid: String, cmd: String, hdfsNamenode: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration): Result = {
     // we need to run sqlToRdd. Needed for pagination
     Configuration.log4j.info("[SharkUtils]: we will execute sqlToRdd command")
     Configuration.log4j.info("[SharkUtils]: the final command is " + cmd)
@@ -164,7 +164,7 @@ object SharkUtils {
     val customIndexer = new CustomIndexer()
     val indexedRdd = customIndexer.indexRdd(transformedSelectRdd)
 
-    loggingDal.setMetaInfo(uuid, new ScriptMetaDTO(nbOfResults, maxNumberOfResults, false, isLimited))
+    loggingDal.setMetaInfo(uuid, new QueryMetaInfo(nbOfResults, maxNumberOfResults, false, isLimited))
 
     // write schema on hdfs
     Utils.rewriteFile(getSchema(selectRdd), conf, Configuration.schemaFolder.getOrElse("jawsSchemaFolder") + "/" + uuid)
@@ -176,7 +176,7 @@ object SharkUtils {
   def getSchema(selectRdd: TableRDD): String = {
     var schema = ""
     selectRdd.schema.foreach(column => {
-      schema = schema + column.name + COLUMN_SEPARATOR
+      schema = schema + column.name + COLUMN_VALUE_SEPARATOR + column.dataType.name + COLUMN_SEPARATOR
     })
     val lastSeparator = schema.lastIndexOf(COLUMN_SEPARATOR)
     schema.substring(0, lastSeparator)
@@ -192,10 +192,10 @@ object SharkUtils {
     return returnHdfsNamenode + "user/" + System.getProperty("user.name") + "/" + uuid
   }
 
-  def run(sharkContext: SharkContext, cmd: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: IJawsLogging, uuid: String): Result = {
+  def run(sharkContext: SharkContext, cmd: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: TJawsLogging, uuid: String): Result = {
     Configuration.log4j.info("[SharkUtils]: the final command is " + cmd)
     val resultSet = sharkContext.runSql(cmd)
-    loggingDal.setMetaInfo(uuid, new ScriptMetaDTO(resultSet.getResults.size, maxNumberOfResults, true, isLimited))
+    loggingDal.setMetaInfo(uuid, new QueryMetaInfo(resultSet.getResults.size, maxNumberOfResults, true, isLimited))
     return Result.fromResultSet(resultSet)
   }
 
@@ -214,8 +214,10 @@ object SharkUtils {
     }
   }
 
-  def getSchema(schemaString: String): List[String] = {
-    return schemaString.split(COLUMN_SEPARATOR).toList
+  def getSchema(schemaString: String): Array[Column] = {
+    val schema = Array[Column]()
+    schemaString.split(COLUMN_SEPARATOR).foreach(s => schema ++ Array(new Column(s.split(COLUMN_VALUE_SEPARATOR))))
+    return schema
   }
 
 }
