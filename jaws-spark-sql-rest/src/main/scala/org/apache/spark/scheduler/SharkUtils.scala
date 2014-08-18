@@ -215,8 +215,8 @@ object SharkUtils {
   }
 
   def getSchema(schemaString: String): Array[Column] = {
-    val schema = Array[Column]()
-    schemaString.split(COLUMN_SEPARATOR).foreach(s => schema ++ Array(new Column(s.split(COLUMN_VALUE_SEPARATOR))))
+    var schema = Array[Column]()
+    schemaString.split(COLUMN_SEPARATOR).foreach(s => { schema = schema ++ Array(new Column(s.split(COLUMN_VALUE_SEPARATOR))) })
     return schema
   }
 
