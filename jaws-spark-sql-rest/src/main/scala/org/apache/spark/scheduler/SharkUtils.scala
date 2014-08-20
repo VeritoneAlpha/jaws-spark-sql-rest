@@ -59,7 +59,6 @@ object SharkUtils {
     return result
   }
 
-  
   def runCmd(cmd: String, sharkContext: SharkContext, uuid: String, loggingDal: TJawsLogging): Result = {
     Configuration.log4j.info("[SharkUtils]: execute the following command:" + cmd)
     val prefix = "--" + uuid + "\n"
@@ -71,7 +70,7 @@ object SharkUtils {
       Configuration.log4j.info("[SharkUtils]: the maximum number of results is: " + Configuration.numberOfResults.getOrElse("100"))
       val temporaryTableName = RandomStringUtils.randomAlphabetic(10)
       // take only x results
-      cmd_trimmed = "select " + temporaryTableName + ".* from ( " + cmd_trimmed + ") " + temporaryTableName + " limit " +  Configuration.numberOfResults.getOrElse("100")
+      cmd_trimmed = "select " + temporaryTableName + ".* from ( " + cmd_trimmed + ") " + temporaryTableName + " limit " + Configuration.numberOfResults.getOrElse("100")
     } else if (tokens(0).equalsIgnoreCase("set") || tokens(0).equalsIgnoreCase("add")) {
       // we won't put an uuid
       Configuration.log4j.info("[SharkUtils]: the command is a set or add")
@@ -148,6 +147,7 @@ object SharkUtils {
     // select rdd
     val selectRdd = sharkContext.sql2rdd(cmd)
     val nbOfResults = selectRdd.count()
+    val queryLimit = selectRdd.limit
 
     // change the shark Row into Object[] -> for serialization purpose
     val transformedSelectRdd = selectRdd.map(row => {
@@ -164,12 +164,20 @@ object SharkUtils {
     val customIndexer = new CustomIndexer()
     val indexedRdd = customIndexer.indexRdd(transformedSelectRdd)
 
+    var indexedRddToSave = indexedRdd;
+    if (queryLimit > 0) {
+      Configuration.log4j.info("[SharkUtils]: limit the returned rdd with count: " + nbOfResults + " to queryLimit: " + queryLimit)
+      indexedRddToSave = indexedRdd.filter(t => t._1 < queryLimit)
+      val limitedRDDCount = indexedRddToSave.count()
+      Configuration.log4j.info("[SharkUtils]: limited RDD count: " + limitedRDDCount + " ; queryLimit is: " + queryLimit)
+    }
+
     loggingDal.setMetaInfo(uuid, new QueryMetaInfo(nbOfResults, maxNumberOfResults, false, isLimited))
 
     // write schema on hdfs
     Utils.rewriteFile(getSchema(selectRdd), conf, Configuration.schemaFolder.getOrElse("jawsSchemaFolder") + "/" + uuid)
     // save rdd on hdfs
-    indexedRdd.saveAsObjectFile(getHDFSRddPath(uuid, hdfsNamenode))
+    indexedRddToSave.saveAsObjectFile(getHDFSRddPath(uuid, hdfsNamenode))
     return null
   }
 
