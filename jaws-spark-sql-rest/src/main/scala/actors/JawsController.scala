@@ -311,6 +311,26 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
               }
             }
           }
+      } ~
+      path(pathPrefix / "tables" / "formatted") {
+        get {
+          parameters('database.as[String], 'table.?) { (database, table) =>
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+              complete {
+
+                val future = ask(getTablesActor, new GetFormattedTablesMessage(database, table.getOrElse(""))).mapTo[scala.collection.immutable.Map[String, scala.collection.immutable.Map[String, Result]]]
+                future
+              }
+            }
+          }
+        } ~
+          options {
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
+              complete {
+                "OK"
+              }
+            }
+          }
       }
 
   }

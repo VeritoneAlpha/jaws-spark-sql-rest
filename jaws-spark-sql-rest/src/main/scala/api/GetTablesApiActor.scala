@@ -15,15 +15,21 @@ import akka.pattern.ask
 import messages.GetDatabasesMessage
 import org.apache.spark.scheduler.SharkUtils
 import messages.GetExtendedTablesMessage
+import messages.GetFormattedTablesMessage
 
 /**
  * Created by emaorhian
  */
+trait DescriptionType
+case class Extended() extends DescriptionType
+case class Formatted() extends DescriptionType
+case class Regular() extends DescriptionType
+
 class GetTablesApiActor(customSharkContext: CustomSharkContext, dals: DAL) extends Actor {
   val databasesActor = context.actorSelection("/user/GetDatabases")
   implicit val timeout = Timeout(Configuration.timeout)
 
-  def getTablesForDatabase(database: String, isExtended: Boolean): Map[String, Result] = {
+  def getTablesForDatabase(database: String, isExtended: DescriptionType): Map[String, Result] = {
     var results = Map[String, Result]()
     Configuration.log4j.info("[GetTablesApiActor]: showing tables for database " + database)
 
@@ -39,7 +45,7 @@ class GetTablesApiActor(customSharkContext: CustomSharkContext, dals: DAL) exten
     results
   }
 
-  def getTableDescription(database: String, table: String, isExtended: Boolean): Map[String, Result] = {
+  def getTableDescription(database: String, table: String, isExtended: DescriptionType): Map[String, Result] = {
     var results = Map[String, Result]()
 
     val useCommand = "use " + database
@@ -47,8 +53,13 @@ class GetTablesApiActor(customSharkContext: CustomSharkContext, dals: DAL) exten
     SharkUtils.runCmd(useCommand, customSharkContext.sharkContext, uuid, dals.loggingDal)
 
     Configuration.log4j.info("[GetTablesApiActor]: describing table " + table + " from database " + database)
+    var cmd = ""
+    isExtended match {
+    	case _ : Extended => cmd = "describe extended " + table
+    	case _ : Formatted => cmd = "describe formatted " + table
+    	case _ => cmd = "describe " + table
+}
 
-    val cmd = if (isExtended) "describe extended " + table else "describe " + table
     val description = Result.trimResults(SharkUtils.runCmd(cmd, customSharkContext.sharkContext, uuid, dals.loggingDal))
     results.put(table, description)
 
@@ -66,10 +77,10 @@ class GetTablesApiActor(customSharkContext: CustomSharkContext, dals: DAL) exten
         val future = ask(databasesActor, GetDatabasesMessage())
         val allDatabases = Await.result(future, timeout.duration).asInstanceOf[Result]
 
-        allDatabases.getResults.foreach(fields => results.put(fields(0), getTablesForDatabase(fields(0), false)))
+        allDatabases.getResults.foreach(fields => results.put(fields(0), getTablesForDatabase(fields(0), new Regular)))
 
       } else {
-        results.put(message.database, getTablesForDatabase(message.database, false))
+        results.put(message.database, getTablesForDatabase(message.database, new Regular))
       }
 
       sender ! Tables.fromMutableMap(results).tables
@@ -80,10 +91,24 @@ class GetTablesApiActor(customSharkContext: CustomSharkContext, dals: DAL) exten
       var results = Map[String, Map[String, Result]]()
 
       if (Option(message.table).getOrElse("").isEmpty) {
-        results.put(message.database, getTablesForDatabase(message.database, true))
+        results.put(message.database, getTablesForDatabase(message.database, new Extended))
 
       } else {
-        results.put(message.database, getTableDescription(message.database, message.table, true))
+        results.put(message.database, getTableDescription(message.database, message.table, new Extended))
+      }
+
+      sender ! Tables.fromMutableMap(results).tables
+
+    }
+
+    case message: GetFormattedTablesMessage => {
+      var results = Map[String, Map[String, Result]]()
+
+      if (Option(message.table).getOrElse("").isEmpty) {
+        results.put(message.database, getTablesForDatabase(message.database, new Formatted))
+
+      } else {
+        results.put(message.database, getTableDescription(message.database, message.table, new Formatted))
       }
 
       sender ! Tables.fromMutableMap(results).tables
