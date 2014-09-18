@@ -16,6 +16,7 @@ import net.liftweb.json.DefaultFormats
 import com.xpatterns.jaws.data.DTO.QueryMetaInfo
 import net.liftweb.json._
 import spray.json._
+import com.xpatterns.jaws.data.utils.Utils
 
 class JawsCassandraResults(keyspace: Keyspace) extends TJawsResults {
 
@@ -28,57 +29,57 @@ class JawsCassandraResults(keyspace: Keyspace) extends TJawsResults {
   val ss = StringSerializer.get.asInstanceOf[Serializer[String]]
 
  override def getResults(uuid: String): ResultDTO = {
+   Utils.TryWithRetry {
+     logger.debug("Reading results for query: " + uuid)
 
-    logger.debug("Reading results for query: " + uuid)
+     val key = computeRowKey(uuid)
 
-    val key = computeRowKey(uuid)
+     val sliceQuery = HFactory.createSliceQuery(keyspace, is, ss, ss)
+     sliceQuery.setColumnFamily(CF_SPARK_RESULTS).setKey(key).setRange(uuid, uuid, false, 1)
 
-    val sliceQuery = HFactory.createSliceQuery(keyspace, is, ss, ss)
-    sliceQuery.setColumnFamily(CF_SPARK_RESULTS).setKey(key).setRange(uuid, uuid, false, 1)
+     val result = sliceQuery.execute()
+     Option(result) match {
+       case None => return null
+       case _ => {
+         val columnSlice = result.get()
+         Option(columnSlice) match {
+           case None => return null
+           case _ => {
+             Option(columnSlice.getColumns()) match {
+               case None => return null
+               case _ => {
 
-    val result = sliceQuery.execute()
-    Option(result) match {
-      case None => return null
-      case _ => {
-        val columnSlice = result.get()
-        Option(columnSlice) match {
-          case None => return null
-          case _ => {
-            Option(columnSlice.getColumns()) match {
-              case None => return null
-              case _ => {
+                 if (columnSlice.getColumns().size() == 0) {
+                   return null
+                 }
 
-                if (columnSlice.getColumns().size() == 0) {
-                  return null
-                }
+                 val col = columnSlice.getColumns().get(0)
+                 implicit val formats = DefaultFormats
+                 val json = parse(col.getValue())
+                 return json.extract[ResultDTO]
 
-                val col = columnSlice.getColumns().get(0)
-                implicit val formats = DefaultFormats
-                val json = parse(col.getValue())
-                return json.extract[ResultDTO]
+               }
+             }
+           }
+         }
 
-              }
-            }
-          }
-        }
-
-      }
-    }
-
+       }
+     }
+   }
   }
 
   override def setResults(uuid: String, resultDTO: ResultDTO) {
+    Utils.TryWithRetry {
+      logger.debug("Writing results to query " + uuid)
 
-    logger.debug("Writing results to query " + uuid)
+      val key = computeRowKey(uuid)
 
-    val key = computeRowKey(uuid)
+      val buffer = resultDTO.toJson.toString()
 
-    val buffer = resultDTO.toJson.toString()
-
-    val mutator = HFactory.createMutator(keyspace, is)
-    mutator.addInsertion(key, CF_SPARK_RESULTS, HFactory.createColumn(uuid, buffer, ss, StringSerializer.get.asInstanceOf[Serializer[Object]]))
-    mutator.execute()
-
+      val mutator = HFactory.createMutator(keyspace, is)
+      mutator.addInsertion(key, CF_SPARK_RESULTS, HFactory.createColumn(uuid, buffer, ss, StringSerializer.get.asInstanceOf[Serializer[Object]]))
+      mutator.execute()
+    }
   }
 
   private def computeRowKey(uuid: String): Integer = {

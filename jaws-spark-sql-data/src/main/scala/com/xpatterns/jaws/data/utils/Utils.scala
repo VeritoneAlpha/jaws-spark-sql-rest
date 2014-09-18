@@ -13,6 +13,10 @@ import java.io.InputStreamReader
 import java.util.SortedSet
 import java.util.Comparator
 import java.util.TreeSet
+import me.prettyprint.hector.api.exceptions.HectorException
+import me.prettyprint.hector.api.exceptions.HUnavailableException
+import me.prettyprint.hector.api.exceptions.HTimedOutException
+
 
 class Utils{}
 
@@ -170,5 +174,66 @@ object Utils {
 
     fs.exists(file)
   }
+
+  def TryWithRetry[A](f: => A): A = {
+    val maxRetries = 30
+    val sleepRetry = 1000
+    val logger = Logger.getLogger(this.getClass().getName())
+
+    var finished: Boolean = false
+    var result: A = null.asInstanceOf[A]
+    var retries: Integer = 0
+
+    while (!finished) {
+      try {
+        finished = true
+        result = f
+      } catch {
+        case ex: HTimedOutException =>
+        {
+          retries += 1
+          finished = false
+          logger.warn("Retrying " + retries + "/" + maxRetries + " at " + sleepRetry + "ms " + ex.getMessage())
+          try {
+            Thread.sleep(sleepRetry);
+          } catch {
+            case ex: InterruptedException => logger.warn(ex.getMessage())
+          }
+          if (retries > maxRetries)
+            throw ex
+        }
+        case ex: HUnavailableException =>
+        {
+          retries += 1
+          finished = false
+          logger.warn("Retrying " + retries + "/" + maxRetries + " at " + sleepRetry + "ms " + ex.getMessage())
+          try {
+            Thread.sleep(sleepRetry);
+          } catch {
+            case ex: InterruptedException => logger.warn(ex.getMessage())
+          }
+          if (retries > maxRetries)
+            throw ex
+        }
+        case ex: HectorException => {
+          if (ex.getMessage().contains("All host pools marked down. Retry burden pushed out to client.")) {
+            retries += 1
+            finished = false
+            logger.warn("Retrying " + retries + "/" + maxRetries + " at " + sleepRetry + "ms " + ex.getMessage() + " ")
+            try {
+              Thread.sleep(sleepRetry);
+            } catch {
+              case ex: InterruptedException => logger.warn(ex.getMessage())
+            }
+            if (retries > maxRetries)
+              throw ex
+          } else
+            throw ex;
+        }
+      }
+    }
+    result
+  }
+
 
 }
