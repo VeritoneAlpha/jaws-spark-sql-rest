@@ -69,6 +69,7 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
     System.getProperties().setProperty("spark.task.maxFailures", Configuration.sparkTaskMaxFailures.getOrElse("4"))
     System.getProperties().setProperty("spark.shuffle.consolidateFiles", Configuration.sparkShuffleConsolidateFiles.getOrElse("true"))
     System.getProperties().setProperty("spark.deploy.spreadOut", Configuration.sparkDeploySpreadOut.getOrElse("true"))
+    System.getProperties().setProperty("spark.serializer", Configuration.sparkSerializer.getOrElse("org.apache.spark.serializer.KryoSerializer"))
 
     hdfsConf = getHadoopConf
     Utils.createFolderIfDoesntExist(hdfsConf, Configuration.schemaFolder.getOrElse("jawsSchemaFolder"), false)
@@ -411,6 +412,7 @@ object Configuration {
   val sparkTaskMaxFailures = Option(sparkConf.getString("spark-task-maxFailures"))
   val sparkShuffleConsolidateFiles = Option(sparkConf.getString("spark-shuffle-consolidateFiles"))
   val sparkDeploySpreadOut = Option(sparkConf.getString("spark-deploy-spreadOut"))
+  val sparkSerializer = Option(sparkConf.getString("spark-serializer"))
 
   val LIMIT_EXCEPTION_MESSAGE: Any = "The limit is null!"
   val HQL_SCRIPT_EXCEPTION_MESSAGE: Any = "The hqlScript is empty or null!"
