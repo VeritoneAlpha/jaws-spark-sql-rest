@@ -8,7 +8,7 @@ import com.xpatterns.jaws.data.DTO.Logs
 import com.xpatterns.jaws.data.DTO.Queries
 import com.xpatterns.jaws.data.DTO.Query
 import com.xpatterns.jaws.data.contracts.TJawsLogging
-import com.xpatterns.jaws.data.utils.QueryState
+import com.xpatterns.jaws.data.utils.{Utils, QueryState}
 import me.prettyprint.cassandra.serializers.CompositeSerializer
 import me.prettyprint.cassandra.serializers.IntegerSerializer
 import me.prettyprint.cassandra.serializers.LongSerializer
@@ -54,35 +54,37 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
   val ls = LongSerializer.get.asInstanceOf[Serializer[Long]]
 
   override def setState(queryId: String, queryState: QueryState.QueryState) {
+    Utils.TryWithRetry {
 
-    logger.debug("Writing query state " + queryState.toString() + " to query " + queryId)
+      logger.debug("Writing query state " + queryState.toString() + " to query " + queryId)
 
-    val key = computeRowKey(queryId)
+      val key = computeRowKey(queryId)
 
-    val column = new Composite()
-    column.setComponent(LEVEL_UUID, queryId, ss)
-    column.setComponent(LEVEL_TYPE, TYPE_QUERY_STATE, is)
+      val column = new Composite()
+      column.setComponent(LEVEL_UUID, queryId, ss)
+      column.setComponent(LEVEL_TYPE, TYPE_QUERY_STATE, is)
 
-    val mutator = HFactory.createMutator(keyspace, is)
-    mutator.addInsertion(key, CF_SPARK_LOGS, HFactory.createColumn(column, queryState.toString(), cs, ss))
-    mutator.execute()
-
+      val mutator = HFactory.createMutator(keyspace, is)
+      mutator.addInsertion(key, CF_SPARK_LOGS, HFactory.createColumn(column, queryState.toString(), cs, ss))
+      mutator.execute()
+    }
   }
 
   override def setScriptDetails(queryId: String, scriptDetails: String) {
+    Utils.TryWithRetry {
 
-    logger.debug("Writing script details " + scriptDetails + " to query " + queryId)
+      logger.debug("Writing script details " + scriptDetails + " to query " + queryId)
 
-    val key = computeRowKey(queryId)
+      val key = computeRowKey(queryId)
 
-    val column = new Composite()
-    column.setComponent(LEVEL_TYPE, TYPE_SCRIPT_DETAILS, is)
-    column.setComponent(LEVEL_UUID, queryId, ss)
+      val column = new Composite()
+      column.setComponent(LEVEL_TYPE, TYPE_SCRIPT_DETAILS, is)
+      column.setComponent(LEVEL_UUID, queryId, ss)
 
-    val mutator = HFactory.createMutator(keyspace, is)
-    mutator.addInsertion(key, CF_SPARK_LOGS, HFactory.createColumn(column, scriptDetails, cs, ss))
-    mutator.execute()
-
+      val mutator = HFactory.createMutator(keyspace, is)
+      mutator.addInsertion(key, CF_SPARK_LOGS, HFactory.createColumn(column, scriptDetails, cs, ss))
+      mutator.execute()
+    }
   }
 
   private def computeRowKey(uuid: String): Integer = {
@@ -90,227 +92,234 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
   }
 
  override def addLog(queryId: String, jobId: String, time: Long, log: String) {
+   Utils.TryWithRetry {
 
-    logger.debug("Writing log " + log + " to query " + queryId + " at time " + time)
-    val dto = new Log(log, jobId, time)
+     logger.debug("Writing log " + log + " to query " + queryId + " at time " + time)
+     val dto = new Log(log, jobId, time)
 
-    val key = computeRowKey(queryId)
+     val key = computeRowKey(queryId)
 
-    val column = new Composite()
-    column.setComponent(LEVEL_TYPE, TYPE_LOG, is)
-    column.setComponent(LEVEL_UUID, queryId, ss)
-    column.setComponent(LEVEL_TIME_STAMP, time, ls)
+     val column = new Composite()
+     column.setComponent(LEVEL_TYPE, TYPE_LOG, is)
+     column.setComponent(LEVEL_UUID, queryId, ss)
+     column.setComponent(LEVEL_TIME_STAMP, time, ls)
 
-    val mutator = HFactory.createMutator(keyspace, is)
-    mutator.addInsertion(key, CF_SPARK_LOGS, HFactory.createColumn(column, dto.toJson.toString(), cs, StringSerializer.get.asInstanceOf[Serializer[Object]]))
-    mutator.execute()
-
+     val mutator = HFactory.createMutator(keyspace, is)
+     mutator.addInsertion(key, CF_SPARK_LOGS, HFactory.createColumn(column, dto.toJson.toString(), cs, StringSerializer.get.asInstanceOf[Serializer[Object]]))
+     mutator.execute()
+   }
   }
 
   override def getState(queryId: String): QueryState.QueryState = {
+    Utils.TryWithRetry {
 
-    logger.debug("Reading query state for query: " + queryId)
+      logger.debug("Reading query state for query: " + queryId)
 
-    val key = computeRowKey(queryId)
+      val key = computeRowKey(queryId)
 
-    val column = new Composite()
-    column.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, ComponentEquality.EQUAL)
-    column.addComponent(LEVEL_UUID, queryId, ComponentEquality.EQUAL)
+      val column = new Composite()
+      column.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, ComponentEquality.EQUAL)
+      column.addComponent(LEVEL_UUID, queryId, ComponentEquality.EQUAL)
 
-    val sliceQuery: SliceQuery[Int, Composite, String] = HFactory.createSliceQuery(keyspace, is, cs, ss)
-    sliceQuery.setColumnFamily(CF_SPARK_LOGS).setKey(key).setRange(column, column, false, 1)
+      val sliceQuery: SliceQuery[Int, Composite, String] = HFactory.createSliceQuery(keyspace, is, cs, ss)
+      sliceQuery.setColumnFamily(CF_SPARK_LOGS).setKey(key).setRange(column, column, false, 1)
 
-    val result: QueryResult[ColumnSlice[Composite, String]] = sliceQuery.execute()
+      val result: QueryResult[ColumnSlice[Composite, String]] = sliceQuery.execute()
 
-    Option(result) match {
-      case None => logger.info("No results found")
-      case _ => {
+      Option(result) match {
+        case None => logger.info("No results found")
+        case _ => {
 
-        val columnSlice: ColumnSlice[Composite, String] = result.get()
+          val columnSlice: ColumnSlice[Composite, String] = result.get()
 
-        Option(columnSlice) match {
-          case None => return QueryState.NOT_FOUND
-          case _ => {
-            Option(columnSlice.getColumns()) match {
-              case None => return QueryState.NOT_FOUND
-              case _ => {
-                if (columnSlice.getColumns().size() == 0) {
-                  return QueryState.NOT_FOUND
+          Option(columnSlice) match {
+            case None => return QueryState.NOT_FOUND
+            case _ => {
+              Option(columnSlice.getColumns()) match {
+                case None => return QueryState.NOT_FOUND
+                case _ => {
+                  if (columnSlice.getColumns().size() == 0) {
+                    return QueryState.NOT_FOUND
+                  }
+                  val col = columnSlice.getColumns().get(0)
+                  val state = col.getValue()
+
+                  return QueryState.withName(state)
+
                 }
-                val col = columnSlice.getColumns().get(0)
-                val state = col.getValue()
-
-                return QueryState.withName(state)
-
               }
             }
           }
+
         }
-
       }
-    }
 
-    return QueryState.NOT_FOUND
+      return QueryState.NOT_FOUND
+    }
   }
 
   override def getScriptDetails(queryId: String): String = {
+    Utils.TryWithRetry {
 
-    logger.debug("Reading script details for query: " + queryId)
+      logger.debug("Reading script details for query: " + queryId)
 
-    val key = computeRowKey(queryId)
+      val key = computeRowKey(queryId)
 
-    val column = new Composite()
-    column.addComponent(LEVEL_TYPE, TYPE_SCRIPT_DETAILS, ComponentEquality.EQUAL)
-    column.addComponent(LEVEL_UUID, queryId, ComponentEquality.EQUAL)
+      val column = new Composite()
+      column.addComponent(LEVEL_TYPE, TYPE_SCRIPT_DETAILS, ComponentEquality.EQUAL)
+      column.addComponent(LEVEL_UUID, queryId, ComponentEquality.EQUAL)
 
-    val sliceQuery: SliceQuery[Int, Composite, String] = HFactory.createSliceQuery(keyspace, is, cs, ss)
-    sliceQuery.setColumnFamily(CF_SPARK_LOGS).setKey(key).setRange(column, column, false, 1)
+      val sliceQuery: SliceQuery[Int, Composite, String] = HFactory.createSliceQuery(keyspace, is, cs, ss)
+      sliceQuery.setColumnFamily(CF_SPARK_LOGS).setKey(key).setRange(column, column, false, 1)
 
-    val result: QueryResult[ColumnSlice[Composite, String]] = sliceQuery.execute()
-    Option(result) match {
-      case None => return ""
-      case _ => {
-        val columnSlice: ColumnSlice[Composite, String] = result.get()
-        Option(columnSlice) match {
-          case None => return ""
-          case _ => {
-            Option(columnSlice.getColumns()) match {
-              case None => return ""
-              case _ => {
+      val result: QueryResult[ColumnSlice[Composite, String]] = sliceQuery.execute()
+      Option(result) match {
+        case None => return ""
+        case _ => {
+          val columnSlice: ColumnSlice[Composite, String] = result.get()
+          Option(columnSlice) match {
+            case None => return ""
+            case _ => {
+              Option(columnSlice.getColumns()) match {
+                case None => return ""
+                case _ => {
 
-                if (columnSlice.getColumns().size() == 0) {
-                  return ""
+                  if (columnSlice.getColumns().size() == 0) {
+                    return ""
+                  }
+                  val col: HColumn[Composite, String] = columnSlice.getColumns().get(0)
+                  val description = col.getValue()
+
+                  return description
                 }
-                val col: HColumn[Composite, String] = columnSlice.getColumns().get(0)
-                val description = col.getValue()
-
-                return description
               }
+
             }
-
           }
-        }
 
+        }
       }
     }
-
   }
 
  override def getLogs(queryId: String, time: Long, limit: Int): Logs = {
+   Utils.TryWithRetry {
 
-    logger.debug("Reading logs for query: " + queryId + " from date: " + time)
-    var logs = Array[Log]()
-    val state = getState(queryId).toString
-    val key = computeRowKey(queryId)
+     logger.debug("Reading logs for query: " + queryId + " from date: " + time)
+     var logs = Array[Log]()
+     val state = getState(queryId).toString
+     val key = computeRowKey(queryId)
 
-    val startColumn = new Composite()
-    startColumn.addComponent(LEVEL_TYPE, TYPE_LOG, ComponentEquality.EQUAL)
-    startColumn.addComponent(LEVEL_UUID, queryId, ComponentEquality.EQUAL)
-    startColumn.addComponent(LEVEL_TIME_STAMP, time, ComponentEquality.EQUAL)
+     val startColumn = new Composite()
+     startColumn.addComponent(LEVEL_TYPE, TYPE_LOG, ComponentEquality.EQUAL)
+     startColumn.addComponent(LEVEL_UUID, queryId, ComponentEquality.EQUAL)
+     startColumn.addComponent(LEVEL_TIME_STAMP, time, ComponentEquality.EQUAL)
 
-    val endColumn = new Composite()
-    endColumn.addComponent(LEVEL_TYPE, TYPE_LOG, ComponentEquality.EQUAL)
-    endColumn.addComponent(LEVEL_UUID, queryId, ComponentEquality.GREATER_THAN_EQUAL)
-    val sliceQuery: SliceQuery[Int, Composite, String] = HFactory.createSliceQuery(keyspace, is, cs, ss)
-    sliceQuery.setColumnFamily(CF_SPARK_LOGS).setKey(key).setRange(startColumn, endColumn, false, limit)
+     val endColumn = new Composite()
+     endColumn.addComponent(LEVEL_TYPE, TYPE_LOG, ComponentEquality.EQUAL)
+     endColumn.addComponent(LEVEL_UUID, queryId, ComponentEquality.GREATER_THAN_EQUAL)
+     val sliceQuery: SliceQuery[Int, Composite, String] = HFactory.createSliceQuery(keyspace, is, cs, ss)
+     sliceQuery.setColumnFamily(CF_SPARK_LOGS).setKey(key).setRange(startColumn, endColumn, false, limit)
 
-    val result: QueryResult[ColumnSlice[Composite, String]] = sliceQuery.execute()
+     val result: QueryResult[ColumnSlice[Composite, String]] = sliceQuery.execute()
 
-    Option(result) match {
-      case None => return new Logs(logs, getState(queryId).toString)
-      case _ => {
-        val columnSlice: ColumnSlice[Composite, String] = result.get()
-        Option(columnSlice) match {
-          case None => return new Logs(logs, getState(queryId).toString)
-          case _ => {
-            Option(columnSlice.getColumns()) match {
+     Option(result) match {
+       case None => return new Logs(logs, getState(queryId).toString)
+       case _ => {
+         val columnSlice: ColumnSlice[Composite, String] = result.get()
+         Option(columnSlice) match {
+           case None => return new Logs(logs, getState(queryId).toString)
+           case _ => {
+             Option(columnSlice.getColumns()) match {
 
-              case None => return new Logs(logs, getState(queryId).toString)
-              case _ => {
-                if (columnSlice.getColumns().size() == 0) {
-                  return new Logs(logs, getState(queryId).toString)
-                }
+               case None => return new Logs(logs, getState(queryId).toString)
+               case _ => {
+                 if (columnSlice.getColumns().size() == 0) {
+                   return new Logs(logs, getState(queryId).toString)
+                 }
 
-                val columns = columnSlice.getColumns().asScala
-                implicit val formats = DefaultFormats
-                columns.foreach(col => {
-                  val value = col.getValue()
-                  val json = parse(value)
-                  val log = json.extract[Log]
-                  logs = logs ++ Array(log)
-                })
-                return return new Logs(logs, state)
-              }
-            }
+                 val columns = columnSlice.getColumns().asScala
+                 implicit val formats = DefaultFormats
+                 columns.foreach(col => {
+                   val value = col.getValue()
+                   val json = parse(value)
+                   val log = json.extract[Log]
+                   logs = logs ++ Array(log)
+                 })
+                 return return new Logs(logs, state)
+               }
+             }
 
-          }
-        }
+           }
+         }
 
-      }
-    }
-
+       }
+     }
+   }
   }
 
   override def getQueriesStates(queryId: String, limit: Int): Queries = {
+    Utils.TryWithRetry {
 
-    var skipFirst = false
-    logger.debug("Reading queries states starting with the query: " + queryId)
+      var skipFirst = false
+      logger.debug("Reading queries states starting with the query: " + queryId)
 
-    val map = new TreeMap[String, Query]()
-    val stateList = Array[Query]()
-    val keysList: java.util.List[Integer] = new ArrayList[Integer]()
+      val map = new TreeMap[String, Query]()
+      val stateList = Array[Query]()
+      val keysList: java.util.List[Integer] = new ArrayList[Integer]()
 
-    for (key <- 0 until CF_SPARK_LOGS_NUMBER_OF_ROWS) {
-      keysList.add(key)
-    }
-
-    val startColumn = new Composite()
-    startColumn.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, ComponentEquality.EQUAL)
-    if (queryId != null && !queryId.isEmpty()) {
-      startColumn.addComponent(LEVEL_UUID, queryId, ComponentEquality.EQUAL)
-    }
-
-    val endColumn = new Composite()
-    if (queryId != null && !queryId.isEmpty()) {
-      endColumn.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, ComponentEquality.LESS_THAN_EQUAL)
-    } else {
-      endColumn.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, ComponentEquality.GREATER_THAN_EQUAL)
-    }
-
-    val multiSliceQuery: MultigetSliceQuery[Integer, Composite, String] = HFactory.createMultigetSliceQuery(keyspace, IntegerSerializer.get.asInstanceOf[Serializer[Integer]], cs, ss)
-    if (queryId != null && !queryId.isEmpty()) {
-      multiSliceQuery.setColumnFamily(CF_SPARK_LOGS).setKeys(keysList).setRange(startColumn, endColumn, true, limit + 1)
-      skipFirst = true
-    } else {
-      multiSliceQuery.setColumnFamily(CF_SPARK_LOGS).setKeys(keysList).setRange(endColumn, startColumn, true, limit)
-    }
-
-    val result: QueryResult[Rows[Integer, Composite, String]] = multiSliceQuery.execute()
-    val rows = result.get()
-    if (rows == null || rows.getCount() == 0) {
-      return new Queries(stateList)
-    }
-
-    val rrows = rows.asScala
-
-    rrows.foreach(row => {
-
-      val columnSlice = row.getColumnSlice()
-      if (columnSlice == null || columnSlice.getColumns() == null || columnSlice.getColumns().size() == 0) {
-
-      } else {
-        val columns = columnSlice.getColumns().asScala
-        columns.foreach(column => {
-          val name = column.getName
-          if (name.get(LEVEL_TYPE, is) == TYPE_QUERY_STATE) {
-            val query = new Query(column.getValue(), name.get(LEVEL_UUID, ss), getScriptDetails(name.get(LEVEL_UUID, ss)))
-            map.put(name.get(LEVEL_UUID, ss), query)
-          }
-        })
+      for (key <- 0 until CF_SPARK_LOGS_NUMBER_OF_ROWS) {
+        keysList.add(key)
       }
-    })
 
-    return Queries(getCollectionFromSortedMapWithLimit(map, limit, skipFirst))
+      val startColumn = new Composite()
+      startColumn.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, ComponentEquality.EQUAL)
+      if (queryId != null && !queryId.isEmpty()) {
+        startColumn.addComponent(LEVEL_UUID, queryId, ComponentEquality.EQUAL)
+      }
+
+      val endColumn = new Composite()
+      if (queryId != null && !queryId.isEmpty()) {
+        endColumn.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, ComponentEquality.LESS_THAN_EQUAL)
+      } else {
+        endColumn.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, ComponentEquality.GREATER_THAN_EQUAL)
+      }
+
+      val multiSliceQuery: MultigetSliceQuery[Integer, Composite, String] = HFactory.createMultigetSliceQuery(keyspace, IntegerSerializer.get.asInstanceOf[Serializer[Integer]], cs, ss)
+      if (queryId != null && !queryId.isEmpty()) {
+        multiSliceQuery.setColumnFamily(CF_SPARK_LOGS).setKeys(keysList).setRange(startColumn, endColumn, true, limit + 1)
+        skipFirst = true
+      } else {
+        multiSliceQuery.setColumnFamily(CF_SPARK_LOGS).setKeys(keysList).setRange(endColumn, startColumn, true, limit)
+      }
+
+      val result: QueryResult[Rows[Integer, Composite, String]] = multiSliceQuery.execute()
+      val rows = result.get()
+      if (rows == null || rows.getCount() == 0) {
+        return new Queries(stateList)
+      }
+
+      val rrows = rows.asScala
+
+      rrows.foreach(row => {
+
+        val columnSlice = row.getColumnSlice()
+        if (columnSlice == null || columnSlice.getColumns() == null || columnSlice.getColumns().size() == 0) {
+
+        } else {
+          val columns = columnSlice.getColumns().asScala
+          columns.foreach(column => {
+            val name = column.getName
+            if (name.get(LEVEL_TYPE, is) == TYPE_QUERY_STATE) {
+              val query = new Query(column.getValue(), name.get(LEVEL_UUID, ss), getScriptDetails(name.get(LEVEL_UUID, ss)))
+              map.put(name.get(LEVEL_UUID, ss), query)
+            }
+          })
+        }
+      })
+
+      return Queries(getCollectionFromSortedMapWithLimit(map, limit, skipFirst))
+    }
   }
 
   def getCollectionFromSortedMapWithLimit(map: TreeMap[String, Query], limit: Int, skipFirst: Boolean): Array[Query] = {
@@ -334,49 +343,54 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
   }
 
  override def setMetaInfo(queryId: String, metainfo: QueryMetaInfo) {
-    logger.debug("Writing script meta info " + metainfo + " to query " + queryId)
+   Utils.TryWithRetry {
 
-    val key = computeRowKey(queryId)
+     logger.debug("Writing script meta info " + metainfo + " to query " + queryId)
 
-    val column = new Composite()
-    column.setComponent(LEVEL_TYPE, TYPE_META, is)
-    column.setComponent(LEVEL_UUID, queryId, ss)
+     val key = computeRowKey(queryId)
 
-    val value = metainfo.toJson.toString
+     val column = new Composite()
+     column.setComponent(LEVEL_TYPE, TYPE_META, is)
+     column.setComponent(LEVEL_UUID, queryId, ss)
 
-    val mutator = HFactory.createMutator(keyspace, is)
+     val value = metainfo.toJson.toString
 
-    mutator.addInsertion(key, CF_SPARK_LOGS, HFactory.createColumn(column, value, cs, StringSerializer.get.asInstanceOf[Serializer[Object]]))
-    mutator.execute()
+     val mutator = HFactory.createMutator(keyspace, is)
 
+     mutator.addInsertion(key, CF_SPARK_LOGS, HFactory.createColumn(column, value, cs, StringSerializer.get.asInstanceOf[Serializer[Object]]))
+     mutator.execute()
+   }
   }
 
  override def getMetaInfo(queryId: String): QueryMetaInfo = {
-    logger.debug("Reading meta info for for query: " + queryId)
+   Utils.TryWithRetry {
 
-    val key = computeRowKey(queryId)
+     logger.debug("Reading meta info for for query: " + queryId)
 
-    val column = new Composite()
-    column.addComponent(LEVEL_TYPE, TYPE_META, ComponentEquality.EQUAL)
-    column.addComponent(LEVEL_UUID, queryId, ComponentEquality.EQUAL)
+     val key = computeRowKey(queryId)
 
-    val columnQuery = HFactory.createColumnQuery(keyspace, is, cs, ss)
-    columnQuery.setColumnFamily(CF_SPARK_LOGS).setKey(key).setName(column)
+     val column = new Composite()
+     column.addComponent(LEVEL_TYPE, TYPE_META, ComponentEquality.EQUAL)
+     column.addComponent(LEVEL_UUID, queryId, ComponentEquality.EQUAL)
 
-    val result = columnQuery.execute()
-    if (result != null) {
-      val col = result.get()
+     val columnQuery = HFactory.createColumnQuery(keyspace, is, cs, ss)
+     columnQuery.setColumnFamily(CF_SPARK_LOGS).setKey(key).setName(column)
 
-      if (col == null) {
-        return new QueryMetaInfo()
-      }
-      implicit val formats = DefaultFormats
-      val value = col.getValue()
-      val json = parse(value)
-      return json.extract[QueryMetaInfo]
-    }
+     val result = columnQuery.execute()
+     if (result != null) {
+       val col = result.get()
 
-    return new QueryMetaInfo()
+       if (col == null) {
+         return new QueryMetaInfo()
+       }
+       implicit val formats = DefaultFormats
+       val value = col.getValue()
+       val json = parse(value)
+       return json.extract[QueryMetaInfo]
+     }
+
+     return new QueryMetaInfo()
+   }
   }
 
 }
