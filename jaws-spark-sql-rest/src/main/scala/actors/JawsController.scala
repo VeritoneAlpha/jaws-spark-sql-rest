@@ -123,6 +123,24 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
   val pathPrefix = "jaws"
 
   startServer(interface = InetAddress.getLocalHost().getHostName(), port = Configuration.webServicesPort.getOrElse("8080").toInt) {
+    path(pathPrefix / "index") {
+      get {
+
+        corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+          complete {
+            "Jaws is up and running!"
+          }
+        }
+
+      } ~
+        options {
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
+            complete {
+              "OK"
+            }
+          }
+        }
+    } ~
     path(pathPrefix / "run") {
       post {
         parameters('numberOfResults.as[Int] ? 100, 'limited.as[Boolean]) { (numberOfResults, limited) =>
