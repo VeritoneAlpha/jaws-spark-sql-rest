@@ -1,6 +1,8 @@
 package actors
 
 import java.net.InetAddress
+import com.typesafe.config.Config
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.apache.log4j.Logger
 import com.google.gson.Gson
@@ -69,9 +71,21 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
     System.getProperties().setProperty("spark.task.maxFailures", Configuration.sparkTaskMaxFailures.getOrElse("4"))
     System.getProperties().setProperty("spark.shuffle.consolidateFiles", Configuration.sparkShuffleConsolidateFiles.getOrElse("true"))
     System.getProperties().setProperty("spark.deploy.spreadOut", Configuration.sparkDeploySpreadOut.getOrElse("true"))
-    System.getProperties().setProperty("spark.serializer", Configuration.sparkSerializer.getOrElse("org.apache.spark.serializer.KryoSerializer"))
-    System.getProperties().setProperty("spark.kryoserializer.buffer.mb", Configuration.sparkKryosSerializerBufferMb.getOrElse("10"))
-    System.getProperties().setProperty("spark.kryoserializer.buffer.max.mb", Configuration.sparkKryoSerializerBufferMaxMb.getOrElse("64"))
+    
+    // *******Set the kryo properties only if they exist: NO DEFAULTS FOR THEM
+    Configuration.sparkSerializer match {
+      case None => Configuration.log4j.info("spark.serializer configuration not set!")
+      case _ => System.getProperties().setProperty("spark.serializer", Configuration.sparkSerializer.get)
+    }
+    Configuration.sparkKryosSerializerBufferMb match {
+      case None => Configuration.log4j.info("spark.kryoserializer.buffer.mb configuration not set!")
+      case _ => System.getProperties().setProperty("spark.kryoserializer.buffer.mb", Configuration.sparkKryosSerializerBufferMb.get)
+    }
+    Configuration.sparkKryoSerializerBufferMaxMb match {
+      case None => Configuration.log4j.info("spark.kryoserializer.buffer.max.mb configuration not set!")
+      case _ => System.getProperties().setProperty("spark.kryoserializer.buffer.max.mb", Configuration.sparkKryoSerializerBufferMaxMb.get)
+    }
+    // *******
 
 
     hdfsConf = getHadoopConf
@@ -367,57 +381,61 @@ object Configuration {
   val cassandraConf = conf.getConfig("cassandraConf").withFallback(conf)
 
   // cassandra configuration
-  val cassandraHost = Option(cassandraConf.getString("cassandra.host"))
-  val cassandraKeyspace = Option(cassandraConf.getString("cassandra.keyspace"))
-  val cassandraClusterName = Option(cassandraConf.getString("cassandra.cluster.name"))
+  val cassandraHost = getStringConfiguration(cassandraConf, "cassandra.host")
+  val cassandraKeyspace = getStringConfiguration(cassandraConf, "cassandra.keyspace")
+  val cassandraClusterName = getStringConfiguration(cassandraConf, "cassandra.cluster.name")
+
 
   //hadoop conf 
-  val replicationFactor = Option(hadoopConf.getString("replicationFactor"))
-  val forcedMode = Option(hadoopConf.getString("forcedMode"))
-  val loggingFolder = Option(hadoopConf.getString("loggingFolder"))
-  val stateFolder = Option(hadoopConf.getString("stateFolder"))
-  val detailsFolder = Option(hadoopConf.getString("detailsFolder"))
-  val resultsFolder = Option(hadoopConf.getString("resultsFolder"))
-  val metaInfoFolder = Option(hadoopConf.getString("metaInfoFolder"))
-  val namenode = Option(hadoopConf.getString("namenode"))
+  val replicationFactor = getStringConfiguration(hadoopConf, "replicationFactor")
+  val forcedMode = getStringConfiguration(hadoopConf, "forcedMode")
+  val loggingFolder = getStringConfiguration(hadoopConf, "loggingFolder")
+  val stateFolder = getStringConfiguration(hadoopConf, "stateFolder")
+  val detailsFolder = getStringConfiguration(hadoopConf, "detailsFolder")
+  val resultsFolder = getStringConfiguration(hadoopConf, "resultsFolder")
+  val metaInfoFolder = getStringConfiguration(hadoopConf, "metaInfoFolder")
+  val namenode = getStringConfiguration(hadoopConf, "namenode")
+
 
   //app configuration
-  val loggingType = Option(appConf.getString("app.logging.type"))
-  val jawsNamenode = Option(appConf.getString("jaws.namenode"))
-  val remoteDomainActor = Option(appConf.getString("remote.domain.actor").trim())
-  val applicationName = Option(appConf.getString("application.name"))
-  val webServicesPort = Option(appConf.getString("web.services.port"))
-  val webSocketsPort = Option(appConf.getString("web.sockets.port"))
-  val nrOfThreads = Option(appConf.getString("nr.of.threads"))
-  val timeout = Option(appConf.getString("timeout")).getOrElse("10000").toInt
-  val schemaFolder = Option(appConf.getString("schemaFolder"))
-  val numberOfResults = Option(appConf.getString("nr.of.results"))
-  val corsFilterAllowedHosts = Option(appConf.getString("cors-filter-allowed-hosts"))
-  val jarPath = Option(appConf.getString("jar-path"))
+  val loggingType = getStringConfiguration(appConf, "app.logging.type")
+  val jawsNamenode = getStringConfiguration(appConf, "jaws.namenode")
+  val remoteDomainActor = getStringConfiguration(appConf, "remote.domain.actor")
+  val applicationName = getStringConfiguration(appConf, "application.name")
+  val webServicesPort = getStringConfiguration(appConf, "web.services.port")
+  val webSocketsPort = getStringConfiguration(appConf, "web.sockets.port")
+  val nrOfThreads = getStringConfiguration(appConf, "nr.of.threads")
+  val timeout = getStringConfiguration(appConf, "timeout").getOrElse("10000").toInt
+  val schemaFolder = getStringConfiguration(appConf, "schemaFolder")
+  val numberOfResults = getStringConfiguration(appConf, "nr.of.results")
+  val corsFilterAllowedHosts = getStringConfiguration(appConf, "cors-filter-allowed-hosts")
+  val jarPath = getStringConfiguration(appConf, "jar-path")
+
 
   //spark configuration
-  val sparkMaster = Option(sparkConf.getString("spark-master"))
-  val sparkPath = Option(sparkConf.getString("spark-path"))
-  val sparkExecutorMemory = Option(sparkConf.getString("spark-executor-memory"))
-  val sparkSchedulerMode = Option(sparkConf.getString("spark-scheduler-mode"))
-  val sparkMesosCoarse = Option(sparkConf.getString("spark-mesos-coarse"))
-  val sparkCoresMax = Option(sparkConf.getString("spark-cores-max"))
-  val sparkShuffleSpill = Option(sparkConf.getString("spark-shuffle-spill"))
-  val sparkDefaultParallelism = Option(sparkConf.getString("spark-default-parallelism"))
-  val sparkStorageMemoryFraction = Option(sparkConf.getString("spark-storage-memoryFraction"))
-  val sparkShuffleMemoryFraction = Option(sparkConf.getString("spark-shuffle-memoryFraction"))
-  val sparkShuffleCompress = Option(sparkConf.getString("spark-shuffle-compress"))
-  val sparkShuffleSpillCompress = Option(sparkConf.getString("spark-shuffle-spill-compress"))
-  val sparkReducerMaxMbInFlight = Option(sparkConf.getString("spark-reducer-maxMbInFlight"))
-  val sparkAkkaFrameSize = Option(sparkConf.getString("spark-akka-frameSize"))
-  val sparkAkkaThreads = Option(sparkConf.getString("spark-akka-threads"))
-  val sparkAkkaTimeout = Option(sparkConf.getString("spark-akka-timeout"))
-  val sparkTaskMaxFailures = Option(sparkConf.getString("spark-task-maxFailures"))
-  val sparkShuffleConsolidateFiles = Option(sparkConf.getString("spark-shuffle-consolidateFiles"))
-  val sparkDeploySpreadOut = Option(sparkConf.getString("spark-deploy-spreadOut"))
-  val sparkSerializer = Option(sparkConf.getString("spark-serializer"))
-  val sparkKryosSerializerBufferMb=Option(sparkConf.getString("spark-kryoserializer-buffer-mb"))
-  val sparkKryoSerializerBufferMaxMb=Option(sparkConf.getString("spark-kryoserializer-buffer-max-mb"))
+  val sparkMaster = getStringConfiguration(sparkConf, "spark-master")
+  val sparkPath = getStringConfiguration(sparkConf, "spark-path")
+  val sparkExecutorMemory = getStringConfiguration(sparkConf, "spark-executor-memory")
+  val sparkSchedulerMode = getStringConfiguration(sparkConf, "spark-scheduler-mode")
+  val sparkMesosCoarse = getStringConfiguration(sparkConf, "spark-mesos-coarse")
+  val sparkCoresMax = getStringConfiguration(sparkConf, "spark-cores-max")
+  val sparkShuffleSpill = getStringConfiguration(sparkConf, "spark-shuffle-spill")
+  val sparkDefaultParallelism = getStringConfiguration(sparkConf, "spark-default-parallelism")
+  val sparkStorageMemoryFraction = getStringConfiguration(sparkConf, "spark-storage-memoryFraction")
+  val sparkShuffleMemoryFraction = getStringConfiguration(sparkConf, "spark-shuffle-memoryFraction")
+  val sparkShuffleCompress = getStringConfiguration(sparkConf, "spark-shuffle-compress")
+  val sparkShuffleSpillCompress = getStringConfiguration(sparkConf, "spark-shuffle-spill-compress")
+  val sparkReducerMaxMbInFlight = getStringConfiguration(sparkConf, "spark-reducer-maxMbInFlight")
+  val sparkAkkaFrameSize = getStringConfiguration(sparkConf, "spark-akka-frameSize")
+  val sparkAkkaThreads = getStringConfiguration(sparkConf, "spark-akka-threads")
+  val sparkAkkaTimeout = getStringConfiguration(sparkConf, "spark-akka-timeout")
+  val sparkTaskMaxFailures = getStringConfiguration(sparkConf, "spark-task-maxFailures")
+  val sparkShuffleConsolidateFiles = getStringConfiguration(sparkConf, "spark-shuffle-consolidateFiles")
+  val sparkDeploySpreadOut = getStringConfiguration(sparkConf, "spark-deploy-spreadOut")
+  val sparkSerializer = getStringConfiguration(sparkConf, "spark-serializer")
+  val sparkKryosSerializerBufferMb = getStringConfiguration(sparkConf, "spark-kryoserializer-buffer-mb")
+  val sparkKryoSerializerBufferMaxMb = getStringConfiguration(sparkConf, "spark-kryoserializer-buffer-max-mb")
+
 
 
   val LIMIT_EXCEPTION_MESSAGE: Any = "The limit is null!"
@@ -425,4 +443,9 @@ object Configuration {
   val UUID_EXCEPTION_MESSAGE: Any = "The uuid is empty or null!"
   val LIMITED_EXCEPTION_MESSAGE: Any = "The limited flag is null!"
   val RESULSTS_NUMBER_EXCEPTION_MESSAGE: Any = "The results number is null!"
+    
+  def getStringConfiguration(configuration: Config, configurationPath: String): Option[String] = {
+    return if (configuration.hasPath(configurationPath)) Option(configuration.getString(configurationPath).trim) else Option(null)
+  }
+
 }
