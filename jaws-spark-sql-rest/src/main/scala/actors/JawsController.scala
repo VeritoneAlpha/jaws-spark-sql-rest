@@ -69,6 +69,10 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
     System.getProperties().setProperty("spark.task.maxFailures", Configuration.sparkTaskMaxFailures.getOrElse("4"))
     System.getProperties().setProperty("spark.shuffle.consolidateFiles", Configuration.sparkShuffleConsolidateFiles.getOrElse("true"))
     System.getProperties().setProperty("spark.deploy.spreadOut", Configuration.sparkDeploySpreadOut.getOrElse("true"))
+    System.getProperties().setProperty("spark.serializer", Configuration.sparkSerializer.getOrElse("org.apache.spark.serializer.KryoSerializer"))
+    System.getProperties().setProperty("spark.kryoserializer.buffer.mb", Configuration.sparkKryosSerializerBufferMb.getOrElse("10"))
+    System.getProperties().setProperty("spark.kryoserializer.buffer.max.mb", Configuration.sparkKryoSerializerBufferMaxMb.getOrElse("64"))
+
 
     hdfsConf = getHadoopConf
     Utils.createFolderIfDoesntExist(hdfsConf, Configuration.schemaFolder.getOrElse("jawsSchemaFolder"), false)
@@ -411,6 +415,10 @@ object Configuration {
   val sparkTaskMaxFailures = Option(sparkConf.getString("spark-task-maxFailures"))
   val sparkShuffleConsolidateFiles = Option(sparkConf.getString("spark-shuffle-consolidateFiles"))
   val sparkDeploySpreadOut = Option(sparkConf.getString("spark-deploy-spreadOut"))
+  val sparkSerializer = Option(sparkConf.getString("spark-serializer"))
+  val sparkKryosSerializerBufferMb=Option(sparkConf.getString("spark-kryoserializer-buffer-mb"))
+  val sparkKryoSerializerBufferMaxMb=Option(sparkConf.getString("spark-kryoserializer-buffer-max-mb"))
+
 
   val LIMIT_EXCEPTION_MESSAGE: Any = "The limit is null!"
   val HQL_SCRIPT_EXCEPTION_MESSAGE: Any = "The hqlScript is empty or null!"
