@@ -302,7 +302,7 @@ Example:
 ### Tables extended api:
 
     curl 'http://devbox.local:8181/jaws/tables/extended?database=default&table=test' -X GET
-    curl 'http://devbox.local:8181/jaws/tables?database=default' -X GET
+    curl 'http://devbox.local:8181/jaws/tables/extended?database=default' -X GET
 
 Parameters:
 
@@ -345,6 +345,203 @@ Example:
                 "Detailed Table Information", 
                 "Table(tableName:user_predictions, dbName:test, owner:root, createTime:1404128550, lastAccessTime:0, retention:0, sd:StorageDescriptor(cols:[FieldSchema(name:userid, type:int, comment:null), FieldSchema(name:moviename, type:string, comment:null)], location:hdfs://devBox.local:8020/user/hive/warehouse/test.db/user_predictions, inputFormat:org.apache.hadoop.mapred.SequenceFileInputFormat, outputFormat:org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat, compressed:false, numBuckets:-1, serdeInfo:SerDeInfo(name:null, serializationLib:org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe, parameters:{serialization.format=1}), bucketCols:[], sortCols:[], parameters:{}, skewedInfo:SkewedInfo(skewedColNames:[], skewedColValues:[], skewedColValueLocationMaps:{}), storedAsSubDirectories:false), partitionKeys:[], parameters:{numPartitions=0, numFiles=1, transient_lastDdlTime=1405336104, totalSize=1194934, numRows=29665, rawDataSize=797502}, viewOriginalText:null, viewExpandedText:null, tableType:MANAGED_TABLE)"
           ]
+       ]
+        }
+    }
+
+
+### Tables formatted api:
+
+    curl 'http://devbox.local:8181/jaws/tables/formatted?database=default&table=test' -X GET
+    curl 'http://devbox.local:8181/jaws/tables/formatted?database=default' -X GET
+
+Parameters:
+
+  * database [required] : is the database for which you want to retrieve formatted information about tables
+  *  table [not required]: is the table for which you want to retrieve formatted information
+
+
+Results:
+
+If the table parameter is set, the api returns a JSON containing the formatted information about it. Otherwise, the api will return the formatted information about all the tables inside the specified database.
+
+Example:
+
+{
+
+    "test": {
+             "user_predictions": {
+            "schema": [
+                "col_name",
+                "data_type",
+                "comment"
+            ],
+            "results": [
+                         [
+                            "# col_name",
+                            "data_type",
+                            "comment"
+                         ],
+                         [
+                             "",
+                             "",
+                             ""
+                         ],
+                        [
+                            "userid",
+                            "int",
+                            "None"
+                        ],
+                        [
+                            "moviename",
+                            "string",
+                            "None"
+                        ],
+                         [
+                          "",
+                          " ", 
+                         " "
+                       ],
+                       [
+                         "# Detailed Table Information",
+                         "",
+                         ""
+                       ],
+                       [
+                         "Database:",
+                         "test",
+                         ""
+                       ],
+                       [
+                         "Owner:",
+                         "ubuntu",
+                         ""
+                       ],
+                       [
+                         "CreateTime:",
+                         "Tue Jul 22 17:56:49 EEST 2014",
+                         ""
+                       ],
+                       [
+                         "LastAccessTime:",
+                         "UNKNOWN",
+                         ""
+                       ],
+                       [
+                         "Protect Mode:",
+                         "None",
+                         ""
+                       ],
+                       [
+                         "Retention:",
+                         "0",
+                         ""
+                       ],
+                       [
+                         "Location:",
+                         "hdfs://devbox.local:8020/user/hive/warehouse/test.db/user_predictions",
+                         ""
+                       ],
+                       [
+                         "Table Type:",
+                         "MANAGED_TABLE",
+                         ""
+                       ],
+                       [
+                         "Table Parameters:",
+                         "",
+                         ""
+                       ],
+                       [
+                         "",
+                         "numFiles",
+                         "1"
+                       ],
+                       [
+                         "",
+                         "numPartitions",
+                         "0"
+                       ],
+                       [
+                         "",
+                         "numRows",
+                         "0"
+                       ],
+                       [
+                         "",
+                         "rawDataSize",
+                         "0"
+                       ],
+                       [
+                         "",
+                         "totalSize",
+                         "34"
+                       ],
+                       [
+                         "",
+                         "transient_lastDdlTime",
+                         "1406041077"
+                       ],
+                       [
+                         "",
+                         "",
+                         ""
+                       ],
+                       [
+                         "# Storage Information",
+                         "",
+                         ""
+                       ],
+                       [
+                         "SerDe Library:",
+                         "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe",
+                         ""
+                       ],
+                       [
+                         "InputFormat:",
+                         "org.apache.hadoop.mapred.TextInputFormat",
+                         ""
+                       ],
+                       [
+                         "OutputFormat:",
+                         "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat",
+                         ""
+                       ],
+                       [
+                         "Compressed:",
+                         "No",
+                         ""
+                       ],
+                       [
+                         "Num Buckets:",
+                         "-1",
+                         ""
+                       ],
+                       [
+                         "Bucket Columns:",
+                         "[]",
+                         ""
+                       ],
+                       [
+                         "Sort Columns:",
+                         "[]",
+                         ""
+                       ],
+                       [
+                         "Storage Desc Params:",
+                         "",
+                         ""
+                       ],
+                       [
+                         "",
+                         "field.delim",
+                         ","
+                       ],
+                       [
+                         "",
+                         "serialization.format",
+                         ","
+                       ]
        ]
         }
     }
