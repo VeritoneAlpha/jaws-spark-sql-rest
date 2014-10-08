@@ -133,14 +133,8 @@ object HiveUtils {
       return null
     }
 
-    if (tokens(0).equalsIgnoreCase("drop")) {
-      Configuration.log4j.info("[SharkUtils]: the command is a drop")
-      hiveContext.runMetadataSql(cmd_trimmed)
-      return null
-    }
-
-    if (tokens(0).equalsIgnoreCase("create")) {
-      Configuration.log4j.info("[SharkUtils]: the command is a create")
+    if (tokens(0).equalsIgnoreCase("drop") || tokens(0).equalsIgnoreCase("create") || tokens(0).equalsIgnoreCase("show") || tokens(0).equalsIgnoreCase("describe")) {
+      Configuration.log4j.info("[SharkUtils]: the command is a metadata query : " + tokens(0))
       hiveContext.runMetadataSql(cmd_trimmed)
       return null
     }
@@ -153,8 +147,7 @@ object HiveUtils {
     val result = hiveContext.runMetadataSql(cmd).map(element => {
       if (element != null) {
         element.split("\t")
-      }
-      else Array(element)
+      } else Array(element)
     }).toArray
     val schema = new Array[Column](1)
     schema(0) = new Column("result", "stringType")

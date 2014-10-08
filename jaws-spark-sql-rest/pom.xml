@@ -97,35 +97,7 @@
 			<artifactId>Java-WebSocket</artifactId>
 			<version>1.3.0</version>
 		</dependency>
-		<!-- <dependency> <groupId>com.typesafe.akka</groupId> <artifactId>akka-actor_2.10</artifactId> 
-			<version>2.3.2</version> </dependency> <dependency> <groupId>com.typesafe.akka</groupId> 
-			<artifactId>akka-remote_2.10</artifactId> <version>2.3.2</version> </dependency> -->
-		<!-- <dependency>
-			<groupId>org.apache.spark</groupId>
-			<artifactId>spark-core_2.10</artifactId>
-			<version>1.0.1</version>
-			<exclusions>
-				<exclusion> <groupId>org.spark-project.akka</groupId> <artifactId>akka-actor_2.10</artifactId> 
-					</exclusion> <exclusion> <groupId>org.spark-project.akka</groupId> <artifactId>akka-remote_2.10</artifactId> 
-					</exclusion>
-				<exclusion>
-					<groupId>org.apache.zookeeper</groupId>
-					<artifactId>zookeeper</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.apache.hadoop</groupId>
-					<artifactId>hadoop-client</artifactId>
-				</exclusion>
-				<exclusion>
-					<artifactId>slf4j-log4j12</artifactId>
-					<groupId>org.slf4j</groupId>
-				</exclusion>
-				<exclusion>
-					<groupId>junit</groupId>
-					<artifactId>junit</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency> -->
+		
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-annotations</artifactId>
@@ -287,16 +259,7 @@
 							<goal>shade</goal>
 						</goals>
 						<configuration>
-							<!-- <artifactSet>
-								<includes>
-									<include>edu.berkeley.cs.shark:shark_2.10</include> <include>org.tachyonproject:tachyon</include> 
-										<include>org.slf4j:slf4j-api</include> <include>org.slf4j:slf4j-log4j12</include> 
-										<include>org.apache.thrift:libfb303</include> <include>org.spark-project.hive:hive-exec</include> 
-										<include>org.spark-project.hive:hive-metastore</include> <include>org.antlr:antlr-runtime</include>
-									<include>org.eclipse.jetty.orbit:javax.servlet</include>
-
-								</includes>
-							</artifactSet> -->
+							
 							<filters>
 								<filter>
 									<artifact>*:*</artifact>
