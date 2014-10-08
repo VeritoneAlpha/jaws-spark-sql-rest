@@ -2,10 +2,10 @@ package org.apache.spark.scheduler
 
 import scala.collection.mutable.Map
 import org.json4s.jackson.JsonMethods._
-import actors.Configuration
-import actors.LogsActor.PushLogs
-import actors.MainActors
-import actors.Systems
+import server.Configuration
+import server.LogsActor.PushLogs
+import server.MainActors
+import server.Systems
 import akka.actor.ActorRef
 import traits.DAL
 import org.apache.spark.util.JsonProtocol

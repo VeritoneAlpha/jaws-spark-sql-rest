@@ -1,7 +1,7 @@
 package utils
 
 import org.apache.log4j.Logger
-import actors.JawsController
+import server.JawsController
 import java.text.SimpleDateFormat
 import java.util.Date
 

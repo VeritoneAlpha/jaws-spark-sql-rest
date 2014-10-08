@@ -1,4 +1,4 @@
-package actors
+package server
 
 import akka.actor.Props
 import akka.actor.ActorSystem

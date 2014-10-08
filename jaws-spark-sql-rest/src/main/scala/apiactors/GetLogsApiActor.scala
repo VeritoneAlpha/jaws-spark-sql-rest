@@ -1,16 +1,16 @@
-package api
+package apiactors
 
 import akka.actor.Actor
 import akka.actor.actorRef2Scala
 import messages.GetQueriesMessage
 import com.google.common.base.Preconditions
-import actors.LogsActor
+import server.LogsActor
 import akka.actor.ActorLogging
 import traits.DAL
 import messages.GetLogsMessage
 import org.joda.time.DateTime
 import java.util.Collection
-import actors.Configuration
+import server.Configuration
 import com.xpatterns.jaws.data.DTO.Logs
 import com.xpatterns.jaws.data.DTO.Log
 /**

@@ -278,7 +278,7 @@
 
 					<programs>
 						<program>
-							<mainClass>actors.JawsController</mainClass>
+							<mainClass>server.JawsController</mainClass>
 							<name>main-jaws.sh</name>
 						</program>
 					</programs>

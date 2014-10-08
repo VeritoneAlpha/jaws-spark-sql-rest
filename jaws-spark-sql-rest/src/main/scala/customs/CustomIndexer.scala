@@ -2,7 +2,7 @@ package customs
 import scala.Array.canBuildFrom
 import scala.Iterator
 import org.apache.spark.rdd.RDD
-import actors.Configuration
+import server.Configuration
 
 /**
  * Created by emaorhian

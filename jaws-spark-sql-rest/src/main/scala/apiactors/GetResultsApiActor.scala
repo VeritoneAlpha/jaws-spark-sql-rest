@@ -1,4 +1,4 @@
-package api
+package apiactors
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.hive.HiveContext
@@ -6,7 +6,7 @@ import com.google.common.base.Preconditions
 import com.xpatterns.jaws.data.DTO.Column
 import com.xpatterns.jaws.data.DTO.Result
 import com.xpatterns.jaws.data.utils.Utils
-import actors.Configuration
+import server.Configuration
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.actorRef2Scala

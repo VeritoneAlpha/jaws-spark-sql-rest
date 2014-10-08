@@ -1,8 +1,8 @@
-package api
+package apiactors
 
 import messages.GetQueryInfoMessage
 import traits.DAL
-import actors.Configuration
+import server.Configuration
 import akka.actor.Actor
 import com.google.common.base.Preconditions
 import com.xpatterns.jaws.data.DTO.Query

@@ -1,10 +1,10 @@
 package org.apache.spark.scheduler
 
 import traits.DAL
-import actors.Systems
-import actors.MainActors
-import actors.Configuration
-import actors.LogsActor.PushLogs
+import server.Systems
+import server.MainActors
+import server.Configuration
+import server.LogsActor.PushLogs
 import com.xpatterns.jaws.data.DTO.Result
 import org.apache.commons.lang.time.DurationFormatUtils
 import com.xpatterns.jaws.data.utils.QueryState

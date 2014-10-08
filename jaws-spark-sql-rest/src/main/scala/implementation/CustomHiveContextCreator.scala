@@ -1,9 +1,9 @@
 package implementation
 
 import org.apache.spark.scheduler.LoggingListener
-import actors.Configuration
-import actors.MainActors
-import actors.Systems
+import server.Configuration
+import server.MainActors
+import server.Systems
 import traits.DAL
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.SparkContext

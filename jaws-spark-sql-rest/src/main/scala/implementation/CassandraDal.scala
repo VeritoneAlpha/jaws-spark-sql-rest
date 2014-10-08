@@ -2,7 +2,7 @@ package implementation
 
 import com.xpatterns.jaws.data.impl.JawsCassandraLogging
 import com.xpatterns.jaws.data.impl.JawsCassandraResults
-import actors.Configuration
+import server.Configuration
 import me.prettyprint.cassandra.model.AllOneConsistencyLevelPolicy
 import me.prettyprint.cassandra.service.CassandraHostConfigurator
 import me.prettyprint.cassandra.service.ThriftCluster

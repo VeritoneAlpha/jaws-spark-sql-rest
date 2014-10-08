@@ -6,9 +6,9 @@ import java.io.InputStreamReader
 import org.apache.commons.lang.RandomStringUtils
 import org.apache.commons.lang.StringUtils
 import com.xpatterns.jaws.data.utils.Utils
-import actors.Configuration
-import actors.MainActors
-import actors.Systems
+import server.Configuration
+import server.MainActors
+import server.Systems
 import customs.CustomIndexer
 import customs.CustomIndexer
 import com.xpatterns.jaws.data.DTO.Result

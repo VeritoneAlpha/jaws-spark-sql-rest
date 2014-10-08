@@ -1,4 +1,4 @@
-package actors
+package server
 import akka.actor.Actor
 import akka.actor.OneForOneStrategy
 import akka.actor.SupervisorStrategy._

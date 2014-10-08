@@ -1,4 +1,4 @@
-package actors
+package server
 
 import java.net.InetAddress
 import com.typesafe.config.Config
@@ -14,13 +14,7 @@ import akka.actor.actorRef2Scala
 import akka.pattern.ask
 import akka.util.Timeout
 import akka.util.Timeout
-import api.GetDatabasesApiActor
-import api.GetQueryInfoApiActor
-import api.GetQueriesApiActor
-import api.GetLogsApiActor
-import api.GetResultsApiActor
-import api.GetTablesApiActor
-import api.RunScriptApiActor
+import apiactors._
 import customs.CORSDirectives
 import implementation.CassandraDal
 import implementation.HdfsDal

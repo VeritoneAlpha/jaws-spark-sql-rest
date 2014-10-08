@@ -1,4 +1,4 @@
-package api
+package apiactors
 
 import messages.{GetFormattedTablesMessage, GetTablesMessage, GetDatabasesMessage, GetExtendedTablesMessage}
 import scala.concurrent.Await
@@ -7,7 +7,7 @@ import java.util.UUID
 import akka.actor.Actor
 import com.xpatterns.jaws.data.DTO.Result
 import akka.util.Timeout
-import actors.Configuration
+import server.Configuration
 import scala.collection.mutable.Map
 import akka.pattern.ask
 import com.xpatterns.jaws.data.DTO.Tables

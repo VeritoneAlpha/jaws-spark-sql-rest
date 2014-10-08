@@ -1,11 +1,11 @@
-package actors
+package server
 
 import akka.actor.{ Actor, ActorLogging }
 import scala.collection._
 import org.java_websocket.WebSocket
-import actors.ReactiveServer.Close
-import actors.ReactiveServer.Error
-import actors.ReactiveServer.Open
+import server.ReactiveServer.Close
+import server.ReactiveServer.Error
+import server.ReactiveServer.Open
 import akka.actor.actorRef2Scala
 
 /**
@@ -21,7 +21,7 @@ object LogsActor {
 
 class LogsActor extends Actor with ActorLogging {
   import LogsActor._
-  import actors.ReactiveServer._
+  import server.ReactiveServer._
 
   val uuidToClients = mutable.Map[String, mutable.ListBuffer[WebSocket]]()
 

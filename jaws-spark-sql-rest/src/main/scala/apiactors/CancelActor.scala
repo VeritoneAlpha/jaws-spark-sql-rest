@@ -1,15 +1,8 @@
-package actors
+package apiactors
 
-import akka.actor.Actor
-import akka.actor.OneForOneStrategy
-import akka.actor.SupervisorStrategy._
-import scala.concurrent.duration._
-import akka.actor.Props
-import akka.actor.actorRef2Scala
-import akka.actor.ActorSystem
-import akka.actor.ActorRef
+import server.Configuration
+import akka.actor.{Actor, ActorRef, ActorSelection, actorRef2Scala}
 import messages.CancelMessage
-import akka.actor.ActorSelection
 
 /**
  * Created by emaorhian
@@ -27,7 +20,7 @@ class CancelActor(domainActor: ActorRef) extends Actor {
       domainActor ! mes
       Option(remoteDomain) match {
         case None => Configuration.log4j.info("[CancelActor] There aren't any remote domains to send the cancel message to!")
-        case _ => remoteDomain.map { dom => dom ! mes; dom }
+        case _ => remoteDomain.foreach { dom => dom ! mes }
       }
   }
 
