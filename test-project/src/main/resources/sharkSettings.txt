@@ -1,2 +1,0 @@
-set mapreduce.job.reduces=128
-set shark.column.compress=true
