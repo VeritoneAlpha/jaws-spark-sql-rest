@@ -70,6 +70,7 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
     System.getProperties().setProperty("spark.task.maxFailures", Configuration.sparkTaskMaxFailures.getOrElse("4"))
     System.getProperties().setProperty("spark.shuffle.consolidateFiles", Configuration.sparkShuffleConsolidateFiles.getOrElse("true"))
     System.getProperties().setProperty("spark.deploy.spreadOut", Configuration.sparkDeploySpreadOut.getOrElse("true"))
+    System.getProperties().setProperty("spark.kryo.referenceTracking", Configuration.sparkKryoReferenceTracking.getOrElse("false"))
 
     // *******Set the kryo properties only if they exist: NO DEFAULTS FOR IT
     Configuration.sparkSerializer match {
@@ -430,6 +431,7 @@ object Configuration {
   val sparkSerializer = getStringConfiguration(sparkConf, "spark-serializer")
   val sparkKryosSerializerBufferMb = getStringConfiguration(sparkConf, "spark-kryoserializer-buffer-mb")
   val sparkKryoSerializerBufferMaxMb = getStringConfiguration(sparkConf, "spark-kryoserializer-buffer-max-mb")
+  val sparkKryoReferenceTracking = getStringConfiguration(sparkConf, "spark-kryo-referenceTracking")
 
   val LIMIT_EXCEPTION_MESSAGE: Any = "The limit is null!"
   val HQL_SCRIPT_EXCEPTION_MESSAGE: Any = "The hqlScript is empty or null!"
