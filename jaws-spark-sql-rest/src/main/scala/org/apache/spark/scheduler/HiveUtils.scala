@@ -77,7 +77,6 @@ object HiveUtils {
     } else if (tokens(0).equalsIgnoreCase("set") || tokens(0).equalsIgnoreCase("add")) {
       // we won't put an uuid
       Configuration.log4j.info("[SharkUtils]: the command is a set or add")
-      hiveContext.hql("")
       val resultSet = hiveContext.hql(cmd_trimmed).collect
 
       return null
@@ -133,14 +132,8 @@ object HiveUtils {
       return null
     }
 
-    if (tokens(0).equalsIgnoreCase("drop")) {
-      Configuration.log4j.info("[SharkUtils]: the command is a drop")
-      hiveContext.runMetadataSql(cmd_trimmed)
-      return null
-    }
-
-    if (tokens(0).equalsIgnoreCase("create")) {
-      Configuration.log4j.info("[SharkUtils]: the command is a create")
+    if (tokens(0).equalsIgnoreCase("drop") || tokens(0).equalsIgnoreCase("create") || tokens(0).equalsIgnoreCase("show") || tokens(0).equalsIgnoreCase("describe")) {
+      Configuration.log4j.info("[SharkUtils]: the command is a metadata query : " + tokens(0))
       hiveContext.runMetadataSql(cmd_trimmed)
       return null
     }
@@ -208,9 +201,9 @@ object HiveUtils {
     return returnHdfsNamenode + "user/" + System.getProperty("user.name") + "/" + Configuration.resultsFolder.getOrElse("jawsResultsFolder") + "/" + uuid
   }
 
-  def run(HiveContext: HiveContext, cmd: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: TJawsLogging, uuid: String): Result = {
+  def run(hiveContext: HiveContext, cmd: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: TJawsLogging, uuid: String): Result = {
     Configuration.log4j.info("[SharkUtils]: the final command is " + cmd)
-    val resultRdd = HiveContext.hql(cmd)
+    val resultRdd = hiveContext.hql(cmd)
     val result = resultRdd.collect
     val schema = resultRdd.queryExecution.analyzed.outputSet
     loggingDal.setMetaInfo(uuid, new QueryMetaInfo(result.size, maxNumberOfResults, true, isLimited))

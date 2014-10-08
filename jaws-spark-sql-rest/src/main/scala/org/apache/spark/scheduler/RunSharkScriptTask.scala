@@ -65,7 +65,7 @@ class RunSharkScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextW
 
     } catch {
       case e: Exception => {
-        Configuration.log4j.error(e.getMessage())
+        Configuration.log4j.error(e.getStackTraceString)
         throw new RuntimeException(e)
       }
     }
@@ -83,9 +83,9 @@ class RunSharkScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextW
       return result
     } catch {
       case e: Exception => {
-        Configuration.log4j.error(e.getMessage())
-        dals.loggingDal.addLog(uuid, "hql", System.currentTimeMillis(), e.getMessage())
-        logsActor ! PushLogs(uuid, e.getMessage())
+        Configuration.log4j.error(e.getStackTraceString)
+        dals.loggingDal.addLog(uuid, "hql", System.currentTimeMillis(), e.getStackTraceString)
+        logsActor ! PushLogs(uuid, e.getStackTraceString)
         dals.loggingDal.setState(uuid, QueryState.FAILED)
         throw new RuntimeException(e)
       }

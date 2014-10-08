@@ -1,3 +1,2 @@
 set mapreduce.job.reduces=128
 set hive.column.compress=true
-show databases

@@ -93,7 +93,7 @@ object Utils {
       fs.rename(temporaryFile, file)
     } catch {
       case ex: Exception => {
-        log.error(ex.getMessage())
+        log.error(ex.getStackTraceString)
         throw ex
       }
     } finally {
@@ -190,11 +190,11 @@ object Utils {
         {
           retries += 1
           finished = false
-          logger.warn("Retrying " + retries + "/" + maxRetries + " at " + sleepRetry + "ms " + ex.getMessage())
+          logger.warn("Retrying " + retries + "/" + maxRetries + " at " + sleepRetry + "ms " + ex.getStackTraceString)
           try {
             Thread.sleep(sleepRetry);
           } catch {
-            case ex: InterruptedException => logger.warn(ex.getMessage())
+            case ex: InterruptedException => logger.warn(ex.getStackTraceString)
           }
           if (retries > maxRetries)
             throw ex
@@ -203,11 +203,11 @@ object Utils {
         {
           retries += 1
           finished = false
-          logger.warn("Retrying " + retries + "/" + maxRetries + " at " + sleepRetry + "ms " + ex.getMessage())
+          logger.warn("Retrying " + retries + "/" + maxRetries + " at " + sleepRetry + "ms " + ex.getStackTraceString)
           try {
             Thread.sleep(sleepRetry);
           } catch {
-            case ex: InterruptedException => logger.warn(ex.getMessage())
+            case ex: InterruptedException => logger.warn(ex.getStackTraceString)
           }
           if (retries > maxRetries)
             throw ex
