@@ -36,10 +36,10 @@ object HiveUtils {
 
   def parseHql(hql: String): List[String] = {
     var result = List[String]()
-    Configuration.log4j.info("[SharkUtils]: processing the following script:" + hql)
+    Configuration.log4j.info("[HiveUtils]: processing the following script:" + hql)
     var command: String = ""
     Option(hql) match {
-      case None => Configuration.log4j.info("[SharkUtils] hql is null")
+      case None => Configuration.log4j.info("[HiveUtils] hql is null")
       case _ => {
         hql.split(";").foreach(oneCmd => {
           val trimmedCmd = oneCmd.trim()
@@ -63,39 +63,39 @@ object HiveUtils {
   }
 
   def runCmd(cmd: String, hiveContext: HiveContext, uuid: String, loggingDal: TJawsLogging): Result = {
-    Configuration.log4j.info("[SharkUtils]: execute the following command:" + cmd)
+    Configuration.log4j.info("[HiveUtils]: execute the following command:" + cmd)
 
     var cmd_trimmed: String = cmd.trim()
     val tokens = cmd_trimmed.split("\\s+")
 
     if (tokens(0).equalsIgnoreCase("select")) {
-      Configuration.log4j.info("[SharkUtils]: the command is a select")
-      Configuration.log4j.info("[SharkUtils]: the maximum number of results is: " + Configuration.numberOfResults.getOrElse("100"))
+      Configuration.log4j.info("[HiveUtils]: the command is a select")
+      Configuration.log4j.info("[HiveUtils]: the maximum number of results is: " + Configuration.numberOfResults.getOrElse("100"))
       val temporaryTableName = RandomStringUtils.randomAlphabetic(10)
       // take only x results
       cmd_trimmed = "select " + temporaryTableName + ".* from ( " + cmd_trimmed + ") " + temporaryTableName + " limit " + Configuration.numberOfResults.getOrElse("100")
     } else if (tokens(0).equalsIgnoreCase("set") || tokens(0).equalsIgnoreCase("add")) {
       // we won't put an uuid
-      Configuration.log4j.info("[SharkUtils]: the command is a set or add")
+      Configuration.log4j.info("[HiveUtils]: the command is a set or add")
       val resultSet = hiveContext.hql(cmd_trimmed).collect
 
       return null
     }
 
-    Configuration.log4j.info("[SharkUtils]: the command is a different command")
+    Configuration.log4j.info("[HiveUtils]: the command is a different command")
     return run(hiveContext, cmd_trimmed, 0, false, loggingDal, uuid)
   }
 
   def runCmdRdd(cmd: String, hiveContext: HiveContextWrapper, defaultNumberOfResults: Int, uuid: String, isLimited: Boolean, maxNumberOfResults: Long, isLastCommand: Boolean, hdfsNamenode: String, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration): Result = {
-    Configuration.log4j.info("[SharkUtils]: execute the following command:" + cmd)
+    Configuration.log4j.info("[HiveUtils]: execute the following command:" + cmd)
 
     var cmd_trimmed = cmd.trim()
     val tokens = cmd_trimmed.split("\\s+")
 
     if (tokens(0).equalsIgnoreCase("select")) {
 
-      Configuration.log4j.info("[SharkUtils]: the command is a select")
-      Configuration.log4j.info("[SharkUtils]: the default number of results is: " + defaultNumberOfResults + " while the maximum number of results is " + maxNumberOfResults)
+      Configuration.log4j.info("[HiveUtils]: the command is a select")
+      Configuration.log4j.info("[HiveUtils]: the default number of results is: " + defaultNumberOfResults + " while the maximum number of results is " + maxNumberOfResults)
 
       // ***** limited and few results -> cassandra
       if (isLimited && maxNumberOfResults <= defaultNumberOfResults) {
@@ -127,18 +127,18 @@ object HiveUtils {
 
     if (tokens(0).equalsIgnoreCase("set") || tokens(0).equalsIgnoreCase("add")) {
       // we won't put an uuid
-      Configuration.log4j.info("[SharkUtils]: the command is a set or add")
+      Configuration.log4j.info("[HiveUtils]: the command is a set or add")
       val resultSet = hiveContext.sql(cmd_trimmed)
       return null
     }
 
     if (tokens(0).equalsIgnoreCase("drop") || tokens(0).equalsIgnoreCase("create") || tokens(0).equalsIgnoreCase("show") || tokens(0).equalsIgnoreCase("describe")) {
-      Configuration.log4j.info("[SharkUtils]: the command is a metadata query : " + tokens(0))
+      Configuration.log4j.info("[HiveUtils]: the command is a metadata query : " + tokens(0))
       hiveContext.runMetadataSql(cmd_trimmed)
       return null
     }
 
-    Configuration.log4j.info("[SharkUtils]: the command is a different command")
+    Configuration.log4j.info("[HiveUtils]: the command is a different command")
     return run(hiveContext, cmd_trimmed, maxNumberOfResults, isLimited, loggingDal, uuid)
   }
 
@@ -156,8 +156,8 @@ object HiveUtils {
 
   def runRdd(hiveContext: HiveContext, uuid: String, cmd: String, hdfsNamenode: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration): Result = {
     // we need to run sqlToRdd. Needed for pagination
-    Configuration.log4j.info("[SharkUtils]: we will execute sqlToRdd command")
-    Configuration.log4j.info("[SharkUtils]: the final command is " + cmd)
+    Configuration.log4j.info("[HiveUtils]: we will execute sqlToRdd command")
+    Configuration.log4j.info("[HiveUtils]: the final command is " + cmd)
 
     // select rdd
     val selectRdd = hiveContext.hql(cmd)
@@ -202,7 +202,7 @@ object HiveUtils {
   }
 
   def run(hiveContext: HiveContext, cmd: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: TJawsLogging, uuid: String): Result = {
-    Configuration.log4j.info("[SharkUtils]: the final command is " + cmd)
+    Configuration.log4j.info("[HiveUtils]: the final command is " + cmd)
     val resultRdd = hiveContext.hql(cmd)
     val result = resultRdd.collect
     val schema = resultRdd.queryExecution.analyzed.outputSet
