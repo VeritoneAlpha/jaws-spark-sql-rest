@@ -130,13 +130,17 @@ object HiveUtils {
       // we won't put an uuid
       Configuration.log4j.info("[SharkUtils]: the command is a set or add")
       val resultSet = hiveContext.sql(cmd_trimmed)
-      return null
+      loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, true, isLimited))
+      return new Result(Array[Column](), Array[Array[String]] ())
+
     }
 
     if (tokens(0).equalsIgnoreCase("drop") || tokens(0).equalsIgnoreCase("create") || tokens(0).equalsIgnoreCase("show") || tokens(0).equalsIgnoreCase("describe")) {
       Configuration.log4j.info("[SharkUtils]: the command is a metadata query : " + tokens(0))
-      hiveContext.runMetadataSql(cmd_trimmed)
-      return null
+      val result = runMetadataCmd(hiveContext, cmd_trimmed, loggingDal, uuid)
+      loggingDal.setMetaInfo(uuid, new QueryMetaInfo(result.results.size, maxNumberOfResults, true, isLimited))
+      return result
+
     }
 
     Configuration.log4j.info("[SharkUtils]: the command is a different command")
