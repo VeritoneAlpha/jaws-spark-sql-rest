@@ -132,8 +132,9 @@ object HiveUtils {
       loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, true, isLimited))
       return new Result(Array[Column](), Array[Array[String]] ())
     }
+    
 
-    if (tokens(0).equalsIgnoreCase("drop") || tokens(0).equalsIgnoreCase("create") || tokens(0).equalsIgnoreCase("show") || tokens(0).equalsIgnoreCase("describe")) {
+    if (tokens(0).equalsIgnoreCase("drop") || tokens(0).equalsIgnoreCase("show") || tokens(0).equalsIgnoreCase("describe")) {
       Configuration.log4j.info("[HiveUtils]: the command is a metadata query : " + tokens(0))
       
       val result = runMetadataCmd(hiveContext, cmd_trimmed, loggingDal, uuid)
@@ -141,6 +142,8 @@ object HiveUtils {
       return result
     }
 
+    
+    
     Configuration.log4j.info("[HiveUtils]: the command is a different command")
     return run(hiveContext, cmd_trimmed, maxNumberOfResults, isLimited, loggingDal, uuid)
   }
