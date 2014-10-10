@@ -87,6 +87,10 @@
 					<artifactId>jetty-server</artifactId>
 				</exclusion>
 				<exclusion>
+					<groupId>org.eclipse.jetty</groupId>
+					<artifactId>jetty-servlet</artifactId>
+				</exclusion>
+				<exclusion>
 					<groupId>org.eclipse.jetty.orbit</groupId>
 					<artifactId>javax.servlet</artifactId>
 				</exclusion>
