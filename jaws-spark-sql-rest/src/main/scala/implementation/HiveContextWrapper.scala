@@ -9,4 +9,7 @@ class HiveContextWrapper(sc: SparkContext) extends HiveContext(sc: SparkContext)
 			runSqlHive(sql)
 	}
   
+	def getSparkContext() : SparkContext = {
+	  sc;
+	}
 }

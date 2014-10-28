@@ -62,34 +62,12 @@ object HiveUtils {
     return result
   }
 
-  def runCmd(cmd: String, hiveContext: HiveContext, uuid: String, loggingDal: TJawsLogging): Result = {
-    Configuration.log4j.info("[HiveUtils]: execute the following command:" + cmd)
-
-    var cmd_trimmed: String = cmd.trim()
-    val tokens = cmd_trimmed.split("\\s+")
-
-    if (tokens(0).equalsIgnoreCase("select")) {
-      Configuration.log4j.info("[HiveUtils]: the command is a select")
-      Configuration.log4j.info("[HiveUtils]: the maximum number of results is: " + Configuration.numberOfResults.getOrElse("100"))
-      val temporaryTableName = RandomStringUtils.randomAlphabetic(10)
-      // take only x results
-      cmd_trimmed = "select " + temporaryTableName + ".* from ( " + cmd_trimmed + ") " + temporaryTableName + " limit " + Configuration.numberOfResults.getOrElse("100")
-    } else if (tokens(0).equalsIgnoreCase("set") || tokens(0).equalsIgnoreCase("add")) {
-      // we won't put an uuid
-      Configuration.log4j.info("[HiveUtils]: the command is a set or add")
-      val resultSet = hiveContext.hql(cmd_trimmed).collect
-
-      return null
-    }
-
-    Configuration.log4j.info("[HiveUtils]: the command is a different command")
-    return run(hiveContext, cmd_trimmed, 0, false, loggingDal, uuid)
-  }
-
   def runCmdRdd(cmd: String, hiveContext: HiveContextWrapper, defaultNumberOfResults: Int, uuid: String, isLimited: Boolean, maxNumberOfResults: Long, isLastCommand: Boolean, hdfsNamenode: String, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration): Result = {
     Configuration.log4j.info("[HiveUtils]: execute the following command:" + cmd)
 
-    var cmd_trimmed = cmd.trim()
+    var cmd_trimmed = cmd.trim
+    val lowerCaseCmd = cmd_trimmed.toLowerCase()
+    
     val tokens = cmd_trimmed.split("\\s+")
 
     if (tokens(0).equalsIgnoreCase("select")) {
@@ -125,10 +103,28 @@ object HiveUtils {
 
     }
 
-    if (tokens(0).equalsIgnoreCase("set") || tokens(0).equalsIgnoreCase("add")) {
+    if (tokens(0).equalsIgnoreCase("set")) {
       // we won't put an uuid because it fails otherwise
-      Configuration.log4j.info("[HiveUtils]: the command is a set or add")
-      val resultSet = hiveContext.sql(cmd_trimmed)
+      Configuration.log4j.info("[HiveUtils]: the command is a set")
+      val resultSet = hiveContext.hql(cmd_trimmed)
+      loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, true, isLimited))
+      return new Result(Array[Column](), Array[Array[String]] ())
+    }
+    
+    if (tokens.size >= 3 && tokens(0).trim.equalsIgnoreCase("add") && tokens(1).trim.equalsIgnoreCase("jar")){
+      Configuration.log4j.info("[HiveUtils]: the command is a add jar")
+      val jarPath = tokens(2).trim
+      val resultSet = hiveContext.getSparkContext.addJar(jarPath)
+    
+      loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, true, isLimited))
+      return new Result(Array[Column](), Array[Array[String]] ())
+    }
+    
+    if (tokens.size >= 3 && tokens(0).trim.equalsIgnoreCase("add") && tokens(1).trim.equalsIgnoreCase("file")){
+      Configuration.log4j.info("[HiveUtils]: the command is a add jar")
+      val filePath = tokens(2).trim
+      val resultSet = hiveContext.getSparkContext.addFile(filePath)
+    
       loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, true, isLimited))
       return new Result(Array[Column](), Array[Array[String]] ())
     }
