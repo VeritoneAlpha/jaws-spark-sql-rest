@@ -39,7 +39,6 @@
 		<scala.version>2.10.3</scala.version>
 		<scala.version.alias>2.10</scala.version.alias>
 		<akka.version>2.0.5</akka.version>
-		<spray.json.version>1.2.3</spray.json.version>
 		<spray.io.version>1.2.1</spray.io.version>
 	</properties>
 

@@ -70,7 +70,7 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
     System.getProperties().setProperty("spark.task.maxFailures", Configuration.sparkTaskMaxFailures.getOrElse("4"))
     System.getProperties().setProperty("spark.shuffle.consolidateFiles", Configuration.sparkShuffleConsolidateFiles.getOrElse("true"))
     System.getProperties().setProperty("spark.deploy.spreadOut", Configuration.sparkDeploySpreadOut.getOrElse("true"))
-    System.getProperties().setProperty("spark.kryo.referenceTracking", Configuration.sparkKryoReferenceTracking.getOrElse("false"))
+    System.getProperties().setProperty("spark.kryo.referenceTracking", Configuration.sparkKryoReferenceTracking.getOrElse("true"))
 
     // *******Set the kryo properties only if they exist: NO DEFAULTS FOR IT
     Configuration.sparkSerializer match {
