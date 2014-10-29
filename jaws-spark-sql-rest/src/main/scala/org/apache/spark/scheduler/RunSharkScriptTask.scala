@@ -10,6 +10,7 @@ import org.apache.commons.lang.time.DurationFormatUtils
 import com.xpatterns.jaws.data.utils.QueryState
 import org.apache.spark.sql.hive.HiveContext
 import implementation.HiveContextWrapper
+import com.xpatterns.jaws.data.DTO.QueryMetaInfo
 
 /**
  * Created by emaorhian
@@ -87,6 +88,8 @@ class RunSharkScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextW
         dals.loggingDal.addLog(uuid, "hql", System.currentTimeMillis(), e.getStackTraceString)
         logsActor ! PushLogs(uuid, e.getStackTraceString)
         dals.loggingDal.setState(uuid, QueryState.FAILED)
+        dals.loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, true, isLimited))
+
         throw new RuntimeException(e)
       }
     }
