@@ -40,18 +40,18 @@ class JawsCassandraResults(keyspace: Keyspace) extends TJawsResults {
 
      val result = sliceQuery.execute()
      Option(result) match {
-       case None => return null
+       case None => return new Result()
        case _ => {
          val columnSlice = result.get()
          Option(columnSlice) match {
-           case None => return null
+           case None => return new Result()
            case _ => {
              Option(columnSlice.getColumns()) match {
-               case None => return null
+               case None => return new Result()
                case _ => {
 
                  if (columnSlice.getColumns().size() == 0) {
-                   return null
+                   return new Result()
                  }
 
                  val col = columnSlice.getColumns().get(0)

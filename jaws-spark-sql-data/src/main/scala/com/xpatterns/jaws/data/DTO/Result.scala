@@ -9,6 +9,10 @@ import org.apache.spark.sql.catalyst.expressions.Row
  */
 case class Result(schema: Array[Column], results: Array[Array[String]]) {
 
+   def this() = {
+     this(Array[Column](),Array[Array[String]]())
+   }
+  
   override def hashCode(): Int = {
     val prime = 31
     var result = 1
