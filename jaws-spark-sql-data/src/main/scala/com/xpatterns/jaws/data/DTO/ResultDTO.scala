@@ -9,6 +9,10 @@ import org.apache.spark.sql.catalyst.expressions.Row
  */
 case class ResultDTO(var schema: Array[Column], var results: Array[Array[String]]) {
 
+  def this() = {
+    this(Array[Column](), Array[Array[String]]())
+  }
+
   override def hashCode(): Int = {
     val prime = 31
     var result = 1
@@ -42,7 +46,7 @@ case class ResultDTO(var schema: Array[Column], var results: Array[Array[String]
   }
 
   def this(schema: Set[Attribute], result: Array[Row]) {
-	  this(ResultDTO.getSchema(schema), ResultDTO.getResults(result))
+    this(ResultDTO.getSchema(schema), ResultDTO.getResults(result))
   }
 }
 
@@ -63,26 +67,27 @@ object ResultDTO {
   def trimResults(result: ResultDTO): ResultDTO = {
     ResultDTO(result.schema, result.results.map(row => row.map(field => field.trim())))
   }
-  
-   def getSchema(schema: Set[Attribute]): Array[Column] = {
+
+  def getSchema(schema: Set[Attribute]): Array[Column] = {
     var finalSchema = Array[Column]()
     schema.foreach(attribute => { finalSchema = finalSchema ++ Array(new Column(attribute.name, attribute.dataType.toString())) })
     finalSchema
   }
-   
-   def getResults(results: Array[Row]): Array[Array[String]] = {
+
+  def getResults(results: Array[Row]): Array[Array[String]] = {
     var finalResults = Array[Array[String]]()
- 
+
     results.foreach(row => {
-      var rrow = row.map(value =>{
+      var rrow = row.map(value => {
         Option(value) match {
-            case None => "Null"
-            case _ => value.toString()
-      }})
-      
+          case None => "Null"
+          case _ => value.toString()
+        }
+      })
+
       finalResults = finalResults ++ Array(rrow.toArray)
     })
-    
+
     finalResults
   }
 }  
