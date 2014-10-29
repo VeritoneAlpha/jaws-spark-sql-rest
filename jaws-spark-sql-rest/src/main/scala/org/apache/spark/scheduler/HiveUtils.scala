@@ -114,6 +114,7 @@ object HiveUtils {
     if (tokens.size >= 3 && tokens(0).trim.equalsIgnoreCase("add") && tokens(1).trim.equalsIgnoreCase("jar")){
       Configuration.log4j.info("[HiveUtils]: the command is a add jar")
       val jarPath = tokens(2).trim
+      Configuration.log4j.info("[HiveUtils]: the jar to be added is" + jarPath)
       val resultSet = hiveContext.getSparkContext.addJar(jarPath)
     
       loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, true, isLimited))
@@ -121,8 +122,9 @@ object HiveUtils {
     }
     
     if (tokens.size >= 3 && tokens(0).trim.equalsIgnoreCase("add") && tokens(1).trim.equalsIgnoreCase("file")){
-      Configuration.log4j.info("[HiveUtils]: the command is a add jar")
+      Configuration.log4j.info("[HiveUtils]: the command is a add file")
       val filePath = tokens(2).trim
+      Configuration.log4j.info("[HiveUtils]: the file to be added is" + filePath)
       val resultSet = hiveContext.getSparkContext.addFile(filePath)
     
       loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, true, isLimited))
