@@ -63,48 +63,15 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
-		
-		<dependency>
-
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-context</artifactId>
-			<version>${org.springframework.version}</version>
-			<exclusions>
-				<!-- Exclude Commons Logging in favor of SLF4j -->
-				<exclusion>
-					<groupId>commons-logging</groupId>
-					<artifactId>commons-logging</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency>
-
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
 			<version>2.2.4</version>
 		</dependency>
-
-		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-core</artifactId>
-			<version>${org.springframework.version}</version>
-
-		</dependency>
 		<dependency>
 			<groupId>com.google.code.findbugs</groupId>
 			<artifactId>jsr305</artifactId>
 			<version>2.0.3</version>
-		</dependency>
-
-		<dependency>
-			<groupId>org.aspectj</groupId>
-			<artifactId>aspectjrt</artifactId>
-			<version>1.6.10</version>
-		</dependency>
-		<dependency>
-			<groupId>org.aspectj</groupId>
-			<artifactId>aspectjweaver</artifactId>
-			<version>1.6.10</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
@@ -116,9 +83,6 @@
 			<artifactId>slf4j-log4j12</artifactId>
 			<version>1.5.5</version>
 		</dependency>
-		<!-- <dependency> <groupId>me.prettyprint</groupId> <artifactId>hector-core</artifactId> 
-			<version>1.0-5</version> </dependency> -->
-		<!-- Adding dependency to 1.1-5 and to junit -->
 		<dependency>
 			<groupId>org.hectorclient</groupId>
 			<artifactId>hector-core</artifactId>
@@ -143,11 +107,6 @@
 			<groupId>commons-lang</groupId>
 			<artifactId>commons-lang</artifactId>
 			<version>2.6</version>
-		</dependency>
-		<dependency>
-			<groupId>org.aspectj</groupId>
-			<artifactId>aspectjweaver</artifactId>
-			<version>1.7.3</version>
 		</dependency>
 		<dependency>
 			<groupId>cglib</groupId>
