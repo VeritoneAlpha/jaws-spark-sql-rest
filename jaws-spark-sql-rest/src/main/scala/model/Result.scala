@@ -12,6 +12,10 @@ import com.xpatterns.jaws.data.DTO.Column
  * Created by emaorhian
  */
 case class Result(schema: Array[Column], results: Array[Array[String]]) {
+  def this() = {
+    this(Array[Column](),Array[Array[String]]())
+  }
+
   def getSchema(): Array[Column] = {
     schema
   }
