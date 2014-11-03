@@ -287,11 +287,11 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
       } ~
       path(pathPrefix / "tables") {
         get {
-          parameters('database.?) { database =>
+          parameters('database.?, 'describe ? true) { (database, describe) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
               complete {
 
-                val future = ask(getTablesActor, new GetTablesMessage(database.getOrElse(null))).mapTo[scala.collection.immutable.Map[String, scala.collection.immutable.Map[String, Result]]]
+                val future = ask(getTablesActor, new GetTablesMessage(database.getOrElse(null), describe)).mapTo[scala.collection.immutable.Map[String, scala.collection.immutable.Map[String, Result]]]
                 future
               }
             }
