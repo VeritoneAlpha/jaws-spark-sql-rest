@@ -3,6 +3,7 @@ package com.xpatterns.jaws.data.DTO
 import spray.json.DefaultJsonProtocol._
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.Row
+import org.apache.spark.sql.catalyst.expressions.AttributeSet
 
 /**
  * Created by emaorhian
@@ -45,7 +46,7 @@ case class Result(schema: Array[Column], results: Array[Array[String]]) {
     "ResultDTO [schema=" + schema + ", results=" + results + "]"
   }
 
-  def this(schema: Set[Attribute], result: Array[Row]) {
+  def this(schema: AttributeSet, result: Array[Row]) {
 	  this(Result.getSchema(schema), Result.getResults(result))
   }
 }
@@ -68,7 +69,7 @@ object Result {
     Result(result.schema, result.results.map(row => row.map(field => field.trim())))
   }
   
-   def getSchema(schema: Set[Attribute]): Array[Column] = {
+   def getSchema(schema: AttributeSet): Array[Column] = {
     var finalSchema = Array[Column]()
     schema.foreach(attribute => { finalSchema = finalSchema ++ Array(new Column(attribute.name, attribute.dataType.toString())) })
     finalSchema

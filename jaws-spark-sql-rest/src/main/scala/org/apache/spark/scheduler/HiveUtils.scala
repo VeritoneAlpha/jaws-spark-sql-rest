@@ -23,6 +23,7 @@ import spray.json.DefaultJsonProtocol._
 import implementation.HiveContextWrapper
 import com.xpatterns.jaws.data.DTO.Column
 import implementation.HiveContextWrapper
+import org.apache.spark.sql.catalyst.expressions.AttributeSet
 
 /**
  * Created by emaorhian
@@ -106,7 +107,7 @@ object HiveUtils {
     if (tokens(0).equalsIgnoreCase("set")) {
       // we won't put an uuid because it fails otherwise
       Configuration.log4j.info("[HiveUtils]: the command is a set")
-      val resultSet = hiveContext.hql(cmd_trimmed)
+      val resultSet = hiveContext.sql(cmd_trimmed)
       loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, true, isLimited))
       return new Result(Array[Column](), Array[Array[String]] ())
     }
@@ -164,7 +165,7 @@ object HiveUtils {
     Configuration.log4j.info("[HiveUtils]: the final command is " + cmd)
 
     // select rdd
-    val selectRdd = hiveContext.hql(cmd)
+    val selectRdd = hiveContext.sql(cmd)
     val nbOfResults = selectRdd.count()
 
     // change the shark Row into String[] -> for serialization purpose 
@@ -191,7 +192,8 @@ object HiveUtils {
     return null
   }
 
-  def getSchema(schema: Set[Attribute]): String = {
+  def getSchema(schema: AttributeSet): String = {
+  
     val transformedSchema = Result.getSchema(schema)
     transformedSchema.toJson.toString()
   }
@@ -207,7 +209,7 @@ object HiveUtils {
 
   def run(hiveContext: HiveContext, cmd: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: TJawsLogging, uuid: String): Result = {
     Configuration.log4j.info("[HiveUtils]: the final command is " + cmd)
-    val resultRdd = hiveContext.hql(cmd)
+    val resultRdd = hiveContext.sql(cmd)
     val result = resultRdd.collect
     val schema = resultRdd.queryExecution.analyzed.outputSet
     loggingDal.setMetaInfo(uuid, new QueryMetaInfo(result.size, maxNumberOfResults, true, isLimited))
@@ -224,7 +226,7 @@ object HiveUtils {
 
     scala.io.Source.fromInputStream(sharkSettings).getLines().foreach { line =>
       {
-        sc.hql(line.trim())
+        sc.sql(line.trim())
       }
     }
   }
