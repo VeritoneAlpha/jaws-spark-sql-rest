@@ -59,17 +59,11 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, customS
       if (metaInfo.resultsInCassandra == true) {
         val result = dals.resultsDal.getResults(message.queryID)
         var endIndex = offset + limit
-        if (offset >= result.results.length) {
-          Configuration.log4j.info("[GetResultsMessage]: The offset is larger than the number of results (" + offset + ">" + result.results.length + ")")
-          sender ! new Result
-        } else {
           if (endIndex > result.results.length) {
             endIndex = result.results.length
           }
           result.results = result.results.slice(offset, endIndex)
           sender ! Result.fromResultDTO(result)
-
-        }
 
       } else {
 
