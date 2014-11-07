@@ -24,6 +24,7 @@ import implementation.HiveContextWrapper
 import com.xpatterns.jaws.data.DTO.Column
 import implementation.HiveContextWrapper
 import org.apache.spark.sql.catalyst.expressions.AttributeSet
+import org.apache.spark.sql.catalyst.types.StructType
 
 /**
  * Created by emaorhian
@@ -186,13 +187,14 @@ object HiveUtils {
     loggingDal.setMetaInfo(uuid, new QueryMetaInfo(nbOfResults, maxNumberOfResults, false, isLimited))
 
     // write schema on hdfs
-    Utils.rewriteFile(getSchema(selectRdd.queryExecution.analyzed.outputSet), conf, Configuration.schemaFolder.getOrElse("jawsSchemaFolder") + "/" + uuid)
+    
+    Utils.rewriteFile(getSchema(selectRdd.schema), conf, Configuration.schemaFolder.getOrElse("jawsSchemaFolder") + "/" + uuid)
     // save rdd on hdfs
     indexedRdd.saveAsObjectFile(getHDFSRddPath(uuid, hdfsNamenode))
     return null
   }
 
-  def getSchema(schema: AttributeSet): String = {
+  def getSchema(schema: StructType): String = {
   
     val transformedSchema = Result.getSchema(schema)
     transformedSchema.toJson.toString()
@@ -211,7 +213,7 @@ object HiveUtils {
     Configuration.log4j.info("[HiveUtils]: the final command is " + cmd)
     val resultRdd = hiveContext.sql(cmd)
     val result = resultRdd.collect
-    val schema = resultRdd.queryExecution.analyzed.outputSet
+    val schema = resultRdd.schema
     loggingDal.setMetaInfo(uuid, new QueryMetaInfo(result.size, maxNumberOfResults, true, isLimited))
     return new Result(schema, result)
   }

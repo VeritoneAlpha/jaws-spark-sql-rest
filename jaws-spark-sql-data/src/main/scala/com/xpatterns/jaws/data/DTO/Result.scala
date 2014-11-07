@@ -4,6 +4,7 @@ import spray.json.DefaultJsonProtocol._
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.Row
 import org.apache.spark.sql.catalyst.expressions.AttributeSet
+import org.apache.spark.sql.catalyst.types.StructType
 
 /**
  * Created by emaorhian
@@ -46,7 +47,7 @@ case class Result(schema: Array[Column], results: Array[Array[String]]) {
     "ResultDTO [schema=" + schema + ", results=" + results + "]"
   }
 
-  def this(schema: AttributeSet, result: Array[Row]) {
+  def this(schema: StructType, result: Array[Row]) {
 	  this(Result.getSchema(schema), Result.getResults(result))
   }
 }
@@ -69,9 +70,11 @@ object Result {
     Result(result.schema, result.results.map(row => row.map(field => field.trim())))
   }
   
-   def getSchema(schema: AttributeSet): Array[Column] = {
+   def getSchema(schema: StructType): Array[Column] = {
     var finalSchema = Array[Column]()
-    schema.foreach(attribute => { finalSchema = finalSchema ++ Array(new Column(attribute.name, attribute.dataType.toString())) })
+    
+    val fields = schema.fields;
+    fields.foreach(field => { finalSchema = finalSchema ++ Array(new Column(field.name, field.dataType.toString())) })
     finalSchema
   }
    
