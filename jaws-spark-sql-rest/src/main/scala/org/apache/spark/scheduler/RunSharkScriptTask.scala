@@ -76,7 +76,7 @@ class RunSharkScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextW
     var message = ""
 
     try {
-      val result = HiveUtils.runCmdRdd(command, hiveContext, Configuration.numberOfResults.getOrElse("100").toInt, uuid, isLimited, maxNumberOfResults, isLastCommand, Configuration.jawsNamenode.get, dals.loggingDal, hdfsConf)
+      val result = HiveUtils.runCmdRdd(command, hiveContext, Configuration.numberOfResults.getOrElse("100").toInt, uuid, isLimited, maxNumberOfResults, isLastCommand, Configuration.rddDestinationIp.get, dals.loggingDal, hdfsConf)
       message = "Command progress : There were executed " + (commandIndex + 1) + " commands out of " + nrOfCommands
       Configuration.log4j.info(message)
       dals.loggingDal.addLog(uuid, "hql", System.currentTimeMillis(), message)
@@ -88,7 +88,7 @@ class RunSharkScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextW
         dals.loggingDal.addLog(uuid, "hql", System.currentTimeMillis(), e.getStackTraceString)
         logsActor ! PushLogs(uuid, e.getStackTraceString)
         dals.loggingDal.setState(uuid, QueryState.FAILED)
-        dals.loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, true, isLimited))
+        dals.loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, 0, isLimited))
 
         throw new RuntimeException(e)
       }

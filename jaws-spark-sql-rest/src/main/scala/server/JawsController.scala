@@ -394,7 +394,8 @@ object Configuration {
 
   //app configuration
   val loggingType = getStringConfiguration(appConf, "app.logging.type")
-  val jawsNamenode = getStringConfiguration(appConf, "jaws.namenode")
+  val rddDestinationIp = getStringConfiguration(appConf, "rdd.destination.ip")
+  val rddDestinationLocation = getStringConfiguration(appConf, "rdd.destination.location")
   val remoteDomainActor = getStringConfiguration(appConf, "remote.domain.actor")
   val applicationName = getStringConfiguration(appConf, "application.name")
   val webServicesPort = getStringConfiguration(appConf, "web.services.port")

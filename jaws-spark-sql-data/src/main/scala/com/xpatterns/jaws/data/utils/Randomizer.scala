@@ -43,6 +43,6 @@ object Randomizer {
 	}
 
 	def createQueryMetainfo  : QueryMetaInfo =  {
-		return new QueryMetaInfo(RandomUtils.nextLong(), RandomUtils.nextLong(), RandomUtils.nextBoolean(), RandomUtils.nextBoolean())
+		return new QueryMetaInfo(RandomUtils.nextLong(), RandomUtils.nextLong(), RandomUtils.nextInt(3), RandomUtils.nextBoolean())
 	}
 }

@@ -69,7 +69,7 @@ object HiveUtils {
 
     var cmd_trimmed = cmd.trim
     val lowerCaseCmd = cmd_trimmed.toLowerCase()
-    
+
     val tokens = cmd_trimmed.split("\\s+")
 
     if (tokens(0).equalsIgnoreCase("select")) {
@@ -109,41 +109,38 @@ object HiveUtils {
       // we won't put an uuid because it fails otherwise
       Configuration.log4j.info("[HiveUtils]: the command is a set")
       val resultSet = hiveContext.sql(cmd_trimmed)
-      loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, true, isLimited))
-      return new Result(Array[Column](), Array[Array[String]] ())
+      loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, 0, isLimited))
+      return new Result(Array[Column](), Array[Array[String]]())
     }
-    
-    if (tokens.size >= 3 && tokens(0).trim.equalsIgnoreCase("add") && tokens(1).trim.equalsIgnoreCase("jar")){
+
+    if (tokens.size >= 3 && tokens(0).trim.equalsIgnoreCase("add") && tokens(1).trim.equalsIgnoreCase("jar")) {
       Configuration.log4j.info("[HiveUtils]: the command is a add jar")
       val jarPath = tokens(2).trim
       Configuration.log4j.info("[HiveUtils]: the jar to be added is" + jarPath)
       val resultSet = hiveContext.getSparkContext.addJar(jarPath)
-    
-      loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, true, isLimited))
-      return new Result(Array[Column](), Array[Array[String]] ())
+
+      loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, 0, isLimited))
+      return new Result(Array[Column](), Array[Array[String]]())
     }
-    
-    if (tokens.size >= 3 && tokens(0).trim.equalsIgnoreCase("add") && tokens(1).trim.equalsIgnoreCase("file")){
+
+    if (tokens.size >= 3 && tokens(0).trim.equalsIgnoreCase("add") && tokens(1).trim.equalsIgnoreCase("file")) {
       Configuration.log4j.info("[HiveUtils]: the command is a add file")
       val filePath = tokens(2).trim
       Configuration.log4j.info("[HiveUtils]: the file to be added is" + filePath)
       val resultSet = hiveContext.getSparkContext.addFile(filePath)
-    
-      loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, true, isLimited))
-      return new Result(Array[Column](), Array[Array[String]] ())
+
+      loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, 0, isLimited))
+      return new Result(Array[Column](), Array[Array[String]]())
     }
-    
 
     if (tokens(0).equalsIgnoreCase("drop") || tokens(0).equalsIgnoreCase("show") || tokens(0).equalsIgnoreCase("describe")) {
       Configuration.log4j.info("[HiveUtils]: the command is a metadata query : " + tokens(0))
-      
+
       val result = runMetadataCmd(hiveContext, cmd_trimmed, loggingDal, uuid)
-      loggingDal.setMetaInfo(uuid, new QueryMetaInfo(result.results.size, maxNumberOfResults, true, isLimited))
+      loggingDal.setMetaInfo(uuid, new QueryMetaInfo(result.results.size, maxNumberOfResults, 0, isLimited))
       return result
     }
 
-    
-    
     Configuration.log4j.info("[HiveUtils]: the command is a different command")
     return run(hiveContext, cmd_trimmed, maxNumberOfResults, isLimited, loggingDal, uuid)
   }
@@ -152,15 +149,14 @@ object HiveUtils {
     val result = hiveContext.runMetadataSql(cmd).map(element => {
       if (element != null) {
         element.split("\t")
-      }
-      else Array(element)
+      } else Array(element)
     }).toArray
     val schema = new Array[Column](1)
     schema(0) = new Column("result", "stringType")
     return new Result(schema, result)
   }
 
-  def runRdd(hiveContext: HiveContext, uuid: String, cmd: String, hdfsNamenode: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration): Result = {
+  def runRdd(hiveContext: HiveContext, uuid: String, cmd: String, destinationIp: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration): Result = {
     // we need to run sqlToRdd. Needed for pagination
     Configuration.log4j.info("[HiveUtils]: we will execute sqlToRdd command")
     Configuration.log4j.info("[HiveUtils]: the final command is " + cmd)
@@ -184,29 +180,36 @@ object HiveUtils {
     val customIndexer = new CustomIndexer()
     val indexedRdd = customIndexer.indexRdd(transformedSelectRdd)
 
-    loggingDal.setMetaInfo(uuid, new QueryMetaInfo(nbOfResults, maxNumberOfResults, false, isLimited))
-
-    // write schema on hdfs
-    
+    // write schema on hdfs 
     Utils.rewriteFile(getSchema(selectRdd.schema), conf, Configuration.schemaFolder.getOrElse("jawsSchemaFolder") + "/" + uuid)
+    var destination = getHdfsPath(destinationIp)
+    Configuration.rddDestinationLocation.get match {
+      case "hdfs" => loggingDal.setMetaInfo(uuid, new QueryMetaInfo(nbOfResults, maxNumberOfResults, 1, isLimited))
+
+      case "tachyon" => {
+        loggingDal.setMetaInfo(uuid, new QueryMetaInfo(nbOfResults, maxNumberOfResults, 2, isLimited))
+        destination = getTachyonPath(destinationIp)
+      }
+      case _ => loggingDal.setMetaInfo(uuid, new QueryMetaInfo(nbOfResults, maxNumberOfResults, 1, isLimited))
+    }
+
     // save rdd on hdfs
-    indexedRdd.saveAsObjectFile(getHDFSRddPath(uuid, hdfsNamenode))
+    indexedRdd.saveAsObjectFile(getRddDestinationPath(uuid, destination))
     return null
   }
 
   def getSchema(schema: StructType): String = {
-  
+
     val transformedSchema = Result.getSchema(schema)
     transformedSchema.toJson.toString()
   }
 
-  def getHDFSRddPath(uuid: String, hdfsNamenode: String): String = {
-    var returnHdfsNamenode = hdfsNamenode
-    if (hdfsNamenode.endsWith("/") == false) {
-      returnHdfsNamenode = hdfsNamenode + "/"
+  def getRddDestinationPath(uuid: String, rddDestination: String): String = {
+    var finalDestination = rddDestination
+    if (rddDestination.endsWith("/") == false) {
+      finalDestination = rddDestination + "/"
     }
-
-    return returnHdfsNamenode + "user/" + System.getProperty("user.name") + "/" + Configuration.resultsFolder.getOrElse("jawsResultsFolder") + "/" + uuid
+    return finalDestination + "user/" + System.getProperty("user.name") + "/" + Configuration.resultsFolder.getOrElse("jawsResultsFolder") + "/" + uuid
   }
 
   def run(hiveContext: HiveContext, cmd: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: TJawsLogging, uuid: String): Result = {
@@ -214,7 +217,7 @@ object HiveUtils {
     val resultRdd = hiveContext.sql(cmd)
     val result = resultRdd.collect
     val schema = resultRdd.schema
-    loggingDal.setMetaInfo(uuid, new QueryMetaInfo(result.size, maxNumberOfResults, true, isLimited))
+    loggingDal.setMetaInfo(uuid, new QueryMetaInfo(result.size, maxNumberOfResults, 0, isLimited))
     return new Result(schema, result)
   }
 
@@ -233,4 +236,11 @@ object HiveUtils {
     }
   }
 
+  def getHdfsPath(ip: String): String = {
+    "hdfs://" + ip.trim() + ":8020"
+  }
+
+  def getTachyonPath(ip: String): String = {
+    "tachyon://" + ip.trim() + ":19998"
+  }
 }
