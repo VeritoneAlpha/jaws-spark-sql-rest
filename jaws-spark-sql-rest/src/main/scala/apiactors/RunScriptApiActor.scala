@@ -60,7 +60,7 @@ class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCont
       Preconditions.checkArgument(message.maxNumberOfResults != null, Configuration.RESULSTS_NUMBER_EXCEPTION_MESSAGE)
 
       val uuid = System.currentTimeMillis() + UUID.randomUUID().toString()
-      val task = new RunSharkScriptTask(dals, message.hqlScript, hiveContext, uuid, false, message.limited, message.maxNumberOfResults, hdfsConf)
+      val task = new RunSharkScriptTask(dals, message.hqlScript, hiveContext, uuid, false, message.limited, message.maxNumberOfResults, hdfsConf, message.rddDestination)
       taskCache.put(uuid, task)
       threadPool.execute(task)
 

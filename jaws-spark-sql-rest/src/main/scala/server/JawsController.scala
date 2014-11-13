@@ -2,7 +2,6 @@ package server
 
 import java.net.InetAddress
 import com.typesafe.config.Config
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.apache.log4j.Logger
 import com.google.gson.Gson
@@ -36,6 +35,7 @@ import implementation.CustomHiveContextCreator
 import com.xpatterns.jaws.data.DTO.Logs
 import com.xpatterns.jaws.data.DTO.Result
 import com.xpatterns.jaws.data.DTO.Query
+
 
 /**
  * Created by emaorhian
@@ -156,11 +156,12 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
     } ~
     path(pathPrefix / "run") {
       post {
-        parameters('numberOfResults.as[Int] ? 100, 'limited.as[Boolean]) { (numberOfResults, limited) =>
+        parameters('numberOfResults.as[Int] ? 100, 'limited.as[Boolean], 'destination.as[String] ? Configuration.rddDestinationLocation.getOrElse("hdfs")) { (numberOfResults, limited, destination) =>
           corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-            entity(as[String]) { string: String =>
-              complete {
-                val future = ask(runScriptActor, RunScriptMessage(string, limited, numberOfResults)).mapTo[String]
+            entity(as[String]) { query: String =>
+              complete{         
+                Configuration.log4j.info(s"The queryis limited=$limited and the destination is $destination")
+                val future = ask(runScriptActor, RunScriptMessage(query, limited, numberOfResults, destination.toLowerCase())).mapTo[String]
                 future
               }
             }	

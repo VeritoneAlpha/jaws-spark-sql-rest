@@ -15,7 +15,7 @@ import com.xpatterns.jaws.data.DTO.QueryMetaInfo
 /**
  * Created by emaorhian
  */
-class RunSharkScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrapper, uuid: String, var isCanceled: Boolean, isLimited: Boolean, maxNumberOfResults: Long, hdfsConf: org.apache.hadoop.conf.Configuration) extends Runnable with MainActors with Systems {
+class RunSharkScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrapper, uuid: String, var isCanceled: Boolean, isLimited: Boolean, maxNumberOfResults: Long, hdfsConf: org.apache.hadoop.conf.Configuration, rddDestination:String) extends Runnable with MainActors with Systems {
 
   override def run() {
     try {
@@ -76,7 +76,8 @@ class RunSharkScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextW
     var message = ""
 
     try {
-      val result = HiveUtils.runCmdRdd(command, hiveContext, Configuration.numberOfResults.getOrElse("100").toInt, uuid, isLimited, maxNumberOfResults, isLastCommand, Configuration.rddDestinationIp.get, dals.loggingDal, hdfsConf)
+     
+      val result = HiveUtils.runCmdRdd(command, hiveContext, Configuration.numberOfResults.getOrElse("100").toInt, uuid, isLimited, maxNumberOfResults, isLastCommand, Configuration.rddDestinationIp.get, dals.loggingDal, hdfsConf, rddDestination)
       message = "Command progress : There were executed " + (commandIndex + 1) + " commands out of " + nrOfCommands
       Configuration.log4j.info(message)
       dals.loggingDal.addLog(uuid, "hql", System.currentTimeMillis(), message)
