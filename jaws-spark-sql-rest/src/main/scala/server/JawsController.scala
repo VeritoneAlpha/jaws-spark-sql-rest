@@ -35,6 +35,7 @@ import implementation.CustomHiveContextCreator
 import com.xpatterns.jaws.data.DTO.Logs
 import com.xpatterns.jaws.data.DTO.Result
 import com.xpatterns.jaws.data.DTO.Query
+import org.apache.spark.SparkConf
 
 
 /**
@@ -47,41 +48,6 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
 
   def initialize() = {
     Configuration.log4j.info("Initializing...")
-    System.getProperties().setProperty("spark.executor.memory", Configuration.sparkExecutorMemory.getOrElse("4g"))
-    System.getProperties().setProperty("spark.scheduler.mode", Configuration.sparkSchedulerMode.getOrElse("FAIR"))
-    System.getProperties().setProperty("spark.mesos.coarse", Configuration.sparkMesosCoarse.getOrElse("false"))
-    System.getProperties().setProperty("spark.cores.max", Configuration.sparkCoresMax.getOrElse("2"))
-
-    System.getProperties().setProperty("spark.shuffle.spill", Configuration.sparkShuffleSpill.getOrElse("false"))
-    System.getProperties().setProperty("spark.default.parallelism", Configuration.sparkDefaultParallelism.getOrElse("384"))
-    System.getProperties().setProperty("spark.storage.memoryFraction", Configuration.sparkStorageMemoryFraction.getOrElse("0.3"))
-    System.getProperties().setProperty("spark.shuffle.memoryFraction", Configuration.sparkShuffleMemoryFraction.getOrElse("0.6"))
-    System.getProperties().setProperty("spark.shuffle.compress", Configuration.sparkShuffleCompress.getOrElse("true"))
-    System.getProperties().setProperty("spark.shuffle.spill.compress", Configuration.sparkShuffleSpillCompress.getOrElse("true"))
-    System.getProperties().setProperty("spark.reducer.maxMbInFlight", Configuration.sparkReducerMaxMbInFlight.getOrElse("48"))
-    System.getProperties().setProperty("spark.akka.frameSize", Configuration.sparkAkkaFrameSize.getOrElse("false"))
-    System.getProperties().setProperty("spark.akka.threads", Configuration.sparkAkkaThreads.getOrElse("4"))
-    System.getProperties().setProperty("spark.akka.timeout", Configuration.sparkAkkaTimeout.getOrElse("100"))
-    System.getProperties().setProperty("spark.task.maxFailures", Configuration.sparkTaskMaxFailures.getOrElse("4"))
-    System.getProperties().setProperty("spark.shuffle.consolidateFiles", Configuration.sparkShuffleConsolidateFiles.getOrElse("true"))
-    System.getProperties().setProperty("spark.deploy.spreadOut", Configuration.sparkDeploySpreadOut.getOrElse("true"))
-    System.getProperties().setProperty("spark.kryo.referenceTracking", Configuration.sparkKryoReferenceTracking.getOrElse("true"))
-
-    // *******Set the kryo properties only if they exist: NO DEFAULTS FOR THEM
-    Configuration.sparkSerializer match {
-      case None => Configuration.log4j.info("spark.serializer configuration not set!")
-      case _ => System.getProperties().setProperty("spark.serializer", Configuration.sparkSerializer.get)
-    }
-    Configuration.sparkKryosSerializerBufferMb match {
-      case None => Configuration.log4j.info("spark.kryoserializer.buffer.mb configuration not set!")
-      case _ => System.getProperties().setProperty("spark.kryoserializer.buffer.mb", Configuration.sparkKryosSerializerBufferMb.get)
-    }
-    Configuration.sparkKryoSerializerBufferMaxMb match {
-      case None => Configuration.log4j.info("spark.kryoserializer.buffer.max.mb configuration not set!")
-      case _ => System.getProperties().setProperty("spark.kryoserializer.buffer.max.mb", Configuration.sparkKryoSerializerBufferMaxMb.get)
-    }
-    // *******
-
 
     hdfsConf = getHadoopConf
     Utils.createFolderIfDoesntExist(hdfsConf, Configuration.schemaFolder.getOrElse("jawsSchemaFolder"), false)
@@ -154,28 +120,28 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
           }
         }
     } ~
-    path(pathPrefix / "run") {
-      post {
-        parameters('numberOfResults.as[Int] ? 100, 'limited.as[Boolean], 'destination.as[String] ? Configuration.rddDestinationLocation.getOrElse("hdfs")) { (numberOfResults, limited, destination) =>
-          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-            entity(as[String]) { query: String =>
-              complete{         
-                Configuration.log4j.info(s"The queryis limited=$limited and the destination is $destination")
-                val future = ask(runScriptActor, RunScriptMessage(query, limited, numberOfResults, destination.toLowerCase())).mapTo[String]
-                future
+      path(pathPrefix / "run") {
+        post {
+          parameters('numberOfResults.as[Int] ? 100, 'limited.as[Boolean], 'destination.as[String] ? Configuration.rddDestinationLocation.getOrElse("hdfs")) { (numberOfResults, limited, destination) =>
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+              entity(as[String]) { query: String =>
+                complete {
+                  Configuration.log4j.info(s"The queryis limited=$limited and the destination is $destination")
+                  val future = ask(runScriptActor, RunScriptMessage(query, limited, numberOfResults, destination.toLowerCase())).mapTo[String]
+                  future
+                }
               }
-            }	
-          }
-        }
-      } ~
-        options {
-          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.POST))) {
-            complete {
-              "OK"
             }
           }
-        }
-    } ~
+        } ~
+          options {
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.POST))) {
+              complete {
+                "OK"
+              }
+            }
+          }
+      } ~
       path(pathPrefix / "logs") {
         get {
           parameters('queryID, 'startTimestamp.as[Long].?, 'limit.as[Int]) { (queryID, startTimestamp, limit) =>
@@ -347,7 +313,7 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
           }
       }
 
-      }
+  }
 
   private val reactiveServer = new ReactiveServer(Configuration.webSocketsPort.getOrElse("8081").toInt, logsActor)
   reactiveServer.start()
@@ -369,18 +335,17 @@ object Configuration {
   private val conf = ConfigFactory.load
   conf.checkValid(ConfigFactory.defaultReference)
 
-  val domain = conf.getConfig("domain").withFallback(conf)
-  val cancel = conf.getConfig("cancel").withFallback(conf)
-  val sparkConf = conf.getConfig("sparkConfiguration").withFallback(conf)
-  val appConf = conf.getConfig("appConf").withFallback(conf)
-  val hadoopConf = conf.getConfig("hadoopConf").withFallback(conf)
-  val cassandraConf = conf.getConfig("cassandraConf").withFallback(conf)
+  val domain = conf.getConfig("domain")
+  val cancel = conf.getConfig("cancel")
+  val sparkConf = conf.getConfig("sparkConfiguration")
+  val appConf = conf.getConfig("appConf")
+  val hadoopConf = conf.getConfig("hadoopConf")
+  val cassandraConf = conf.getConfig("cassandraConf")
 
   // cassandra configuration
   val cassandraHost = getStringConfiguration(cassandraConf, "cassandra.host")
   val cassandraKeyspace = getStringConfiguration(cassandraConf, "cassandra.keyspace")
   val cassandraClusterName = getStringConfiguration(cassandraConf, "cassandra.cluster.name")
-
 
   //hadoop conf 
   val replicationFactor = getStringConfiguration(hadoopConf, "replicationFactor")
@@ -391,7 +356,6 @@ object Configuration {
   val resultsFolder = getStringConfiguration(hadoopConf, "resultsFolder")
   val metaInfoFolder = getStringConfiguration(hadoopConf, "metaInfoFolder")
   val namenode = getStringConfiguration(hadoopConf, "namenode")
-
 
   //app configuration
   val loggingType = getStringConfiguration(appConf, "app.logging.type")
@@ -407,7 +371,6 @@ object Configuration {
   val numberOfResults = getStringConfiguration(appConf, "nr.of.results")
   val corsFilterAllowedHosts = getStringConfiguration(appConf, "cors-filter-allowed-hosts")
   val jarPath = getStringConfiguration(appConf, "jar-path")
-
 
   //spark configuration
   val sparkMaster = getStringConfiguration(sparkConf, "spark-master")
@@ -434,13 +397,12 @@ object Configuration {
   val sparkKryoSerializerBufferMaxMb = getStringConfiguration(sparkConf, "spark-kryoserializer-buffer-max-mb")
   val sparkKryoReferenceTracking = getStringConfiguration(sparkConf, "spark-kryo-referenceTracking")
 
-
   val LIMIT_EXCEPTION_MESSAGE: Any = "The limit is null!"
   val HQL_SCRIPT_EXCEPTION_MESSAGE: Any = "The hqlScript is empty or null!"
   val UUID_EXCEPTION_MESSAGE: Any = "The uuid is empty or null!"
   val LIMITED_EXCEPTION_MESSAGE: Any = "The limited flag is null!"
   val RESULSTS_NUMBER_EXCEPTION_MESSAGE: Any = "The results number is null!"
-    
+
   def getStringConfiguration(configuration: Config, configurationPath: String): Option[String] = {
     return if (configuration.hasPath(configurationPath)) Option(configuration.getString(configurationPath).trim) else Option(null)
   }
