@@ -1,6 +1,6 @@
 package apiactors
 
-import messages.{GetFormattedTablesMessage, GetTablesMessage, GetDatabasesMessage, GetExtendedTablesMessage}
+import messages.{ GetFormattedTablesMessage, GetTablesMessage, GetDatabasesMessage, GetExtendedTablesMessage }
 import scala.concurrent.Await
 import traits.DAL
 import java.util.UUID
@@ -14,6 +14,7 @@ import com.xpatterns.jaws.data.DTO.Tables
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.scheduler.HiveUtils
 import implementation.HiveContextWrapper
+import scala.collection.mutable.LinkedList
 
 /**
  * Created by emaorhian
@@ -24,12 +25,11 @@ case class Extended() extends DescriptionType
 case class Formatted() extends DescriptionType
 case class Regular() extends DescriptionType
 
-
 class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Actor {
   val databasesActor = context.actorSelection("/user/GetDatabases")
   implicit val timeout = Timeout(Configuration.timeout)
 
-  def getTablesForDatabase(database: String, isExtended: DescriptionType, describe : Boolean): Map[String, Result] = {
+  def getTablesForDatabase(database: String, isExtended: DescriptionType, describe: Boolean): Map[String, Result] = {
     var results = Map[String, Result]()
     Configuration.log4j.info("[GetTablesApiActor]: showing tables for database " + database)
 
@@ -39,23 +39,30 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
     HiveUtils.runMetadataCmd(hiveContext, useCommand, dals.loggingDal, uuid)
     val tables = Result.trimResults(HiveUtils.runMetadataCmd(hiveContext, "show tables", dals.loggingDal, uuid))
 
-      tables.results.foreach(result => {
-        if (result.isEmpty == false) {
-          if(describe){
-            results = results ++ getTableDescription(database, result(0), isExtended)
-          }
-          else{
-            results.put(result(0),  new Result)
-          }
+    tables.results.foreach(result => {
+      if (result.isEmpty == false) {
+        if (describe) {
+          results = results ++ describeTable(database, result(0), isExtended)
+        } else {
+          results.put(result(0), new Result)
         }
-      })
-
-
+      }
+    })
 
     results
   }
 
-  def getTableDescription(database: String, table: String, isExtended: DescriptionType): Map[String, Result] = {
+  def describeTables(database: String, tables: List[String]): Map[String, Result] = {
+    var results = Map[String, Result]()
+    Configuration.log4j.info(s"[describeTables]: describing the following tables from database= $database: $tables")
+    tables.foreach(table => {
+      results = results ++ describeTable(database, table, new Regular)
+    })
+
+    results
+  }
+
+  def describeTable(database: String, table: String, isExtended: DescriptionType): Map[String, Result] = {
     var results = Map[String, Result]()
 
     val useCommand = "use " + database
@@ -66,8 +73,8 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
 
     var cmd = ""
     isExtended match {
-      case _ : Extended => cmd = "describe extended " + table
-      case _ : Formatted => cmd = "describe formatted " + table
+      case _: Extended => cmd = "describe extended " + table
+      case _: Formatted => cmd = "describe formatted " + table
       case _ => cmd = "describe " + table
     }
 
@@ -83,16 +90,21 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
 
       var results = Map[String, Map[String, Result]]()
 
+      // if no database is specified, the tables for all databases will be retrieved
       if (Option(message.database).getOrElse("").isEmpty) {
-
         val future = ask(databasesActor, GetDatabasesMessage())
         val allDatabases = Await.result(future, timeout.duration).asInstanceOf[Result]
 
         allDatabases.results.foreach(fields => results.put(fields(0), getTablesForDatabase(fields(0), new Regular, message.describe)))
 
-
       } else {
-        results.put(message.database, getTablesForDatabase(message.database, new Regular, message.describe))
+        // if there is a list of tables specified, then 
+        if (Option(message.tables).getOrElse(new LinkedList()).isEmpty) {
+          results.put(message.database, getTablesForDatabase(message.database, new Regular, message.describe))
+
+        } else {
+          results.put(message.database, describeTables(message.database, message.tables))
+        }
       }
 
       sender ! Tables.fromMutableMap(results).tables
@@ -106,7 +118,7 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
         results.put(message.database, getTablesForDatabase(message.database, new Extended, true))
 
       } else {
-        results.put(message.database, getTableDescription(message.database, message.table, new Extended))
+        results.put(message.database, describeTable(message.database, message.table, new Extended))
       }
 
       sender ! Tables.fromMutableMap(results).tables
@@ -120,7 +132,7 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
         results.put(message.database, getTablesForDatabase(message.database, new Formatted, true))
 
       } else {
-        results.put(message.database, getTableDescription(message.database, message.table, new Formatted))
+        results.put(message.database, describeTable(message.database, message.table, new Formatted))
       }
 
       sender ! Tables.fromMutableMap(results).tables

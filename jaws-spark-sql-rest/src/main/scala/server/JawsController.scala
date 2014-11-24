@@ -36,7 +36,7 @@ import com.xpatterns.jaws.data.DTO.Logs
 import com.xpatterns.jaws.data.DTO.Result
 import com.xpatterns.jaws.data.DTO.Query
 import org.apache.spark.SparkConf
-
+import scala.util.Try
 
 /**
  * Created by emaorhian
@@ -254,11 +254,29 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
       } ~
       path(pathPrefix / "tables") {
         get {
-          parameters('database.?, 'describe ? true) { (database, describe) =>
+          parameterMultiMap { params =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
               complete {
-
-                val future = ask(getTablesActor, new GetTablesMessage(database.getOrElse(null), describe)).mapTo[scala.collection.immutable.Map[String, scala.collection.immutable.Map[String, Result]]]
+                var database = ""
+                var describe = true
+                var tables: List[String] = null;
+                
+                params.foreach(touple => touple._1 match {
+                  case "database" => {
+                    if (touple._2 != null && !touple._2.isEmpty)
+                      database = touple._2(0)
+                  }
+                  case "describe" => {
+                    if (touple._2 != null && !touple._2.isEmpty)
+                       describe = Try(touple._2(0).toBoolean).getOrElse(true)
+                  }
+                  case "tables" => {
+                    tables = touple._2
+                  }
+                  case _ => Configuration.log4j.warn(s"Unknown parameter $touple._1!")
+                })
+                Configuration.log4j.info(s"Retrieving table information for database=$database, tables= $tables, with describe flag set on: $describe")
+                val future = ask(getTablesActor, new GetTablesMessage(database, describe, tables)).mapTo[scala.collection.immutable.Map[String, scala.collection.immutable.Map[String, Result]]]
                 future
               }
             }

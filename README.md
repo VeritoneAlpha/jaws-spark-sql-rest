@@ -235,16 +235,19 @@ This api cancels a running query. Unless Jaws runs in fine-grained mode under Me
     curl 'http://devbox.local:8181/jaws/tables' -X GET
     curl 'http://devbox.local:8181/jaws/tables?database=default' -X GET
     curl 'http://devbox.local:8181/jaws/tables?database=default&describe=false' -X GET
+    curl 'http://devbox.local:8181/jaws/tables?database=default&tables=table1&tables=table2' -X GET
 
 Parameters:
 
-  * database [not required] : is the database for which you want to retrieve all the tables
+  * database [not required] : is the database for which you want to retrieve all the tables.
   * describe [not required] : the default value is true. Flag that specifies if describe table should be performed
+  * tables [not required] : lists the tables that will be described.
 
 Results:
 
 If the database parameter is set, the api returns a JSON containing all the tables from the specified database, otherwise, it will return all the databases with all their tables.
 If the describe parameter is set on true, also the tables columns are returned.
+If a table list is provided, then those will be the tables that will be described. (The database is needed) 
 
 Example:
 
