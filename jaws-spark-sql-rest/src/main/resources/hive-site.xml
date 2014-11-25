@@ -8,7 +8,7 @@
   </property>
   <property>
     <name>hive.metastore.uris</name>
-    <value>thrift://devbox.local:9083</value>
+    <value>thrift://flaviusi-VirtualBox.local:9083</value>
   </property>
   <property>
     <name>hive.metastore.client.socket.timeout</name>
@@ -44,7 +44,7 @@
   </property>
   <property>
     <name>hive.zookeeper.quorum</name>
-    <value>devbox.local</value>
+    <value>flaviusi-VirtualBox.local</value>
   </property>
   <property>
     <name>hive.zookeeper.client.port</name>
@@ -52,7 +52,7 @@
   </property>
   <property>
     <name>hbase.zookeeper.quorum</name>
-    <value>devbox.local</value>
+    <value>flaviusi-VirtualBox.local</value>
   </property>
   <property>
     <name>hbase.zookeeper.property.clientPort</name>
@@ -75,3 +75,4 @@
     <value>false</value>
   </property>
 </configuration>
+

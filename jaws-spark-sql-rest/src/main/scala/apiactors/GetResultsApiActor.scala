@@ -1,5 +1,6 @@
 package apiactors
 
+import apiactors.ActorOperations._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.hive.HiveContext
 import com.google.common.base.Preconditions
@@ -8,13 +9,14 @@ import com.xpatterns.jaws.data.DTO.Result
 import com.xpatterns.jaws.data.utils.Utils
 import server.Configuration
 import akka.actor.Actor
-import akka.actor.ActorLogging
 import akka.actor.actorRef2Scala
 import messages.GetResultsMessage
 import net.liftweb.json._
 import net.liftweb.json.DefaultFormats
 import traits.DAL
 import org.apache.spark.scheduler.HiveUtils
+
+import scala.util.Try
 
 /**
  * Created by emaorhian
@@ -26,61 +28,67 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCon
     case message: GetResultsMessage =>
       {
         Configuration.log4j.info("[GetResultsMessage]: retrieving results for: " + message.queryID)
-        Preconditions.checkArgument(message.queryID != null && !message.queryID.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE)
-        var offset = message.offset
-        var limit = message.limit
 
-        Option(offset) match {
-          case None => {
-            Configuration.log4j.info("[GetResultsMessage]: offset null... setting it on 0")
-            offset = 0
-          }
-          case _ => {
-            Configuration.log4j.info("[GetResultsMessage]: offset = " + offset)
-          }
-        }
+        var result : Result= null
+        val tryGetResults = Try {
+          Preconditions.checkArgument(message.queryID != null && !message.queryID.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE)
+          var offset = message.offset
+          var limit = message.limit
 
-        Option(limit) match {
-          case None => {
-            Configuration.log4j.info("[GetResultsMessage]: limit null... setting it on 100")
-            limit = 100
-          }
-          case _ => {
-            Configuration.log4j.info("[GetResultsMessage]: limit = " + limit)
-          }
-        }
-
-        val metaInfo = dals.loggingDal.getMetaInfo(message.queryID)
-
-        metaInfo.resultsDestination match {
-          // cassandra
-          case 0 => {
-            var result = dals.resultsDal.getResults(message.queryID)
-            var endIndex = offset + limit
-            if (endIndex > result.results.length) {
-              endIndex = result.results.length
+          Option(offset) match {
+            case None => {
+              Configuration.log4j.info("[GetResultsMessage]: offset null... setting it on 0")
+              offset = 0
             }
-            val res = result.results.slice(offset, endIndex)
-            sender ! new Result(result.schema, res)
-
+            case _ => {
+              Configuration.log4j.info("[GetResultsMessage]: offset = " + offset)
+            }
           }
-          //hdfs
-          case 1 => {
-            val destinationPath = HiveUtils.getHdfsPath(Configuration.rddDestinationIp.get)
-            sender ! getResults(offset, limit, destinationPath)
 
+          Option(limit) match {
+            case None => {
+              Configuration.log4j.info("[GetResultsMessage]: limit null... setting it on 100")
+              limit = 100
+            }
+            case _ => {
+              Configuration.log4j.info("[GetResultsMessage]: limit = " + limit)
+            }
           }
-          //tachyon
-          case 2 => {
-            val destinationPath = HiveUtils.getTachyonPath(Configuration.rddDestinationIp.get)
-            sender ! getResults(offset, limit, destinationPath)
 
-          }
-          case _ => {
-            Configuration.log4j.info("[GetResultsMessage]: Unidentified results path : " +  metaInfo.resultsDestination )
-            sender ! new Result
+          val metaInfo = dals.loggingDal.getMetaInfo(message.queryID)
+
+          metaInfo.resultsDestination match {
+            // cassandra
+            case 0 => {
+              var result = dals.resultsDal.getResults(message.queryID)
+              var endIndex = offset + limit
+              if (endIndex > result.results.length) {
+                endIndex = result.results.length
+              }
+              val res = result.results.slice(offset, endIndex)
+              sender ! new Result(result.schema, res)
+
+            }
+            //hdfs
+            case 1 => {
+              val destinationPath = HiveUtils.getHdfsPath(Configuration.rddDestinationIp.get)
+              result = getResults(offset, limit, destinationPath)
+
+            }
+            //tachyon
+            case 2 => {
+              val destinationPath = HiveUtils.getTachyonPath(Configuration.rddDestinationIp.get)
+              result = getResults(offset, limit, destinationPath)
+
+            }
+            case _ => {
+              Configuration.log4j.info("[GetResultsMessage]: Unidentified results path : " + metaInfo.resultsDestination)
+              result = new Result
+            }
           }
         }
+
+        returnResult(tryGetResults, result, "GET results failed with the following message: ", sender)
       }
 
       def getResults(offset: Int, limit: Int, destinationPath: String): Result = {

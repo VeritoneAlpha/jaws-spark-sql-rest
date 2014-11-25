@@ -5,23 +5,20 @@ import com.typesafe.config.Config
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.apache.log4j.Logger
 import com.google.gson.Gson
-import com.typesafe.config.ConfigFactory
 import com.xpatterns.jaws.data.utils.Utils
 import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.actor.actorRef2Scala
 import akka.pattern.ask
 import akka.util.Timeout
-import akka.util.Timeout
 import apiactors._
+import apiactors.ActorsPaths._
 import customs.CORSDirectives
 import implementation.CassandraDal
 import implementation.HdfsDal
 import messages._
 import com.xpatterns.jaws.data.DTO.Queries
-import spray.http.HttpHeaders
-import spray.http.HttpMethods
-import spray.httpx.SprayJsonSupport._
+import spray.http.{StatusCodes, HttpHeaders, HttpMethods, MediaTypes}
 import spray.httpx.SprayJsonSupport.sprayJsonMarshaller
 import spray.httpx.marshalling.ToResponseMarshallable.isMarshallable
 import spray.json.DefaultJsonProtocol._
@@ -31,11 +28,9 @@ import spray.routing.directives.ParamDefMagnet.apply
 import traits.DAL
 import messages.GetResultsMessage
 import implementation.CustomHiveContextCreator
-import implementation.CustomHiveContextCreator
 import com.xpatterns.jaws.data.DTO.Logs
 import com.xpatterns.jaws.data.DTO.Result
 import com.xpatterns.jaws.data.DTO.Query
-import org.apache.spark.SparkConf
 import scala.util.Try
 
 /**
@@ -89,14 +84,14 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
   initialize()
   implicit val timeout = Timeout(Configuration.timeout.toInt)
 
-  val getQueriesActor = createActor(Props(new GetQueriesApiActor(dals)), "GetQueries", system)
-  val runScriptActor = createActor(Props(new RunScriptApiActor(hdfsConf, customSharkContext.hiveContext, dals)), "RunScript", domainSystem)
-  val getLogsActor = createActor(Props(new GetLogsApiActor(dals)), "GetLogs", system)
-  val getResultsActor = createActor(Props(new GetResultsApiActor(hdfsConf, customSharkContext.hiveContext, dals)), "GetResults", system)
-  val getQueryInfoActor = createActor(Props(new GetQueryInfoApiActor(dals)), "GetQueryInfo", system)
-  val getDatabasesActor = createActor(Props(new GetDatabasesApiActor(customSharkContext.hiveContext, dals)), "GetDatabases", system)
+  val getQueriesActor = createActor(Props(new GetQueriesApiActor(dals)), GET_QUERIES_ACTOR_NAME)
+  val getTablesActor = createActor(Props(new GetTablesApiActor(customSharkContext.hiveContext, dals)), GET_TABLES_ACTOR_NAME)
+  val runScriptActor = createActor(Props(new RunScriptApiActor(hdfsConf, customSharkContext.hiveContext, dals)), RUN_SCRIPT_ACTOR_NAME, domainSystem)
+  val getLogsActor = createActor(Props(new GetLogsApiActor(dals)), GET_LOGS_ACTOR_NAME)
+  val getResultsActor = createActor(Props(new GetResultsApiActor(hdfsConf, customSharkContext.hiveContext, dals)), GET_RESULTS_ACTOR_NAME)
+  val getQueryInfoActor = createActor(Props(new GetQueryInfoApiActor(dals)), "GetQueryInfo")
+  val getDatabasesActor = createActor(Props(new GetDatabasesApiActor(customSharkContext.hiveContext, dals)), GET_DATABASES_ACTOR_NAME)
   val cancelActor = createActor(Props(classOf[CancelActor], runScriptActor), "Cancel", cancelSystem)
-  val getTablesActor = createActor(Props(new GetTablesApiActor(customSharkContext.hiveContext, dals)), "GetTables", system)
 
   val gson = new Gson()
   val pathPrefix = "jaws"
@@ -146,13 +141,17 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
         get {
           parameters('queryID, 'startTimestamp.as[Long].?, 'limit.as[Int]) { (queryID, startTimestamp, limit) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              complete {
+
                 var timestamp: java.lang.Long = 0
                 if (startTimestamp.isDefined) {
                   timestamp = startTimestamp.get
                 }
-                val future = ask(getLogsActor, GetLogsMessage(queryID, timestamp, limit)).mapTo[Logs]
-                future
+                val future = ask(getLogsActor, GetLogsMessage(queryID, timestamp, limit))
+                respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                future.map {
+                  case e:ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case result : Logs => ctx.complete(StatusCodes.OK, result)
+                }
               }
             }
           }
@@ -169,10 +168,12 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
         get {
           parameters('queryID, 'offset.as[Int], 'limit.as[Int]) { (queryID, offset, limit) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              complete {
-                val future = ask(getResultsActor, GetResultsMessage(queryID, offset, limit)).mapTo[Result]
-                future
-
+              val future = ask(getResultsActor, GetResultsMessage(queryID, offset, limit))
+              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                future.map {
+                  case e:ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case result : Result => ctx.complete(StatusCodes.OK, result)
+                }
               }
             }
           }
@@ -189,9 +190,12 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
         get {
           parameters('startQueryID.?, 'limit.as[Int]) { (startQueryID, limit) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              complete {
-                val future = ask(getQueriesActor, GetQueriesMessage(startQueryID.getOrElse(null), limit)).mapTo[Queries]
-                future
+              val future = ask(getQueriesActor, GetQueriesMessage(startQueryID.getOrElse(null), limit))
+              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                future.map {
+                  case e:ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case result : Queries => ctx.complete(StatusCodes.OK, result)
+                }
               }
             }
           }
@@ -256,28 +260,32 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
         get {
           parameterMultiMap { params =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              complete {
-                var database = ""
-                var describe = true
-                var tables: List[String] = null;
-                
-                params.foreach(touple => touple._1 match {
-                  case "database" => {
-                    if (touple._2 != null && !touple._2.isEmpty)
-                      database = touple._2(0)
-                  }
-                  case "describe" => {
-                    if (touple._2 != null && !touple._2.isEmpty)
-                       describe = Try(touple._2(0).toBoolean).getOrElse(true)
-                  }
-                  case "tables" => {
-                    tables = touple._2
-                  }
-                  case _ => Configuration.log4j.warn(s"Unknown parameter $touple._1!")
-                })
-                Configuration.log4j.info(s"Retrieving table information for database=$database, tables= $tables, with describe flag set on: $describe")
-                val future = ask(getTablesActor, new GetTablesMessage(database, describe, tables)).mapTo[scala.collection.immutable.Map[String, scala.collection.immutable.Map[String, Result]]]
-                future
+              var database = ""
+              var describe = true
+              var tables: List[String] = List()
+
+              params.foreach(touple => touple._1 match {
+                case "database" => {
+                  if (touple._2 != null && !touple._2.isEmpty)
+                    database = touple._2(0)
+                }
+                case "describe" => {
+                  if (touple._2 != null && !touple._2.isEmpty)
+                    describe = Try(touple._2(0).toBoolean).getOrElse(true)
+                }
+                case "tables" => {
+                  tables = touple._2
+                }
+                case _ => Configuration.log4j.warn(s"Unknown parameter ${touple._1}!")
+              })
+              Configuration.log4j.info(s"Retrieving table information for database=$database, tables= $tables, with describe flag set on: $describe")
+              val future = ask(getTablesActor, new GetTablesMessage(database, describe, tables))
+
+              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                future.map {
+                  case e:ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case result : Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
+                }
               }
             }
           }
@@ -294,10 +302,12 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
         get {
           parameters('database.as[String], 'table.?) { (database, table) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              complete {
-
-                val future = ask(getTablesActor, new GetExtendedTablesMessage(database, table.getOrElse(""))).mapTo[scala.collection.immutable.Map[String, scala.collection.immutable.Map[String, Result]]]
-                future
+              val future = ask(getTablesActor, new GetExtendedTablesMessage(database, table.getOrElse("")))
+              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                future.map {
+                  case e:ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case result : Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
+                }
               }
             }
           }
@@ -314,10 +324,12 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
         get {
           parameters('database.as[String], 'table.?) { (database, table) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              complete {
-
-                val future = ask(getTablesActor, new GetFormattedTablesMessage(database, table.getOrElse(""))).mapTo[scala.collection.immutable.Map[String, scala.collection.immutable.Map[String, Result]]]
-                future
+              val future = ask(getTablesActor, new GetFormattedTablesMessage(database, table.getOrElse("")))
+              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                future.map {
+                  case e:ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case result : Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
+                }
               }
             }
           }

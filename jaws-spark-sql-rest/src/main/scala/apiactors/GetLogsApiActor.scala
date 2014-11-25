@@ -2,6 +2,7 @@ package apiactors
 
 import akka.actor.Actor
 import akka.actor.actorRef2Scala
+import apiactors.ActorOperations._
 import messages.GetQueriesMessage
 import com.google.common.base.Preconditions
 import server.LogsActor
@@ -13,6 +14,9 @@ import java.util.Collection
 import server.Configuration
 import com.xpatterns.jaws.data.DTO.Logs
 import com.xpatterns.jaws.data.DTO.Log
+
+import scala.util.Try
+
 /**
  * Created by emaorhian
  */
@@ -22,25 +26,27 @@ class GetLogsApiActor(dals: DAL) extends Actor {
 
     case message: GetLogsMessage => {
       Configuration.log4j.info("[GetLogsApiActor]: retrieving logs for: " + message.queryID)
-      Preconditions.checkArgument(message.queryID != null && !message.queryID.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE)
-      var startDate = message.startDate
-      var limit = message.limit
+      var logs : Logs = null
+      val tryGetLogs = Try {
+        Preconditions.checkArgument(message.queryID != null && !message.queryID.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE)
+        var startDate = message.startDate
+        var limit = message.limit
 
-      Option(message.startDate) match {
-        case None => {
-          startDate = new DateTime(1977, 1, 1, 1, 1, 1, 1).getMillis()
+        Option(message.startDate) match {
+          case None => {
+            startDate = new DateTime(1977, 1, 1, 1, 1, 1, 1).getMillis()
+          }
+          case _ => Configuration.log4j.debug("[GetLogsApiActor]: Start date = " + startDate)
+
         }
-        case _ => Configuration.log4j.debug("[GetLogsApiActor]: Start date = " + startDate)
-        
+
+        Option(limit) match {
+          case None => limit = 100
+          case _ => Configuration.log4j.debug("[GetLogsApiActor]: Limit = " + limit)
+        }
+      logs = dals.loggingDal.getLogs(message.queryID, startDate, limit)
       }
-
-      Option(limit) match {
-        case None => limit = 100
-        case _ => Configuration.log4j.debug("[GetLogsApiActor]: Limit = " + limit)
-      }
-
-      sender ! dals.loggingDal.getLogs(message.queryID, startDate, limit)
-
+      returnResult(tryGetLogs, logs, "GET logs failed with the following message: ", sender)
     }
   }
 }
