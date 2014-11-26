@@ -4,16 +4,14 @@ import scala.collection.mutable.Map
 import org.json4s.jackson.JsonMethods._
 import server.Configuration
 import server.LogsActor.PushLogs
-import server.MainActors
-import server.Systems
-import akka.actor.ActorRef
+import server.MainActors._
 import traits.DAL
 import org.apache.spark.util.JsonProtocol
 
 /**
  * Created by emaorhian
  */
-class LoggingListener(dals: DAL) extends SparkListener with MainActors with Systems {
+class LoggingListener(dals: DAL) extends SparkListener {
 
   val JOB_ID: String = "xpatterns.job.id"
   val commentSize = 2

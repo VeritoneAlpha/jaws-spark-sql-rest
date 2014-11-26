@@ -1,35 +1,25 @@
 package org.apache.spark.scheduler
 
-import java.io.BufferedReader
 import java.io.InputStream
-import java.io.InputStreamReader
 import org.apache.commons.lang.RandomStringUtils
 import org.apache.commons.lang.StringUtils
 import com.xpatterns.jaws.data.utils.Utils
 import server.Configuration
-import server.MainActors
-import server.Systems
-import customs.CustomIndexer
 import customs.CustomIndexer
 import com.xpatterns.jaws.data.DTO.Result
 import org.apache.spark.sql.hive.HiveContext
 import com.xpatterns.jaws.data.contracts.TJawsLogging
 import com.xpatterns.jaws.data.DTO.QueryMetaInfo
-import org.apache.spark.sql.catalyst.expressions.Attribute
-import net.liftweb.json._
 import spray.json._
-import spray.httpx.SprayJsonSupport._
 import spray.json.DefaultJsonProtocol._
-import implementation.HiveContextWrapper
 import com.xpatterns.jaws.data.DTO.Column
 import implementation.HiveContextWrapper
-import org.apache.spark.sql.catalyst.expressions.AttributeSet
 import org.apache.spark.sql.catalyst.types.StructType
 
 /**
  * Created by emaorhian
  */
-class HiveUtils extends MainActors with Systems {
+class HiveUtils {
 
 }
 

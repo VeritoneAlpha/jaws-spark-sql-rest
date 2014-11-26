@@ -2,36 +2,24 @@ package apiactors
 
 import akka.actor.Actor
 import akka.actor.actorRef2Scala
-import messages.GetQueriesMessage
 import com.google.common.base.Preconditions
-import server.LogsActor
-import akka.actor.ActorLogging
 import traits.DAL
-import com.xpatterns.jaws.data.DTO.Queries
-import com.xpatterns.jaws.data.DTO.Query
 import messages.RunScriptMessage
 import java.util.UUID
 import server.Configuration
-import akka.actor.ActorRef
-import com.google.common.cache.LoadingCache
 import com.google.common.cache.CacheBuilder
 import java.util.concurrent.TimeUnit
-import com.google.common.cache.CacheLoader
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
 import server.MainActors
-import server.Systems
-import scala.collection.immutable.Nil
 import com.google.common.cache.Cache
 import messages.CancelMessage
 import org.apache.spark.scheduler.RunSharkScriptTask
-import shapeless.ToInt
-import org.apache.spark.sql.hive.HiveContext
 import implementation.HiveContextWrapper
 
 /**
  * Created by emaorhian
  */
-class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveContext: HiveContextWrapper, dals: DAL) extends Actor with MainActors with Systems {
+class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveContext: HiveContextWrapper, dals: DAL) extends Actor {
   var taskCache: Cache[String, RunSharkScriptTask] = _
   var threadPool: ThreadPoolTaskExecutor = _
 

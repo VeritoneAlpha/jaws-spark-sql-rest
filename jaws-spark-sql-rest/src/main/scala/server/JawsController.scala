@@ -32,11 +32,12 @@ import com.xpatterns.jaws.data.DTO.Logs
 import com.xpatterns.jaws.data.DTO.Result
 import com.xpatterns.jaws.data.DTO.Query
 import scala.util.Try
+import server.MainActors._
 
 /**
  * Created by emaorhian
  */
-object JawsController extends App with SimpleRoutingApp with MainActors with Systems with CORSDirectives {
+object JawsController extends App with SimpleRoutingApp with CORSDirectives {
   var hdfsConf: org.apache.hadoop.conf.Configuration = _
   var customSharkContext: CustomHiveContextCreator = _
   var dals: DAL = _
@@ -84,17 +85,20 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
   initialize()
   implicit val timeout = Timeout(Configuration.timeout.toInt)
 
-  val getQueriesActor = createActor(Props(new GetQueriesApiActor(dals)), GET_QUERIES_ACTOR_NAME)
-  val getTablesActor = createActor(Props(new GetTablesApiActor(customSharkContext.hiveContext, dals)), GET_TABLES_ACTOR_NAME)
-  val runScriptActor = createActor(Props(new RunScriptApiActor(hdfsConf, customSharkContext.hiveContext, dals)), RUN_SCRIPT_ACTOR_NAME, domainSystem)
-  val getLogsActor = createActor(Props(new GetLogsApiActor(dals)), GET_LOGS_ACTOR_NAME)
-  val getResultsActor = createActor(Props(new GetResultsApiActor(hdfsConf, customSharkContext.hiveContext, dals)), GET_RESULTS_ACTOR_NAME)
-  val getQueryInfoActor = createActor(Props(new GetQueryInfoApiActor(dals)), GET_QUERY_INFO_ACTOR_NAME)
-  val getDatabasesActor = createActor(Props(new GetDatabasesApiActor(customSharkContext.hiveContext, dals)), GET_DATABASES_ACTOR_NAME)
-  val cancelActor = createActor(Props(classOf[CancelActor], runScriptActor), CANCEL_ACTOR_NAME, cancelSystem)
+  val getQueriesActor = createActor(Props(new GetQueriesApiActor(dals)), GET_QUERIES_ACTOR_NAME, localSupervisor)
+  val getTablesActor = createActor(Props(new GetTablesApiActor(customSharkContext.hiveContext, dals)), GET_TABLES_ACTOR_NAME, localSupervisor)
+  val runScriptActor = createActor(Props(new RunScriptApiActor(hdfsConf, customSharkContext.hiveContext, dals)), RUN_SCRIPT_ACTOR_NAME, remoteSupervisor)
+  val getLogsActor = createActor(Props(new GetLogsApiActor(dals)), GET_LOGS_ACTOR_NAME, localSupervisor)
+  val getResultsActor = createActor(Props(new GetResultsApiActor(hdfsConf, customSharkContext.hiveContext, dals)), GET_RESULTS_ACTOR_NAME, localSupervisor)
+  val getQueryInfoActor = createActor(Props(new GetQueryInfoApiActor(dals)), GET_QUERY_INFO_ACTOR_NAME, localSupervisor)
+  val getDatabasesActor = createActor(Props(new GetDatabasesApiActor(customSharkContext.hiveContext, dals)), GET_DATABASES_ACTOR_NAME, localSupervisor)
+  val cancelActor = createActor(Props(classOf[CancelActor], runScriptActor), CANCEL_ACTOR_NAME, remoteSupervisor)
+
 
   val gson = new Gson()
   val pathPrefix = "jaws"
+
+  implicit val spraySystem: ActorSystem = ActorSystem("spraySystem")
 
   startServer(interface = InetAddress.getLocalHost().getHostName(), port = Configuration.webServicesPort.getOrElse("8080").toInt) {
     path(pathPrefix / "index") {
@@ -352,17 +356,8 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
 
   }
 
-  private val reactiveServer = new ReactiveServer(Configuration.webSocketsPort.getOrElse("8081").toInt, logsActor)
+  private val reactiveServer = new ReactiveServer(Configuration.webSocketsPort.getOrElse("8081").toInt, MainActors.logsActor)
   reactiveServer.start()
-
-}
-
-trait Systems {
-  implicit lazy val system: ActorSystem = ActorSystem("system")
-
-  def cancelSystem: ActorSystem = ActorSystem("cancelSystem", Configuration.cancel)
-
-  def domainSystem: ActorSystem = ActorSystem("domainSystem", Configuration.domain)
 
 }
 
@@ -375,8 +370,7 @@ object Configuration {
   private val conf = ConfigFactory.load
   conf.checkValid(ConfigFactory.defaultReference)
 
-  val domain = conf.getConfig("domain")
-  val cancel = conf.getConfig("cancel")
+  val remote = conf.getConfig("remote")
   val sparkConf = conf.getConfig("sparkConfiguration")
   val appConf = conf.getConfig("appConf")
   val hadoopConf = conf.getConfig("hadoopConf")

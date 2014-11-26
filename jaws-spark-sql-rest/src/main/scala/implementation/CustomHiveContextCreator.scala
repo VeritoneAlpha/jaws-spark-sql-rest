@@ -4,9 +4,7 @@ import org.apache.spark.scheduler.LoggingListener
 import scala.collection.JavaConverters._
 import server.Configuration
 import server.MainActors
-import server.Systems
 import traits.DAL
-import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.SparkContext
 import org.apache.spark.scheduler.HiveUtils
 import org.apache.spark.SparkConf
@@ -15,7 +13,7 @@ import com.typesafe.config.Config
 /**
  * Created by emaorhian
  */
-class CustomHiveContextCreator(dals: DAL) extends MainActors with Systems {
+class CustomHiveContextCreator(dals: DAL) {
   val jars = Array(Configuration.jarPath.get)
 
   val hiveContext: HiveContextWrapper = {

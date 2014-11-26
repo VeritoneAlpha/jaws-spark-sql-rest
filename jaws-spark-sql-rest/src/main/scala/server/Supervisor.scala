@@ -21,7 +21,6 @@ class Supervisor extends Actor {
     }
 
   def receive = {
-    case (p: Props, name: String, customSystem: ActorSystem) => sender ! customSystem.actorOf(p, name)
     case (p: Props, name: String) => sender ! context.actorOf(p, name)
   }
 

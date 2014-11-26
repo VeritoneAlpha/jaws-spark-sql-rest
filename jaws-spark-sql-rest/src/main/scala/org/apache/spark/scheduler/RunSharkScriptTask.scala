@@ -1,21 +1,19 @@
 package org.apache.spark.scheduler
 
 import traits.DAL
-import server.Systems
 import server.MainActors
 import server.Configuration
 import server.LogsActor.PushLogs
 import com.xpatterns.jaws.data.DTO.Result
 import org.apache.commons.lang.time.DurationFormatUtils
 import com.xpatterns.jaws.data.utils.QueryState
-import org.apache.spark.sql.hive.HiveContext
 import implementation.HiveContextWrapper
 import com.xpatterns.jaws.data.DTO.QueryMetaInfo
 
 /**
  * Created by emaorhian
  */
-class RunSharkScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrapper, uuid: String, var isCanceled: Boolean, isLimited: Boolean, maxNumberOfResults: Long, hdfsConf: org.apache.hadoop.conf.Configuration, rddDestination:String) extends Runnable with MainActors with Systems {
+class RunSharkScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrapper, uuid: String, var isCanceled: Boolean, isLimited: Boolean, maxNumberOfResults: Long, hdfsConf: org.apache.hadoop.conf.Configuration, rddDestination:String) extends Runnable {
 
   override def run() {
     try {
@@ -30,7 +28,7 @@ class RunSharkScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextW
       var message = "There are " + nrOfCommands + " commands that need to be executed"
       Configuration.log4j.info(message)
       dals.loggingDal.addLog(uuid, "hql", System.currentTimeMillis(), message)
-      logsActor ! new PushLogs(uuid, message)
+      MainActors.logsActor ! new PushLogs(uuid, message)
 
       val startTime = System.currentTimeMillis()
 
@@ -61,7 +59,7 @@ class RunSharkScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextW
 
       message = "The total execution time was: " + formattedDuration + "!"
       dals.loggingDal.addLog(uuid, "hql", System.currentTimeMillis(), message)
-      logsActor ! new PushLogs(uuid, message)
+      MainActors.logsActor ! new PushLogs(uuid, message)
       dals.loggingDal.setState(uuid, QueryState.DONE)
 
     } catch {
@@ -81,13 +79,13 @@ class RunSharkScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextW
       message = "Command progress : There were executed " + (commandIndex + 1) + " commands out of " + nrOfCommands
       Configuration.log4j.info(message)
       dals.loggingDal.addLog(uuid, "hql", System.currentTimeMillis(), message)
-      logsActor ! PushLogs(uuid, message)
+      MainActors.logsActor ! PushLogs(uuid, message)
       return result
     } catch {
       case e: Exception => {
         Configuration.log4j.error(e.getStackTraceString)
         dals.loggingDal.addLog(uuid, "hql", System.currentTimeMillis(), e.getStackTraceString)
-        logsActor ! PushLogs(uuid, e.getStackTraceString)
+        MainActors.logsActor ! PushLogs(uuid, e.getStackTraceString)
         dals.loggingDal.setState(uuid, QueryState.FAILED)
         dals.loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, 0, isLimited))
 
