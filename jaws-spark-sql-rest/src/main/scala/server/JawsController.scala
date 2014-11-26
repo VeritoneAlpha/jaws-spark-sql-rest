@@ -89,9 +89,9 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
   val runScriptActor = createActor(Props(new RunScriptApiActor(hdfsConf, customSharkContext.hiveContext, dals)), RUN_SCRIPT_ACTOR_NAME, domainSystem)
   val getLogsActor = createActor(Props(new GetLogsApiActor(dals)), GET_LOGS_ACTOR_NAME)
   val getResultsActor = createActor(Props(new GetResultsApiActor(hdfsConf, customSharkContext.hiveContext, dals)), GET_RESULTS_ACTOR_NAME)
-  val getQueryInfoActor = createActor(Props(new GetQueryInfoApiActor(dals)), "GetQueryInfo")
+  val getQueryInfoActor = createActor(Props(new GetQueryInfoApiActor(dals)), GET_QUERY_INFO_ACTOR_NAME)
   val getDatabasesActor = createActor(Props(new GetDatabasesApiActor(customSharkContext.hiveContext, dals)), GET_DATABASES_ACTOR_NAME)
-  val cancelActor = createActor(Props(classOf[CancelActor], runScriptActor), "Cancel", cancelSystem)
+  val cancelActor = createActor(Props(classOf[CancelActor], runScriptActor), CANCEL_ACTOR_NAME, cancelSystem)
 
   val gson = new Gson()
   val pathPrefix = "jaws"
@@ -142,15 +142,15 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
           parameters('queryID, 'startTimestamp.as[Long].?, 'limit.as[Int]) { (queryID, startTimestamp, limit) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
 
-                var timestamp: java.lang.Long = 0
-                if (startTimestamp.isDefined) {
-                  timestamp = startTimestamp.get
-                }
-                val future = ask(getLogsActor, GetLogsMessage(queryID, timestamp, limit))
-                respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+              var timestamp: java.lang.Long = 0
+              if (startTimestamp.isDefined) {
+                timestamp = startTimestamp.get
+              }
+              val future = ask(getLogsActor, GetLogsMessage(queryID, timestamp, limit))
+              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
                 future.map {
-                  case e:ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
-                  case result : Logs => ctx.complete(StatusCodes.OK, result)
+                  case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case result: Logs => ctx.complete(StatusCodes.OK, result)
                 }
               }
             }
@@ -171,8 +171,8 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
               val future = ask(getResultsActor, GetResultsMessage(queryID, offset, limit))
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
                 future.map {
-                  case e:ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
-                  case result : Result => ctx.complete(StatusCodes.OK, result)
+                  case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case result: Result => ctx.complete(StatusCodes.OK, result)
                 }
               }
             }
@@ -193,8 +193,8 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
               val future = ask(getQueriesActor, GetQueriesMessage(startQueryID.getOrElse(null), limit))
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
                 future.map {
-                  case e:ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
-                  case result : Queries => ctx.complete(StatusCodes.OK, result)
+                  case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case result: Queries => ctx.complete(StatusCodes.OK, result)
                 }
               }
             }
@@ -212,9 +212,12 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
         get {
           parameters('queryID) { queryID =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              complete {
-                val future = ask(getQueryInfoActor, GetQueryInfoMessage(queryID)).mapTo[Query]
-                future
+              val future = ask(getQueryInfoActor, GetQueryInfoMessage(queryID))
+              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                future.map {
+                  case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case result: Query => ctx.complete(StatusCodes.OK, result)
+                }
               }
             }
           }
@@ -223,9 +226,13 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
       path(pathPrefix / "databases") {
         get {
           corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-            complete {
-              val future = ask(getDatabasesActor, GetDatabasesMessage()).mapTo[Result]
-              future
+
+            val future = ask(getDatabasesActor, GetDatabasesMessage())
+            respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+              future.map {
+                case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                case result: Result => ctx.complete(StatusCodes.OK, result)
+              }
             }
           }
         } ~
@@ -283,8 +290,8 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
 
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
                 future.map {
-                  case e:ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
-                  case result : Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
+                  case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
                 }
               }
             }
@@ -305,8 +312,8 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
               val future = ask(getTablesActor, new GetExtendedTablesMessage(database, table.getOrElse("")))
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
                 future.map {
-                  case e:ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
-                  case result : Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
+                  case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
                 }
               }
             }
@@ -327,8 +334,8 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
               val future = ask(getTablesActor, new GetFormattedTablesMessage(database, table.getOrElse("")))
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
                 future.map {
-                  case e:ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
-                  case result : Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
+                  case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
                 }
               }
             }
@@ -352,12 +359,15 @@ object JawsController extends App with SimpleRoutingApp with MainActors with Sys
 
 trait Systems {
   implicit lazy val system: ActorSystem = ActorSystem("system")
+
   def cancelSystem: ActorSystem = ActorSystem("cancelSystem", Configuration.cancel)
+
   def domainSystem: ActorSystem = ActorSystem("domainSystem", Configuration.domain)
 
 }
 
 object Configuration {
+
   import com.typesafe.config.ConfigFactory
 
   val log4j = Logger.getLogger(JawsController.getClass())

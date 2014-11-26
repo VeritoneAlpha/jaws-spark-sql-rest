@@ -1,6 +1,7 @@
 package apiactors
 
 import messages._
+import spray.http.StatusCodes
 import scala.concurrent.Await
 import traits.DAL
 import java.util.UUID
@@ -11,8 +12,8 @@ import akka.pattern.ask
 import org.apache.spark.scheduler.HiveUtils
 import implementation.HiveContextWrapper
 import akka.actor.Actor
-import com.xpatterns.jaws.data.DTO.{Tables, Result}
-import scala.util.{Try, Success, Failure}
+import com.xpatterns.jaws.data.DTO.{ Tables, Result }
+import scala.util.{ Try, Success, Failure }
 import apiactors.ActorOperations._
 /**
  * Created by emaorhian
@@ -90,23 +91,25 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
       val results = Map[String, Map[String, Result]]()
 
       val tryGetTables = Try(
-      // if no database is specified, the tables for all databases will be retrieved
-      if (Option(message.database).getOrElse("").isEmpty) {
-        val future = ask(databasesActor, GetDatabasesMessage())
-        val allDatabases = Await.result(future, timeout.duration).asInstanceOf[Result]
+        // if no database is specified, the tables for all databases will be retrieved
+        if (Option(message.database).getOrElse("").isEmpty) {
+          val future = ask(databasesActor, GetDatabasesMessage())
+          val allDatabases = Await.result(future, timeout.duration)
 
-        allDatabases.results.foreach(fields => results.put(fields(0), getTablesForDatabase(fields(0), new Regular, message.describe)))
-
-      } else {
-        // if there is a list of tables specified, then
-        if (Option(message.tables).getOrElse(List()).isEmpty) {
-          results.put(message.database, getTablesForDatabase(message.database, new Regular, message.describe))
+          allDatabases match {
+            case e: ErrorMessage => throw new Exception(e.message)
+            case result: Result => result.results.foreach(fields => results.put(fields(0), getTablesForDatabase(fields(0), new Regular, message.describe)))
+          }
 
         } else {
-          results.put(message.database, describeTables(message.database, message.tables))
-        }
-      }
-      )
+          // if there is a list of tables specified, then
+          if (Option(message.tables).getOrElse(List()).isEmpty) {
+            results.put(message.database, getTablesForDatabase(message.database, new Regular, message.describe))
+
+          } else {
+            results.put(message.database, describeTables(message.database, message.tables))
+          }
+        })
 
       returnResult(tryGetTables, Tables.fromMutableMap(results).tables, "GET tables failed with the following message: ", sender)
     }
@@ -115,13 +118,12 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
       val results = Map[String, Map[String, Result]]()
 
       val tryGetExtendedTables = Try(
-      if (Option(message.table).getOrElse("").isEmpty) {
-        results.put(message.database, getTablesForDatabase(message.database, new Extended, true))
+        if (Option(message.table).getOrElse("").isEmpty) {
+          results.put(message.database, getTablesForDatabase(message.database, new Extended, true))
 
-      } else {
-        results.put(message.database, describeTable(message.database, message.table, new Extended))
-      }
-      )
+        } else {
+          results.put(message.database, describeTable(message.database, message.table, new Extended))
+        })
 
       returnResult(tryGetExtendedTables, Tables.fromMutableMap(results).tables, "GET extended tables failed with the following message: ", sender)
     }
@@ -130,18 +132,16 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
       val results = Map[String, Map[String, Result]]()
 
       val tryGetFormattedTables = Try(
-      if (Option(message.table).getOrElse("").isEmpty) {
-        results.put(message.database, getTablesForDatabase(message.database, new Formatted, true))
+        if (Option(message.table).getOrElse("").isEmpty) {
+          results.put(message.database, getTablesForDatabase(message.database, new Formatted, true))
 
-      } else {
-        results.put(message.database, describeTable(message.database, message.table, new Formatted))
-      }
-      )
+        } else {
+          results.put(message.database, describeTable(message.database, message.table, new Formatted))
+        })
       returnResult(tryGetFormattedTables, Tables.fromMutableMap(results).tables, "GET formatted tables failed with the following message: ", sender)
 
     }
 
   }
-
 
 }

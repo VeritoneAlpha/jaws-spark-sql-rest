@@ -80,7 +80,9 @@ class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCont
 
           task.setCanceled(true)
           taskCache.invalidate(message.queryID)
-          if (System.getProperty("spark.mesos.coarse").equalsIgnoreCase("true")) {
+          
+         
+          if (Option(hiveContext.sparkContext.getConf.get("spark.mesos.coarse")).getOrElse("true").equalsIgnoreCase("true")) {
             Configuration.log4j.info("[RunScriptApiActor]: Jaws is running in coarse grained mode!")
             hiveContext.sparkContext.cancelJobGroup(message.queryID)
           } else {
