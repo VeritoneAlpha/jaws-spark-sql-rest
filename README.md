@@ -64,6 +64,26 @@ The api returns an uuid representing the query that was submitted. The query is 
 
 Exemple:
  1404998257416357bb29d-6801-41ca-82e4-7a265816b50c
+
+### Run parquet api:
+    curl -d "select * from testTable" 'http://devbox.local:8181/jaws/run/parquet?tablePath=tachyon://devbox.local:19998/user/jaws/parquetFolder&table=testTable&limited=true&numberOfResults=99' -X POST
+
+Parameters:
+   
+  * tablePath [required] : the path to the parquet folder which you want to query
+  * table : the table name you want to give to your parquet forlder
+  * limited [required]:  if set on true, the query will be limited to a fixed number of results. The number of results will be the one specified in the "numberOfResults" parameter, and they will be collected (in memory) and persisted in the configured backend database (cassandra or hdfs, no latency difference upon retrieval of small datasets). Otherwise, if not specified, the results number will be retrieved from the configuration file (nr.of.results field, default is 100).
+  However, for large datasets that exceed the default number of results (100, configurable), results will not be persisted in memory and the configured database anymore, they will only be stored as an RDD on HDFS, and used for paginated retrieval (offset and limit parameters in the results api).
+  If the limited parameter is set on false, then the query will return all the results and this time they will be stored in an RDD on HDFS, this is an indicator that a large dataset is about to be queried.
+  * numberOfResults [not required]: The parameter is considered only if the "limited" parameter is set on true
+
+
+Results:
+
+The api returns an uuid representing the query that was submitted. The query is executed asynchronously and the expectation is that clients poll for logs and completion status.
+
+Exemple:
+ 1404998257416357bb29d-6801-41ca-82e4-7a265816b50c
  
 
 ### Logs api:
