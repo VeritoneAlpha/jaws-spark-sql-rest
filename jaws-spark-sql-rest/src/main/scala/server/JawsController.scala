@@ -18,7 +18,7 @@ import implementation.CassandraDal
 import implementation.HdfsDal
 import messages._
 import com.xpatterns.jaws.data.DTO.Queries
-import spray.http.{StatusCodes, HttpHeaders, HttpMethods, MediaTypes}
+import spray.http.{ StatusCodes, HttpHeaders, HttpMethods, MediaTypes }
 import spray.httpx.SprayJsonSupport.sprayJsonMarshaller
 import spray.httpx.marshalling.ToResponseMarshallable.isMarshallable
 import spray.json.DefaultJsonProtocol._
@@ -94,7 +94,6 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
   val getDatabasesActor = createActor(Props(new GetDatabasesApiActor(customSharkContext.hiveContext, dals)), GET_DATABASES_ACTOR_NAME, localSupervisor)
   val cancelActor = createActor(Props(classOf[CancelActor], runScriptActor), CANCEL_ACTOR_NAME, remoteSupervisor)
 
-
   val gson = new Gson()
   val pathPrefix = "jaws"
 
@@ -119,16 +118,48 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
           }
         }
     } ~
+      path(pathPrefix / "run" / "parquet") {
+        post {
+          parameters('tablePath.as[String], 'table.as[String], 'numberOfResults.as[Int] ? 100, 'limited.as[Boolean], 'destination.as[String] ? Configuration.rddDestinationLocation.getOrElse("hdfs")) { (tablePath, table, numberOfResults, limited, destination) =>
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+              entity(as[String]) { query: String =>
+                
+                  Configuration.log4j.info(s"The tablePath is $tablePath and the table name is $table")
+                  val future = ask(runScriptActor, RunParquetMessage(query, tablePath, table, limited, numberOfResults, destination))
+                  respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                  future.map {
+                    case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                    case result: String => ctx.complete(StatusCodes.OK, result)
+                  }
+                }
+                
+              }
+            }
+          }
+        } ~
+          options {
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.POST))) {
+              complete {
+                "OK"
+              }
+            }
+          }
+      } ~
       path(pathPrefix / "run") {
         post {
           parameters('numberOfResults.as[Int] ? 100, 'limited.as[Boolean], 'destination.as[String] ? Configuration.rddDestinationLocation.getOrElse("hdfs")) { (numberOfResults, limited, destination) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
               entity(as[String]) { query: String =>
-                complete {
-                  Configuration.log4j.info(s"The queryis limited=$limited and the destination is $destination")
-                  val future = ask(runScriptActor, RunScriptMessage(query, limited, numberOfResults, destination.toLowerCase())).mapTo[String]
-                  future
+
+                Configuration.log4j.info(s"The query is limited=$limited and the destination is $destination")
+                val future = ask(runScriptActor, RunScriptMessage(query, limited, numberOfResults, destination.toLowerCase()))
+                respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                  future.map {
+                    case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                    case result: String => ctx.complete(StatusCodes.OK, result)
+                  }
                 }
+
               }
             }
           }
@@ -432,10 +463,12 @@ object Configuration {
   val sparkKryoReferenceTracking = getStringConfiguration(sparkConf, "spark-kryo-referenceTracking")
 
   val LIMIT_EXCEPTION_MESSAGE: Any = "The limit is null!"
-  val HQL_SCRIPT_EXCEPTION_MESSAGE: Any = "The hqlScript is empty or null!"
+  val SCRIPT_EXCEPTION_MESSAGE: Any = "The script is empty or null!"
   val UUID_EXCEPTION_MESSAGE: Any = "The uuid is empty or null!"
   val LIMITED_EXCEPTION_MESSAGE: Any = "The limited flag is null!"
   val RESULSTS_NUMBER_EXCEPTION_MESSAGE: Any = "The results number is null!"
+  val FILE_EXCEPTION_MESSAGE: Any = "The file is null!"
+  val TABLE_EXCEPTION_MESSAGE: Any = "The table name is null!"
 
   def getStringConfiguration(configuration: Config, configurationPath: String): Option[String] = {
     return if (configuration.hasPath(configurationPath)) Option(configuration.getString(configurationPath).trim) else Option(null)

@@ -13,4 +13,5 @@ case class GetTablesMessage (database : String, describe : Boolean, tables: List
 case class GetExtendedTablesMessage (database : String, table : String)
 case class GetFormattedTablesMessage (database : String, table : String)
 case class RunScriptMessage(hqlScript : String, limited : Boolean, maxNumberOfResults: Long, rddDestination:String)
+case class RunParquetMessage(script : String, tablePath : String, table : String, limited : Boolean, maxNumberOfResults: Long, rddDestination:String)
 case class ErrorMessage(message : String)
