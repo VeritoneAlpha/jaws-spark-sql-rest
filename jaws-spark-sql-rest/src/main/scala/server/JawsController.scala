@@ -262,8 +262,8 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
         get {
           corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
 
-            val future = ask(getDatabasesActor, GetDatabasesMessage())
             respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+              val future = ask(getDatabasesActor, GetDatabasesMessage())
               future.map {
                 case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
                 case result: Result => ctx.complete(StatusCodes.OK, result)
