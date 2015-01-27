@@ -28,8 +28,7 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
 
       var message = "There are " + nrOfCommands + " commands that need to be executed"
       Configuration.log4j.info(message)
-      dals.loggingDal.addLog(uuid, "hql", System.currentTimeMillis(), message)
-      MainActors.logsActor ! new PushLogs(uuid, message)
+      logMessage(message)
 
       val startTime = System.currentTimeMillis()
 
@@ -59,16 +58,22 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
       }
 
       message = "The total execution time was: " + formattedDuration + "!"
-      dals.loggingDal.addLog(uuid, "hql", System.currentTimeMillis(), message)
-      MainActors.logsActor ! new PushLogs(uuid, message)
+      logMessage(message)
       dals.loggingDal.setState(uuid, QueryState.DONE)
 
     } catch {
       case e: Exception => {
-        Configuration.log4j.error(e.getStackTraceString)
+        val message = s"${e.getMessage()} : ${e.getStackTraceString}"
+        Configuration.log4j.error( message)
+        logMessage(message)
         throw new RuntimeException(e)
       }
     }
+  }
+
+  def logMessage(message: String) {
+    dals.loggingDal.addLog(uuid, "hql", System.currentTimeMillis(), message)
+    MainActors.logsActor ! new PushLogs(uuid, message)
   }
 
   def runCommand(command: String, nrOfCommands: Integer, commandIndex: Integer, isLimited: Boolean, isLastCommand: Boolean): Result = {
@@ -79,14 +84,13 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
       val result = HiveUtils.runCmdRdd(command, hiveContext, Configuration.numberOfResults.getOrElse("100").toInt, uuid, isLimited, maxNumberOfResults, isLastCommand, Configuration.rddDestinationIp.get, dals.loggingDal, hdfsConf, rddDestination)
       message = "Command progress : There were executed " + (commandIndex + 1) + " commands out of " + nrOfCommands
       Configuration.log4j.info(message)
-      dals.loggingDal.addLog(uuid, "hql", System.currentTimeMillis(), message)
-      MainActors.logsActor ! PushLogs(uuid, message)
+     logMessage(message)
       return result
     } catch {
       case e: Exception => {
-        Configuration.log4j.error(e.getStackTraceString)
-        dals.loggingDal.addLog(uuid, "hql", System.currentTimeMillis(), e.getStackTraceString)
-        MainActors.logsActor ! PushLogs(uuid, e.getStackTraceString)
+        message = s"${e.getMessage()} : ${e.getStackTraceString}"
+        Configuration.log4j.error(message)
+        logMessage(e.getStackTraceString)
         dals.loggingDal.setState(uuid, QueryState.FAILED)
         dals.loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, 0, isLimited))
 
