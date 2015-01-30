@@ -40,7 +40,7 @@
   </property>
   <property>
     <name>hive.support.concurrency</name>
-    <value>true</value>
+    <value>false</value>
   </property>
   <property>
     <name>hive.zookeeper.quorum</name>
