@@ -92,6 +92,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
   val getResultsActor = createActor(Props(new GetResultsApiActor(hdfsConf, customSharkContext.hiveContext, dals)), GET_RESULTS_ACTOR_NAME, localSupervisor)
   val getQueryInfoActor = createActor(Props(new GetQueryInfoApiActor(dals)), GET_QUERY_INFO_ACTOR_NAME, localSupervisor)
   val getDatabasesActor = createActor(Props(new GetDatabasesApiActor(customSharkContext.hiveContext, dals)), GET_DATABASES_ACTOR_NAME, localSupervisor)
+  val getDatasourceSchemaActor = createActor(Props(new GetDatasourceSchemaActor), GET_DATASOURCE_SCHEMA_ACTOR_NAME, localSupervisor)
   val cancelActor = createActor(Props(classOf[CancelActor], runScriptActor), CANCEL_ACTOR_NAME, remoteSupervisor)
 
   val gson = new Gson()
@@ -383,8 +384,29 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
               }
             }
           }
+      } ~
+      path(pathPrefix / "schema") {
+        get {
+          parameters('path.as[String], 'sourceType.as[String], 'storageType.?) { (path, sourceType, storageType) =>
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+              validate(!path.trim.isEmpty, "Request parameter \'path\' must not be empty!") {
+                complete {
+                  val schemaRequest: GetDatasourceSchemaMessage = GetDatasourceSchemaMessage(path, sourceType, storageType.getOrElse("hdfs"))
+                  val future = ask(getDatasourceSchemaActor, schemaRequest).mapTo[String]
+                  future
+                }
+              }
+            }
+          }
+        } ~
+          options {
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
+              complete {
+                "OK"
+              }
+            }
+          }
       }
-
   }
 
   private val reactiveServer = new ReactiveServer(Configuration.webSocketsPort.getOrElse("8081").toInt, MainActors.logsActor)
