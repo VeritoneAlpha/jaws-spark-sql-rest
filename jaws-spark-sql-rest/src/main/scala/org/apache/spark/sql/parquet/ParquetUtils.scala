@@ -36,6 +36,8 @@ import java.net.URL
 
 object ParquetUtils {
 
+  implicit val parquetBlockSize = ParquetWriter.DEFAULT_BLOCK_SIZE
+
   implicit class xPatternsSQL(sqlC: SQLContext) {
     def readXPatternsParquet(nameNodeUrl: String, folderPath: String) = {
       var nameNode = sanitizePath(nameNodeUrl)
@@ -61,7 +63,7 @@ object ParquetUtils {
   }
 
   implicit class xPatternsRDD[T <: Product: TypeTag: ClassTag](rdd: RDD[T]) {
-    def saveAsXPatternsParquet(nameNodeUrl: String, folderPath: String) = {
+    def saveAsXPatternsParquet(nameNodeUrl: String, folderPath: String)(implicit parquetBlockSize: Int) = {
       var nameNode = sanitizePath(nameNodeUrl)
       var path = sanitizePath(folderPath)
       val finalWritePath = nameNode + "/" + path
@@ -72,7 +74,7 @@ object ParquetUtils {
       val errorRDD = rdd.mapPartitionsWithIndex((index, iterator) => {
 
         val errorList = scala.collection.mutable.MutableList[T]()
-        val parquetWriter = getParquetWriter(finalWritePath + "/part-" + index + ".parquet", attributes)
+        val parquetWriter = getParquetWriter(finalWritePath + "/part-" + index + ".parquet", attributes)(parquetBlockSize)
 
         while (iterator.hasNext) {
           val objectToWrite = iterator.next()
@@ -92,7 +94,7 @@ object ParquetUtils {
   }
 
   implicit class xPatternsSchemaRDD(schemaRDD: SchemaRDD) {
-    def saveAsXPatternsParquet(nameNodeUrl: String, folderPath: String) = {
+    def saveAsXPatternsParquet(nameNodeUrl: String, folderPath: String)(implicit parquetBlockSize: Int) = {
       var nameNode = sanitizePath(nameNodeUrl)
       var path = sanitizePath(folderPath)
       val finalWritePath = nameNode + "/" + path
@@ -103,7 +105,7 @@ object ParquetUtils {
       writeMetadata(schemaRDD.sqlContext.sparkContext, nameNode, attributes, finalWritePath)
       val errorRDD = schemaRDD.mapPartitionsWithIndex((index, iterator) => {
         val errorList = scala.collection.mutable.MutableList[Row]()
-        val parquetWriter = getParquetWriter(finalWritePath + "/part-" + index + ".parquet", attributes)
+        val parquetWriter = getParquetWriter(finalWritePath + "/part-" + index + ".parquet", attributes)(parquetBlockSize)
 
         while (iterator.hasNext) {
           val objectToWrite = iterator.next()
@@ -141,8 +143,8 @@ object ParquetUtils {
   def getSchemaFromAttributes(attributes: Seq[Attribute]): StructType = {
     StructType.fromAttributes(attributes)
   }
-    
-  def getParquetWriter(filePath: String, attributes: Seq[Attribute]): ParquetWriter[Row] = {
+
+  def getParquetWriter(filePath: String, attributes: Seq[Attribute])(implicit parquetBlockSize: Int): ParquetWriter[Row] = {
 
     val conf = new Configuration()
     val writeSupport = new RowWriteSupport
@@ -151,7 +153,7 @@ object ParquetUtils {
     new ParquetWriter[Row](new Path(filePath),
       writeSupport,
       ParquetWriter.DEFAULT_COMPRESSION_CODEC_NAME,
-      ParquetWriter.DEFAULT_BLOCK_SIZE,
+      parquetBlockSize,
       ParquetWriter.DEFAULT_PAGE_SIZE,
       ParquetWriter.DEFAULT_PAGE_SIZE,
       ParquetWriter.DEFAULT_IS_DICTIONARY_ENABLED,
@@ -168,8 +170,8 @@ object ParquetUtils {
     new ParquetReader(conf, new Path(filePath), readSupport, null)
   }
 
-  private def writeMetadata(sc: SparkContext, nameNode: String, attributes: Seq[Attribute], folderPath: String) = {
-    val metdataRdd = sc.parallelize(List(folderPath))
+  def writeMetadata(sc: SparkContext, nameNode: String, attributes: Seq[Attribute], folderPath: String) = {
+    val metdataRdd = sc.parallelize(List(folderPath), 1)
     metdataRdd.foreach { path =>
       val conf = new Configuration()
       conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, nameNode)
@@ -177,8 +179,8 @@ object ParquetUtils {
     }
   }
 
-  private def readMetadata(sc: SparkContext, nameNode: String, folederPath: String) = {
-    val metdataRdd = sc.parallelize(List(folederPath))
+  def readMetadata(sc: SparkContext, nameNode: String, folederPath: String) = {
+    val metdataRdd = sc.parallelize(List(folederPath), 1)
     metdataRdd.map { path =>
       val conf = new Configuration()
       conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, nameNode)
@@ -186,7 +188,7 @@ object ParquetUtils {
     }.first
   }
 
-  private def getAllParquetParts(sc: SparkContext, nameNodeUrl: String, folderPath: String): RDD[String] = {
+  def getAllParquetParts(sc: SparkContext, nameNodeUrl: String, folderPath: String): RDD[String] = {
     val parquetFolderPath = nameNodeUrl + "/" + folderPath + "/"
     val parquetFolderRddPath: RDD[String] = sc.parallelize(List(parquetFolderPath))
 
@@ -208,10 +210,10 @@ object ParquetUtils {
     rdd
   }
 
-  private def sanitizePath(path: String) = {
+  def sanitizePath(path: String) = {
     var pathIntermediar = if (path.endsWith("/")) path.substring(0, path.size - 1) else path
-    if (pathIntermediar.startsWith("/")) 
-       pathIntermediar.substring(1, pathIntermediar.size) 
+    if (pathIntermediar.startsWith("/"))
+      pathIntermediar.substring(1, pathIntermediar.size)
     else pathIntermediar
   }
 }
