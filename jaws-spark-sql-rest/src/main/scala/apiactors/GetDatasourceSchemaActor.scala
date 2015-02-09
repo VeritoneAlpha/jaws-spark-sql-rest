@@ -4,9 +4,8 @@ import akka.actor.Actor
 import apiactors.ActorOperations._
 import implementation.{AvroConverter, HiveContextWrapper}
 import messages.GetDatasourceSchemaMessage
-import org.apache.avro.Schema
 import org.apache.spark.scheduler.HiveUtils
-import org.apache.spark.sql.SchemaRDD
+import org.apache.spark.sql.catalyst.types.StructType
 import org.apache.spark.sql.parquet.ParquetUtils._
 import server.Configuration
 
@@ -50,34 +49,30 @@ class GetDatasourceSchemaActor(hiveContext: HiveContextWrapper) extends Actor {
       var message: String = s"Getting the datasource schema for path $path, sourceType $sourceType, storageType $storageType"
       Configuration.log4j.info(message)
 
+      var result: StructType = null
       SourceType.asSourceType(sourceType) match {
         case SourceType.HIVE =>
-          val result = hiveContext.table(path).schema
-          val avroSchema = AvroConverter.getAvroSchema(result).toString(true)
-          Configuration.log4j.info(avroSchema)
-          message = avroSchema
+          result = hiveContext.table(path).schema
         case SourceType.PARQUET =>
           StorageType.asStorageType(storageType) match {
             case StorageType.HDFS =>
               val hdfsURL = HiveUtils.getHdfsPath(hostname)
-              val result = hiveContext.readXPatternsParquet(hdfsURL, path).schema
-              val avroSchema = AvroConverter.getAvroSchema(result).toString(true)
-              Configuration.log4j.info(avroSchema)
-              message = avroSchema
+              result = hiveContext.readXPatternsParquet(hdfsURL, path).schema
             case StorageType.TACHYON =>
               val tachyonURL = HiveUtils.getTachyonPath(hostname)
-              val result = hiveContext.readXPatternsParquet(tachyonURL, path).schema
-              val avroSchema = AvroConverter.getAvroSchema(result).toString(true)
-              Configuration.log4j.info(avroSchema)
-              message = avroSchema
+              result = hiveContext.readXPatternsParquet(tachyonURL, path).schema
             case _ => Configuration.log4j.error("Unsupported type!")
           }
         case _ => Configuration.log4j.error("Unsupported type!")
       }
 
-      val response = Try(message)
+      val avroSchema = AvroConverter.getAvroSchema(result).toString(true)
+      Configuration.log4j.info(avroSchema)
+      message = avroSchema
 
+      val response = Try(message)
       returnResult(response, message, "GET datasource schema failed with the following message: ", sender)
+
     case request: Any => Configuration.log4j.error(request.toString)
   }
 
