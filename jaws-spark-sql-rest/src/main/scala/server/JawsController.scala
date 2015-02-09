@@ -390,10 +390,13 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
           parameters('path.as[String], 'sourceType.as[String], 'storageType.?) { (path, sourceType, storageType) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
               validate(!path.trim.isEmpty, Configuration.PATH_IS_EMPTY) {
-                complete {
-                  val schemaRequest: GetDatasourceSchemaMessage = GetDatasourceSchemaMessage(path, sourceType, storageType.getOrElse("hdfs"))
-                  val future = ask(getDatasourceSchemaActor, schemaRequest).mapTo[String]
-                  future
+                val schemaRequest: GetDatasourceSchemaMessage = GetDatasourceSchemaMessage(path, sourceType, storageType.getOrElse("hdfs"))
+                val future = ask(getDatasourceSchemaActor, schemaRequest)
+                respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                  future.map {
+                    case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                    case result: String => ctx.complete(StatusCodes.OK, result)
+                  }
                 }
               }
             }

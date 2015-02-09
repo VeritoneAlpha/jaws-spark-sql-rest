@@ -22,8 +22,8 @@ class GetDatasourceSchemaActor(hiveContext: HiveContextWrapper) extends Actor {
     val HIVE = Value("hive")
 
     def asSourceType(`type`: String): SourceType = {
-      if (`type`.equalsIgnoreCase(PARQUET.toString)) return PARQUET
-      else return HIVE
+      if (`type`.equalsIgnoreCase(PARQUET.toString)) PARQUET
+      else HIVE
     }
   }
 
@@ -33,8 +33,8 @@ class GetDatasourceSchemaActor(hiveContext: HiveContextWrapper) extends Actor {
     val TACHYON = Value("tachyon")
 
     def asStorageType(`type`: String): StorageType = {
-      if (`type`.equalsIgnoreCase(HDFS.toString)) return HDFS
-      else return TACHYON
+      if (`type`.equalsIgnoreCase(HDFS.toString)) HDFS
+      else TACHYON
     }
   }
 
@@ -49,28 +49,28 @@ class GetDatasourceSchemaActor(hiveContext: HiveContextWrapper) extends Actor {
       var message: String = s"Getting the datasource schema for path $path, sourceType $sourceType, storageType $storageType"
       Configuration.log4j.info(message)
 
-      var result: StructType = null
-      SourceType.asSourceType(sourceType) match {
-        case SourceType.HIVE =>
-          result = hiveContext.table(path).schema
-        case SourceType.PARQUET =>
-          StorageType.asStorageType(storageType) match {
-            case StorageType.HDFS =>
-              val hdfsURL = HiveUtils.getHdfsPath(hostname)
-              result = hiveContext.readXPatternsParquet(hdfsURL, path).schema
-            case StorageType.TACHYON =>
-              val tachyonURL = HiveUtils.getTachyonPath(hostname)
-              result = hiveContext.readXPatternsParquet(tachyonURL, path).schema
-            case _ => Configuration.log4j.error("Unsupported type!")
-          }
-        case _ => Configuration.log4j.error("Unsupported type!")
+      val response = Try {
+        var result: StructType = null
+        SourceType.asSourceType(sourceType) match {
+          case SourceType.HIVE =>
+            result = hiveContext.table(path).schema
+          case SourceType.PARQUET =>
+            StorageType.asStorageType(storageType) match {
+              case StorageType.HDFS =>
+                val hdfsURL = HiveUtils.getHdfsPath(hostname)
+                result = hiveContext.readXPatternsParquet(hdfsURL, path).schema
+              case StorageType.TACHYON =>
+                val tachyonURL = HiveUtils.getTachyonPath(hostname)
+                result = hiveContext.readXPatternsParquet(tachyonURL, path).schema
+              case _ => Configuration.log4j.error("Unsupported type!")
+            }
+          case _ => Configuration.log4j.error("Unsupported type!")
+        }
+
+        val avroSchema = AvroConverter.getAvroSchema(result).toString(true)
+        Configuration.log4j.info(avroSchema)
+        message = avroSchema
       }
-
-      val avroSchema = AvroConverter.getAvroSchema(result).toString(true)
-      Configuration.log4j.info(avroSchema)
-      message = avroSchema
-
-      val response = Try(message)
       returnResult(response, message, "GET datasource schema failed with the following message: ", sender)
 
     case request: Any => Configuration.log4j.error(request.toString)
