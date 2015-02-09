@@ -92,7 +92,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
   val getResultsActor = createActor(Props(new GetResultsApiActor(hdfsConf, customSharkContext.hiveContext, dals)), GET_RESULTS_ACTOR_NAME, localSupervisor)
   val getQueryInfoActor = createActor(Props(new GetQueryInfoApiActor(dals)), GET_QUERY_INFO_ACTOR_NAME, localSupervisor)
   val getDatabasesActor = createActor(Props(new GetDatabasesApiActor(customSharkContext.hiveContext, dals)), GET_DATABASES_ACTOR_NAME, localSupervisor)
-  val getDatasourceSchemaActor = createActor(Props(new GetDatasourceSchemaActor), GET_DATASOURCE_SCHEMA_ACTOR_NAME, localSupervisor)
+  val getDatasourceSchemaActor = createActor(Props(new GetDatasourceSchemaActor(customSharkContext.hiveContext)), GET_DATASOURCE_SCHEMA_ACTOR_NAME, localSupervisor)
   val cancelActor = createActor(Props(classOf[CancelActor], runScriptActor), CANCEL_ACTOR_NAME, remoteSupervisor)
 
   val gson = new Gson()
@@ -389,7 +389,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
         get {
           parameters('path.as[String], 'sourceType.as[String], 'storageType.?) { (path, sourceType, storageType) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              validate(!path.trim.isEmpty, "Request parameter \'path\' must not be empty!") {
+              validate(!path.trim.isEmpty, Configuration.PATH_IS_EMPTY) {
                 complete {
                   val schemaRequest: GetDatasourceSchemaMessage = GetDatasourceSchemaMessage(path, sourceType, storageType.getOrElse("hdfs"))
                   val future = ask(getDatasourceSchemaActor, schemaRequest).mapTo[String]
@@ -491,6 +491,7 @@ object Configuration {
   val RESULSTS_NUMBER_EXCEPTION_MESSAGE: Any = "The results number is null!"
   val FILE_EXCEPTION_MESSAGE: Any = "The file is null!"
   val TABLE_EXCEPTION_MESSAGE: Any = "The table name is null!"
+  val PATH_IS_EMPTY: String = "Request parameter \'path\' must not be empty!"
 
   def getStringConfiguration(configuration: Config, configurationPath: String): Option[String] = {
     return if (configuration.hasPath(configurationPath)) Option(configuration.getString(configurationPath).trim) else Option(null)
