@@ -71,6 +71,7 @@ object ParquetUtils {
       val finalWritePath = nameNode + "/" + path
 
       val attributes = getAttributesList[T]
+      val schema = getSchemaFromAttributes(attributes)
 
       writeMetadata(rdd.context, nameNode, attributes, finalWritePath)
       val errorRDD = rdd.mapPartitionsWithIndex((index, iterator) => {
@@ -81,7 +82,7 @@ object ParquetUtils {
         while (iterator.hasNext) {
           val objectToWrite = iterator.next()
           try {
-            parquetWriter.write(transformObjectToRow(objectToWrite, getSchemaFromAttributes(attributes)))
+            parquetWriter.write(transformObjectToRow(objectToWrite, schema))
           } catch {
             case e: IOException => errorList += objectToWrite
           }
@@ -126,15 +127,15 @@ object ParquetUtils {
     }
   }
 
-  def transformObjectToRow[A <: Product](data: A, schema : StructType): Row = {
-//    val mutableRow = new GenericMutableRow(data.productArity)
-//    var i = 0
-//    while (i < mutableRow.length) {
-//      mutableRow(i) = ScalaReflection.convertToCatalyst(data.productElement(i))
-//      i += 1
-//    }
-//    mutableRow
-    ScalaReflection.convertToCatalyst(data, schema).asInstanceOf[Row]
+  def transformObjectToRow[A <: Product](data: A, schema: StructType): Row = {
+    val schemaFields = schema.fields.toArray
+    val mutableRow = new GenericMutableRow(data.productArity)
+    var i = 0
+    while (i < mutableRow.length) {
+      mutableRow(i) = ScalaReflection.convertToCatalyst(data.productElement(i), schemaFields(i).dataType)
+      i += 1
+    }
+    mutableRow
   }
 
   def getAttributesList[T <: Product: TypeTag]: Seq[Attribute] = {
@@ -170,7 +171,7 @@ object ParquetUtils {
     val readSupport = new RowReadSupport
     val encoded = ParquetTypesConverter.convertToString(attributes)
     conf.set(RowReadSupport.SPARK_ROW_REQUESTED_SCHEMA, encoded)
-    new ParquetReader(conf, new Path(filePath), readSupport, null)
+    new ParquetReader(conf, new Path(filePath), readSupport)
   }
 
   def writeMetadata(sc: SparkContext, nameNode: String, attributes: Seq[Attribute], folderPath: String) = {
