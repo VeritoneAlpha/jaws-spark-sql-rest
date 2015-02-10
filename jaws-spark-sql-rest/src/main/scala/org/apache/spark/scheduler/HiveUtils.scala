@@ -54,7 +54,7 @@ object HiveUtils {
     return result
   }
 
-  def runCmdRdd(cmd: String, hiveContext: HiveContextWrapper, defaultNumberOfResults: Int, uuid: String, isLimited: Boolean, maxNumberOfResults: Long, isLastCommand: Boolean, hdfsNamenode: String, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration, rddDestination:String): Result = {
+  def runCmdRdd(cmd: String, hiveContext: HiveContextWrapper, defaultNumberOfResults: Int, uuid: String, isLimited: Boolean, maxNumberOfResults: Long, isLastCommand: Boolean, hdfsNamenode: String, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration, rddDestination: String): Result = {
     Configuration.log4j.info("[HiveUtils]: execute the following command:" + cmd)
 
     var cmd_trimmed = cmd.trim
@@ -69,20 +69,20 @@ object HiveUtils {
 
       // ***** limited and few results -> cassandra
       if (isLimited && maxNumberOfResults <= defaultNumberOfResults) {
-        cmd_trimmed = limitQuery(maxNumberOfResults, cmd_trimmed)
-        return run(hiveContext, cmd_trimmed, maxNumberOfResults, isLimited, loggingDal, uuid)
+        //limit query to maxNumberOfResults
+        return run(hiveContext, cmd_trimmed, maxNumberOfResults, maxNumberOfResults.asInstanceOf[Int], isLimited, loggingDal, uuid)
       }
       // ***** limited, lots of results and last command -> hdfs
       if (isLimited && isLastCommand) {
-        cmd_trimmed = limitQuery(maxNumberOfResults, cmd_trimmed)
+        //limit query to maxNumberOfResults
         return runRdd(hiveContext, uuid, cmd_trimmed, hdfsNamenode, maxNumberOfResults, isLimited, loggingDal, conf, rddDestination)
       }
 
       // ***** limited, lots of results and not last command -> default
       // number and cassandra
       if (isLimited) {
-        cmd_trimmed = limitQuery(defaultNumberOfResults, cmd_trimmed)
-        return run(hiveContext, cmd_trimmed, maxNumberOfResults, isLimited, loggingDal, uuid)
+        //limit query to defaultNumberOfResults
+        return run(hiveContext, cmd_trimmed, maxNumberOfResults, defaultNumberOfResults, isLimited, loggingDal, uuid)
       }
 
       // ***** not limited and last command -> hdfs and not a limit
@@ -90,8 +90,8 @@ object HiveUtils {
         return runRdd(hiveContext, uuid, cmd_trimmed, hdfsNamenode, maxNumberOfResults, isLimited, loggingDal, conf, rddDestination)
       }
       // ***** not limited and not last command -> cassandra and default
-      cmd_trimmed = limitQuery(defaultNumberOfResults, cmd_trimmed)
-      return run(hiveContext, cmd_trimmed, maxNumberOfResults, isLimited, loggingDal, uuid)
+      //limit query to defaultNumberOfResults
+      return run(hiveContext, cmd_trimmed, maxNumberOfResults, defaultNumberOfResults, isLimited, loggingDal, uuid)
 
     }
 
@@ -132,7 +132,7 @@ object HiveUtils {
     }
 
     Configuration.log4j.info("[HiveUtils]: the command is a different command")
-    return run(hiveContext, cmd_trimmed, maxNumberOfResults, isLimited, loggingDal, uuid)
+    return run(hiveContext, cmd_trimmed, maxNumberOfResults, maxNumberOfResults.asInstanceOf[Int], isLimited, loggingDal, uuid)
   }
 
   def runMetadataCmd(hiveContext: HiveContextWrapper, cmd: String, loggingDal: TJawsLogging, uuid: String): Result = {
@@ -146,7 +146,7 @@ object HiveUtils {
     return new Result(schema, result)
   }
 
-  def runRdd(hiveContext: HiveContext, uuid: String, cmd: String, destinationIp: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration, userDefinedDestination:String): Result = {
+  def runRdd(hiveContext: HiveContext, uuid: String, cmd: String, destinationIp: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration, userDefinedDestination: String): Result = {
     // we need to run sqlToRdd. Needed for pagination
     Configuration.log4j.info("[HiveUtils]: we will execute sqlToRdd command")
     Configuration.log4j.info("[HiveUtils]: the final command is " + cmd)
@@ -202,19 +202,13 @@ object HiveUtils {
     return finalDestination + "user/" + System.getProperty("user.name") + "/" + Configuration.resultsFolder.getOrElse("jawsResultsFolder") + "/" + uuid
   }
 
-  def run(hiveContext: HiveContext, cmd: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: TJawsLogging, uuid: String): Result = {
+  def run(hiveContext: HiveContext, cmd: String, maxNumberOfResults: Long, limitedNumberOfResults: Int, isLimited: Boolean, loggingDal: TJawsLogging, uuid: String): Result = {
     Configuration.log4j.info("[HiveUtils]: the final command is " + cmd)
     val resultRdd = hiveContext.sql(cmd)
-    val result = resultRdd.collect
+    val result = resultRdd.take(limitedNumberOfResults)
     val schema = resultRdd.schema
     loggingDal.setMetaInfo(uuid, new QueryMetaInfo(result.size, maxNumberOfResults, 0, isLimited))
     return new Result(schema, result)
-  }
-
-  def limitQuery(numberOfResults: Long, cmd: String): String = {
-    val temporaryTableName = RandomStringUtils.randomAlphabetic(10)
-    // take only x results
-    return "select " + temporaryTableName + ".* from ( " + cmd + ") " + temporaryTableName + " limit " + numberOfResults
   }
 
   def setSharkProperties(sc: HiveContext, sharkSettings: InputStream) = {

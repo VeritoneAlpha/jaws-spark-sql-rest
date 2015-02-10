@@ -33,6 +33,8 @@ import parquet.hadoop.metadata.BlockMetaData
 import parquet.io.ParquetEncodingException
 import tachyon.client.WriteType
 import java.net.URL
+import org.apache.spark.sql.catalyst.types.DataType
+import org.apache.spark.sql.catalyst.expressions.GenericRow
 
 object ParquetUtils {
 
@@ -79,7 +81,7 @@ object ParquetUtils {
         while (iterator.hasNext) {
           val objectToWrite = iterator.next()
           try {
-            parquetWriter.write(transformObjectToRow(objectToWrite))
+            parquetWriter.write(transformObjectToRow(objectToWrite, getSchemaFromAttributes(attributes)))
           } catch {
             case e: IOException => errorList += objectToWrite
           }
@@ -124,14 +126,15 @@ object ParquetUtils {
     }
   }
 
-  def transformObjectToRow[A <: Product](data: A): Row = {
-    val mutableRow = new GenericMutableRow(data.productArity)
-    var i = 0
-    while (i < mutableRow.length) {
-      mutableRow(i) = ScalaReflection.convertToCatalyst(data.productElement(i))
-      i += 1
-    }
-    mutableRow
+  def transformObjectToRow[A <: Product](data: A, schema : StructType): Row = {
+//    val mutableRow = new GenericMutableRow(data.productArity)
+//    var i = 0
+//    while (i < mutableRow.length) {
+//      mutableRow(i) = ScalaReflection.convertToCatalyst(data.productElement(i))
+//      i += 1
+//    }
+//    mutableRow
+    ScalaReflection.convertToCatalyst(data, schema).asInstanceOf[Row]
   }
 
   def getAttributesList[T <: Product: TypeTag]: Seq[Attribute] = {
