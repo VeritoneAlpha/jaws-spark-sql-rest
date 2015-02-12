@@ -129,7 +129,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
                   val future = ask(runScriptActor, RunParquetMessage(query, tablePath, table, limited, numberOfResults, destination))
                   respondWithMediaType(MediaTypes.`application/json`) { ctx =>
                   future.map {
-                    case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                    case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
                     case result: String => ctx.complete(StatusCodes.OK, result)
                   }
                 }
@@ -156,7 +156,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
                 val future = ask(runScriptActor, RunScriptMessage(query, limited, numberOfResults, destination.toLowerCase()))
                 respondWithMediaType(MediaTypes.`application/json`) { ctx =>
                   future.map {
-                    case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                    case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
                     case result: String => ctx.complete(StatusCodes.OK, result)
                   }
                 }
@@ -185,7 +185,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
               val future = ask(getLogsActor, GetLogsMessage(queryID, timestamp, limit))
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
                 future.map {
-                  case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
                   case result: Logs => ctx.complete(StatusCodes.OK, result)
                 }
               }
@@ -207,7 +207,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
               val future = ask(getResultsActor, GetResultsMessage(queryID, offset, limit))
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
                 future.map {
-                  case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
                   case result: Result => ctx.complete(StatusCodes.OK, result)
                 }
               }
@@ -229,7 +229,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
               val future = ask(getQueriesActor, GetQueriesMessage(startQueryID.getOrElse(null), limit))
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
                 future.map {
-                  case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
                   case result: Queries => ctx.complete(StatusCodes.OK, result)
                 }
               }
@@ -251,7 +251,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
               val future = ask(getQueryInfoActor, GetQueryInfoMessage(queryID))
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
                 future.map {
-                  case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
                   case result: Query => ctx.complete(StatusCodes.OK, result)
                 }
               }
@@ -266,7 +266,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
             respondWithMediaType(MediaTypes.`application/json`) { ctx =>
               val future = ask(getDatabasesActor, GetDatabasesMessage())
               future.map {
-                case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
                 case result: Result => ctx.complete(StatusCodes.OK, result)
               }
             }
@@ -326,7 +326,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
 
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
                 future.map {
-                  case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
                   case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
                 }
               }
@@ -348,7 +348,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
               val future = ask(getTablesActor, new GetExtendedTablesMessage(database, table.getOrElse("")))
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
                 future.map {
-                  case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
                   case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
                 }
               }
@@ -370,7 +370,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
               val future = ask(getTablesActor, new GetFormattedTablesMessage(database, table.getOrElse("")))
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
                 future.map {
-                  case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
                   case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
                 }
               }
