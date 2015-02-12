@@ -68,7 +68,7 @@ class GetDatasourceSchemaActor(hiveContext: HiveContextWrapper) extends Actor {
         }
 
         val avroSchema = AvroConverter.getAvroSchema(result).toString(true)
-        Configuration.log4j.info(avroSchema)
+        Configuration.log4j.debug(avroSchema)
         message = avroSchema
       }
       returnResult(response, message, "GET datasource schema failed with the following message: ", sender)
