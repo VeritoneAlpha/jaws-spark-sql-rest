@@ -54,7 +54,7 @@ class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCont
         Configuration.log4j.info("[RunScriptApiActor -run]: The script will be executed with the limited flag set on " + message.limited + ". The maximum number of results is " + message.maxNumberOfResults)
         Preconditions.checkArgument(message.hqlScript != null && !message.hqlScript.isEmpty(), Configuration.SCRIPT_EXCEPTION_MESSAGE)
         Preconditions.checkArgument(message.limited != null, Configuration.LIMITED_EXCEPTION_MESSAGE)
-        Preconditions.checkArgument(message.maxNumberOfResults != null, Configuration.RESULSTS_NUMBER_EXCEPTION_MESSAGE)
+        Preconditions.checkArgument(message.maxNumberOfResults != null, Configuration.RESULTS_NUMBER_EXCEPTION_MESSAGE)
 
         val task = new RunScriptTask(dals, message.hqlScript, hiveContext, uuid, false, message.limited, message.maxNumberOfResults, hdfsConf, message.rddDestination)
         taskCache.put(uuid, task)
