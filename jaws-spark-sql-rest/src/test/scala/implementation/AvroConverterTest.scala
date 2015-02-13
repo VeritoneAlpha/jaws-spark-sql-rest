@@ -5,6 +5,7 @@ import org.apache.spark.sql.catalyst.types.{DataType, StructField, StructType}
 import org.junit.runner.RunWith
 import org.scalatest.FunSuite
 import org.scalatest.junit.JUnitRunner
+import org.apache.spark.sql.catalyst.types.ByteType
 
 
 @RunWith(classOf[JUnitRunner])
@@ -17,6 +18,8 @@ class AvroConverterTest extends FunSuite {
   val mapOfRecField = new StructField("mapOfRec", DataType("MapType(StringType,StructType(List(StructField(str,StringType,true))),true)"), false)
   val structType = new StructType(Seq(intField, strField))
   val recordType = new StructField("record", structType, false)
+  val byteField = new StructField("byte", DataType("ByteType"), false)
+  val binaryField = new StructField("binary", DataType("BinaryType"), true)
 
   test("simple schema") {
     val result = AvroConverter.getAvroSchema(structType)
@@ -62,5 +65,8 @@ class AvroConverterTest extends FunSuite {
       "\"name\":\"mapOfRec\",\"fields\":[{\"name\":\"str\",\"type\":[\"string\",\"null\"]}]},\"null\"]}}]}")
   }
 
-
+  test("schema with byte type") {
+    val result = AvroConverter.getAvroSchema(new StructType(Seq(byteField)))
+    assert(result.toString() == "{\"type\":\"record\",\"name\":\"RECORD\",\"fields\":[{\"name\":\"byte\",\"type\":\"int\"}]}")
+  }
 }
