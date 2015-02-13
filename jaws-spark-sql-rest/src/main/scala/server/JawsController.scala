@@ -2,6 +2,7 @@ package server
 
 import java.net.InetAddress
 import com.typesafe.config.Config
+import implementation.SchemaSettingsFactory.{SourceType, StorageType}
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.apache.log4j.Logger
 import com.google.gson.Gson
@@ -14,8 +15,7 @@ import akka.util.Timeout
 import apiactors._
 import apiactors.ActorsPaths._
 import customs.CORSDirectives
-import implementation.CassandraDal
-import implementation.HdfsDal
+import implementation.{SchemaSettingsFactory, CassandraDal, HdfsDal, CustomHiveContextCreator}
 import messages._
 import com.xpatterns.jaws.data.DTO.Queries
 import spray.http.{ StatusCodes, HttpHeaders, HttpMethods, MediaTypes }
@@ -27,11 +27,10 @@ import spray.routing.SimpleRoutingApp
 import spray.routing.directives.ParamDefMagnet.apply
 import traits.DAL
 import messages.GetResultsMessage
-import implementation.CustomHiveContextCreator
 import com.xpatterns.jaws.data.DTO.Logs
 import com.xpatterns.jaws.data.DTO.Result
 import com.xpatterns.jaws.data.DTO.Query
-import scala.util.Try
+import scala.util.{Failure, Try, Success}
 import server.MainActors._
 
 /**
@@ -390,12 +389,26 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
           parameters('path.as[String], 'sourceType.as[String], 'storageType.?) { (path, sourceType, storageType) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
               validate(!path.trim.isEmpty, Configuration.PATH_IS_EMPTY) {
-                val schemaRequest: GetDatasourceSchemaMessage = GetDatasourceSchemaMessage(path, sourceType, storageType.getOrElse("hdfs"))
-                val future = ask(getDatasourceSchemaActor, schemaRequest)
+                var validSourceType: SourceType = null
+                var validStorageType: StorageType = null
+                val validateParams = Try {
+                  validSourceType = SchemaSettingsFactory.getSourceType(sourceType)
+                  validStorageType = SchemaSettingsFactory.getStorageType(storageType.getOrElse("hdfs"))
+                }
                 respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                  future.map {
-                    case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                    case result: String => ctx.complete(StatusCodes.OK, result)
+                  validateParams match {
+                    case Failure(e) =>
+                      Configuration.log4j.error(e.getMessage)
+                      ctx.complete(StatusCodes.InternalServerError, e.getMessage)
+                    case Success(_) =>
+                      val schemaRequest: GetDatasourceSchemaMessage = GetDatasourceSchemaMessage(path, validSourceType, validStorageType)
+                      val future = ask(getDatasourceSchemaActor, schemaRequest)
+                      future.map {
+                        case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                        case result: String =>
+                          Configuration.log4j.info("Getting the data source schema was successful!")
+                          ctx.complete(StatusCodes.OK, result)
+                      }
                   }
                 }
               }
@@ -491,13 +504,15 @@ object Configuration {
   val SCRIPT_EXCEPTION_MESSAGE: Any = "The script is empty or null!"
   val UUID_EXCEPTION_MESSAGE: Any = "The uuid is empty or null!"
   val LIMITED_EXCEPTION_MESSAGE: Any = "The limited flag is null!"
-  val RESULSTS_NUMBER_EXCEPTION_MESSAGE: Any = "The results number is null!"
+  val RESULTS_NUMBER_EXCEPTION_MESSAGE: Any = "The results number is null!"
   val FILE_EXCEPTION_MESSAGE: Any = "The file is null!"
   val TABLE_EXCEPTION_MESSAGE: Any = "The table name is null!"
   val PATH_IS_EMPTY: String = "Request parameter \'path\' must not be empty!"
+  val UNSUPPORTED_SOURCE_TYPE: String = "Unsupported value for parameter \'sourceType\' !"
+  val UNSUPPORTED_STORAGE_TYPE: String = "Unsupported value for parameter \'storageType\' !"
 
   def getStringConfiguration(configuration: Config, configurationPath: String): Option[String] = {
-    return if (configuration.hasPath(configurationPath)) Option(configuration.getString(configurationPath).trim) else Option(null)
+    if (configuration.hasPath(configurationPath)) Option(configuration.getString(configurationPath).trim) else Option(null)
   }
 
 }
