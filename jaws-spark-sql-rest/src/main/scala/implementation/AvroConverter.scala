@@ -4,10 +4,6 @@ import org.apache.avro.SchemaBuilder.{BaseFieldTypeBuilder, BaseTypeBuilder, Fie
 import org.apache.avro.{Schema, SchemaBuilder}
 import org.apache.spark.sql.catalyst.types._
 
-
-/**
- * Created by robertb on 12.12.2014.
- */
 object AvroConverter {
 
   def getAvroSchema(structType: StructType): Schema = {
@@ -48,7 +44,7 @@ object AvroConverter {
                 case DoubleType => arrayFieldAssembler.doubleType().noDefault()
                 case BooleanType => arrayFieldAssembler.booleanType().noDefault()
                 case StructType(_) => back2(arrayType.elementType.asInstanceOf[StructType], field.name, arrayFieldAssembler)
-                case _ => throw new IllegalArgumentException("Avro schema array item with unhandeled type:" + arrayType)
+                case _ => throw new IllegalArgumentException("Avro schema array item with unhandled type:" + arrayType)
               }
             }
             case MapType(_, _, _) => {
@@ -75,7 +71,7 @@ object AvroConverter {
                 case _ => throw new IllegalArgumentException("Avro schema map value with unhandled type: " + field)
               }
             }
-            case _ => throw new IllegalArgumentException("!!! StructType with unhandled type: " + field)
+            case _ => throw new IllegalArgumentException("StructType with unhandled type: " + field)
           }
       }
 
