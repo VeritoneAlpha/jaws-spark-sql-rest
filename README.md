@@ -40,9 +40,9 @@ In order configure Jaws the following files inside the "http-spark-sql-server/xp
 ## Run jaws
 
 After editing all the configuration files Jaws can be run in the following manner:
-    
+
     http-spark-sql-server/xpatterns-jaws/target/xpatterns-jaws/bin/start-jaws.sh
-    
+
 
 ## Queries examples
 
@@ -52,7 +52,7 @@ Below are some queries with example purpose:
     curl -d "select * from table" 'http://devbox.local:8181/jaws/run?limited=true&numberOfResults=99' -X POST
 
 Parameters:
-   
+
   * limited [required]:  if set on true, the query will be limited to a fixed number of results. The number of results will be the one specified in the "numberOfResults" parameter, and they will be collected (in memory) and persisted in the configured backend database (cassandra or hdfs, no latency difference upon retrieval of small datasets). Otherwise, if not specified, the results number will be retrieved from the configuration file (nr.of.results field, default is 100).
   However, for large datasets that exceed the default number of results (100, configurable), results will not be persisted in memory and the configured database anymore, they will only be stored as an RDD on HDFS, and used for paginated retrieval (offset and limit parameters in the results api).
   If the limited parameter is set on false, then the query will return all the results and this time they will be stored in an RDD on HDFS, this is an indicator that a large dataset is about to be queried.
@@ -69,7 +69,7 @@ Exemple:
     curl -d "select * from testTable" 'http://devbox.local:8181/jaws/run/parquet?tablePath=tachyon://devbox.local:19998/user/jaws/parquetFolder&table=testTable&limited=true&numberOfResults=99' -X POST
 
 Parameters:
-   
+
   * tablePath [required] : the path to the parquet folder which you want to query
   * table : the table name you want to give to your parquet forlder
   * limited [required]:  if set on true, the query will be limited to a fixed number of results. The number of results will be the one specified in the "numberOfResults" parameter, and they will be collected (in memory) and persisted in the configured backend database (cassandra or hdfs, no latency difference upon retrieval of small datasets). Otherwise, if not specified, the results number will be retrieved from the configuration file (nr.of.results field, default is 100).
@@ -84,7 +84,7 @@ The api returns an uuid representing the query that was submitted. The query is 
 
 Exemple:
  1404998257416357bb29d-6801-41ca-82e4-7a265816b50c
- 
+
 
 ### Logs api:
     curl 'http://devbox.local:8181/jaws/logs?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&startTimestamp=0&limit=10' -X GET
@@ -213,7 +213,7 @@ Example:
             "query": "USE test;\n\nselect * from user_predictions limit 3"
         }
 
-### Databases api: 
+### Databases api:
     curl 'http://devbox.local:8181/jaws/databases' -X GET
 
 Results:
@@ -248,7 +248,7 @@ Parameters:
   * queryID [required] : uuid returned by the run api.
 
 This api cancels a running query. Unless Jaws runs in fine-grained mode under Mesos, the underlying Spark job is also cancelled. Spark job cancellation in Mesos fine-grained mode is not implemented in Spark core yet! In this mode, if the query is still in the queue, it won't be executed, but we cannot stop it once it started.
- 
+
 
 ### Tables api:
 
@@ -267,7 +267,7 @@ Results:
 
 If the database parameter is set, the api returns a JSON containing all the tables from the specified database, otherwise, it will return all the databases with all their tables.
 If the describe parameter is set on true, also the tables columns are returned.
-If a table list is provided, then those will be the tables that will be described. (The database is needed) 
+If a table list is provided, then those will be the tables that will be described. (The database is needed)
 
 Example:
 
@@ -364,16 +364,18 @@ Example:
                 ],
                  [
                   "",
-                  " ", 
+                  " ",
                  " "
                ],
                [
-                "Detailed Table Information", 
+                "Detailed Table Information",
                 "Table(tableName:user_predictions, dbName:test, owner:root, createTime:1404128550, lastAccessTime:0, retention:0, sd:StorageDescriptor(cols:[FieldSchema(name:userid, type:int, comment:null), FieldSchema(name:moviename, type:string, comment:null)], location:hdfs://devBox.local:8020/user/hive/warehouse/test.db/user_predictions, inputFormat:org.apache.hadoop.mapred.SequenceFileInputFormat, outputFormat:org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat, compressed:false, numBuckets:-1, serdeInfo:SerDeInfo(name:null, serializationLib:org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe, parameters:{serialization.format=1}), bucketCols:[], sortCols:[], parameters:{}, skewedInfo:SkewedInfo(skewedColNames:[], skewedColValues:[], skewedColValueLocationMaps:{}), storedAsSubDirectories:false), partitionKeys:[], parameters:{numPartitions=0, numFiles=1, transient_lastDdlTime=1405336104, totalSize=1194934, numRows=29665, rawDataSize=797502}, viewOriginalText:null, viewExpandedText:null, tableType:MANAGED_TABLE)"
           ]
        ]
         }
     }
+
+}
 
 
 ### Tables formatted api:
@@ -425,7 +427,7 @@ Example:
                         ],
                          [
                           "",
-                          " ", 
+                          " ",
                          " "
                        ],
                        [
@@ -572,3 +574,167 @@ Example:
         }
     }
 
+
+### Schema api:
+
+    curl 'http://devbox.local:8181/jaws/schema?path=databaseName.tableName&sourceType=hive' -X GET
+    curl 'http://devbox.local:8181/jaws/schema?path=/user/test/location&sourceType=parquet&storageType=tachyon' -X GET
+    curl 'http://devbox.local:8181/jaws/schema?path=/user/test/location&sourceType=parquet' -X GET
+
+Parameters:
+
+  * path [required] : represents the location of the data
+  * sourceType [required]: represents the source you want to read the data from; supported values are HIVE and PARQUET
+  * storageType [not required]: represents the persistence layer the PARQUET data is stored in; supported values are TACHYON and HDFS (default)
+
+
+Results:
+
+The api returns a JSON containing the schema (in AVRO format) of the specified data source.
+
+
+Example:
+
+    {
+    "type": "record",
+    "name": "RECORD",
+    "fields": [
+        {
+            "name": "id",
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        {
+            "name": "owner",
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        {
+            "name": "subject",
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        {
+            "name": "from",
+            "type": [
+                {
+                    "type": "array",
+                    "items": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "null"
+            ]
+        },
+        {
+            "name": "replyTo",
+            "type": [
+                {
+                    "type": "array",
+                    "items": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "null"
+            ]
+        },
+        {
+            "name": "sentDate",
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        {
+            "name": "toRecipients",
+            "type": [
+                {
+                    "type": "array",
+                    "items": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "null"
+            ]
+        },
+        {
+            "name": "ccRecipients",
+            "type": [
+                {
+                    "type": "array",
+                    "items": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "null"
+            ]
+        },
+        {
+            "name": "bccRecipients",
+            "type": [
+                {
+                    "type": "array",
+                    "items": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "null"
+            ]
+        },
+        {
+            "name": "receivedDate",
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        {
+            "name": "content",
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        {
+            "name": "messageId",
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        {
+            "name": "contentId",
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        {
+            "name": "isReplica",
+            "type": "boolean"
+        },
+        {
+            "name": "replicas",
+            "type": [
+                {
+                    "type": "array",
+                    "items": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "null"
+            ]
+        }
+    ]}
