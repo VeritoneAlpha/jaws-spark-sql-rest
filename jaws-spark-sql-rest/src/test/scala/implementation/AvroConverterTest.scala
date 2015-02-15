@@ -13,6 +13,7 @@ class AvroConverterTest extends FunSuite {
   val intField = new StructField("int", DataType("IntegerType"), false)
   val strField = new StructField("str", DataType("StringType"), true)
   val arrOfStrField = new StructField("arr", DataType("ArrayType(StringType,false)"), true)
+  val arrOfStrFieldNotNullable = new StructField("arr", DataType("ArrayType(StringType,false)"), false)
   val arrOfRecField = new StructField("arrOfRec", DataType("ArrayType(StructType(List(StructField(str,StringType,true))),false)"), true)
   val mapOfStrField = new StructField("map", DataType("MapType(StringType,StringType,true)"), false)
   val mapOfRecField = new StructField("mapOfRec", DataType("MapType(StringType,StructType(List(StructField(str,StringType,true))),true)"), false)
@@ -20,6 +21,12 @@ class AvroConverterTest extends FunSuite {
   val recordType = new StructField("record", structType, false)
   val byteField = new StructField("byte", DataType("ByteType"), false)
   val binaryField = new StructField("binary", DataType("BinaryType"), true)
+  val arrOfArrString = new StructField("arrOfArrayString", DataType("ArrayType(ArrayType(StringType,false),false)"), true)
+  val mapOfMap = new StructField("mapOfMap", DataType("MapType(StringType, MapType(StringType,StringType,true),true)"), false)
+  val arrOfMapofArr =  new StructField("arrOfMapOfArr", DataType("ArrayType(MapType(StringType, ArrayType(ArrayType(StringType,false),false),true),false)"), true)
+ 
+ 
+  
 
   test("simple schema") {
     val result = AvroConverter.getAvroSchema(structType)
@@ -40,6 +47,13 @@ class AvroConverterTest extends FunSuite {
     val result = AvroConverter.getAvroSchema(arrStructType)
     assert(result.toString == "{\"type\":\"record\",\"name\":\"RECORD\",\"fields\":[{\"name\":\"int\",\"type\":\"int\"}," +
       "{\"name\":\"arr\",\"type\":[{\"type\":\"array\",\"items\":\"string\"},\"null\"]}]}")
+  }
+  
+   test("schema with list of strings not nullable") {
+    val arrStructType = new StructType(Seq(intField, arrOfStrFieldNotNullable))
+    val result = AvroConverter.getAvroSchema(arrStructType)
+    assert(result.toString == "{\"type\":\"record\",\"name\":\"RECORD\",\"fields\":[{\"name\":\"int\",\"type\":\"int\"}," +
+      "{\"name\":\"arr\",\"type\":{\"type\":\"array\",\"items\":\"string\"}}]}")
   }
 
   test("schema with list of records") {
@@ -68,5 +82,24 @@ class AvroConverterTest extends FunSuite {
   test("schema with byte type") {
     val result = AvroConverter.getAvroSchema(new StructType(Seq(byteField)))
     assert(result.toString() == "{\"type\":\"record\",\"name\":\"RECORD\",\"fields\":[{\"name\":\"byte\",\"type\":\"int\"}]}")
+  }
+  
+   test("schema with list of list of strings") {
+    val arrStructType = new StructType(Seq(arrOfArrString))
+    val result = AvroConverter.getAvroSchema(arrStructType)
+   
+    assert(result.toString == "{\"type\":\"record\",\"name\":\"RECORD\",\"fields\":[{\"name\":\"arrOfArrayString\",\"type\":[{\"type\":\"array\",\"items\":{\"type\":\"array\",\"items\":\"string\"}},\"null\"]}]}")
+  }
+   
+   test("schema with map of map") {
+    val mapStructType = new StructType(Seq(mapOfMap))
+    val result = AvroConverter.getAvroSchema(mapStructType)
+    assert(result.toString == "{\"type\":\"record\",\"name\":\"RECORD\",\"fields\":[{\"name\":\"mapOfMap\",\"type\":{\"type\":\"map\",\"values\":[{\"type\":\"map\",\"values\":[\"string\",\"null\"]},\"null\"]}}]}")
+  }
+   
+   test("schema with list of Maps of lists") {
+    val arrStructType = new StructType(Seq(arrOfMapofArr))
+    val result = AvroConverter.getAvroSchema(arrStructType)
+    assert(result.toString == "{\"type\":\"record\",\"name\":\"RECORD\",\"fields\":[{\"name\":\"arrOfMapOfArr\",\"type\":[{\"type\":\"array\",\"items\":{\"type\":\"map\",\"values\":[{\"type\":\"array\",\"items\":{\"type\":\"array\",\"items\":\"string\"}},\"null\"]}},\"null\"]}]}")
   }
 }
