@@ -1,12 +1,13 @@
 package implementation
 
-
-import org.apache.spark.sql.catalyst.types.{DataType, StructField, StructType}
+import org.apache.spark.sql.catalyst.types.{ DataType, StructField, StructType }
 import org.junit.runner.RunWith
 import org.scalatest.FunSuite
 import org.scalatest.junit.JUnitRunner
 import org.apache.spark.sql.catalyst.types.ByteType
-
+import org.apache.commons.lang.time.DurationFormatUtils
+import org.apache.spark.sql.catalyst.types.StructField
+import scala.util.Try
 
 @RunWith(classOf[JUnitRunner])
 class AvroConverterTest extends FunSuite {
@@ -23,15 +24,13 @@ class AvroConverterTest extends FunSuite {
   val binaryField = new StructField("binary", DataType("BinaryType"), true)
   val arrOfArrString = new StructField("arrOfArrayString", DataType("ArrayType(ArrayType(StringType,false),false)"), true)
   val mapOfMap = new StructField("mapOfMap", DataType("MapType(StringType, MapType(StringType,StringType,true),true)"), false)
-  val arrOfMapofArr =  new StructField("arrOfMapOfArr", DataType("ArrayType(MapType(StringType, ArrayType(ArrayType(StringType,false),false),true),false)"), true)
- 
- 
-  
+  val arrOfMapofArr = new StructField("arrOfMapOfArr", DataType("ArrayType(MapType(StringType, ArrayType(ArrayType(StringType,false),false),true),false)"), true)
 
   test("simple schema") {
     val result = AvroConverter.getAvroSchema(structType)
     assert(result.toString() == "{\"type\":\"record\",\"name\":\"RECORD\",\"fields\":[{\"name\":\"int\",\"type\":\"int\"}," +
       "{\"name\":\"str\",\"type\":[\"string\",\"null\"]}]}")
+
   }
 
   test("schema with record") {
@@ -48,8 +47,15 @@ class AvroConverterTest extends FunSuite {
     assert(result.toString == "{\"type\":\"record\",\"name\":\"RECORD\",\"fields\":[{\"name\":\"int\",\"type\":\"int\"}," +
       "{\"name\":\"arr\",\"type\":[{\"type\":\"array\",\"items\":\"string\"},\"null\"]}]}")
   }
-  
-   test("schema with list of strings not nullable") {
+
+  test("schema with list of strings only") {
+    val arrStructType = new StructType(Seq(arrOfStrField))
+    val result = AvroConverter.getAvroSchema(arrStructType)
+    assert(result.toString == "{\"type\":\"record\",\"name\":\"RECORD\",\"fields\":[" +
+      "{\"name\":\"arr\",\"type\":[{\"type\":\"array\",\"items\":\"string\"},\"null\"]}]}")
+  }
+
+  test("schema with list of strings not nullable") {
     val arrStructType = new StructType(Seq(intField, arrOfStrFieldNotNullable))
     val result = AvroConverter.getAvroSchema(arrStructType)
     assert(result.toString == "{\"type\":\"record\",\"name\":\"RECORD\",\"fields\":[{\"name\":\"int\",\"type\":\"int\"}," +
@@ -83,23 +89,32 @@ class AvroConverterTest extends FunSuite {
     val result = AvroConverter.getAvroSchema(new StructType(Seq(byteField)))
     assert(result.toString() == "{\"type\":\"record\",\"name\":\"RECORD\",\"fields\":[{\"name\":\"byte\",\"type\":\"int\"}]}")
   }
-  
-   test("schema with list of list of strings") {
+
+  test("schema with list of list of strings") {
     val arrStructType = new StructType(Seq(arrOfArrString))
     val result = AvroConverter.getAvroSchema(arrStructType)
-   
     assert(result.toString == "{\"type\":\"record\",\"name\":\"RECORD\",\"fields\":[{\"name\":\"arrOfArrayString\",\"type\":[{\"type\":\"array\",\"items\":{\"type\":\"array\",\"items\":\"string\"}},\"null\"]}]}")
   }
-   
-   test("schema with map of map") {
+
+  test("schema with map of map") {
     val mapStructType = new StructType(Seq(mapOfMap))
     val result = AvroConverter.getAvroSchema(mapStructType)
     assert(result.toString == "{\"type\":\"record\",\"name\":\"RECORD\",\"fields\":[{\"name\":\"mapOfMap\",\"type\":{\"type\":\"map\",\"values\":[{\"type\":\"map\",\"values\":[\"string\",\"null\"]},\"null\"]}}]}")
   }
-   
-   test("schema with list of Maps of lists") {
+
+  test("schema with list of Maps of lists") {
     val arrStructType = new StructType(Seq(arrOfMapofArr))
     val result = AvroConverter.getAvroSchema(arrStructType)
     assert(result.toString == "{\"type\":\"record\",\"name\":\"RECORD\",\"fields\":[{\"name\":\"arrOfMapOfArr\",\"type\":[{\"type\":\"array\",\"items\":{\"type\":\"map\",\"values\":[{\"type\":\"array\",\"items\":{\"type\":\"array\",\"items\":\"string\"}},\"null\"]}},\"null\"]}]}")
+  }
+
+  test("schema with lot of fields") {
+    var lots = Seq[StructField]()
+    for (i <- 0 until 10000) {
+      lots = lots ++ Seq(new StructField(s"str$i", DataType("StringType"), true))
+    }
+    val lotsStruct = new StructType(lots)
+    val tryGetLogs = Try(AvroConverter.getAvroSchema(lotsStruct))
+    assert(true, tryGetLogs.isSuccess)
   }
 }

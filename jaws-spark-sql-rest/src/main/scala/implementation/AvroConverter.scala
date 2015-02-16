@@ -8,8 +8,8 @@ import org.apache.avro.SchemaBuilder.FieldDefault
 
 object AvroConverter {
 
-  private def callMethod(builder: Object, method: String) = {
-    builder.getClass.getMethod(method).invoke(builder)
+  private def callMethod(builder: Object, method: String) = {  
+    builder.getClass.getMethod(method).invoke(builder)   
   }
   private def callMethodWithNoDefaults(builder: Object, method: String) = {
     val result = callMethod(builder, method)
@@ -63,7 +63,7 @@ object AvroConverter {
   private def addStructType[R](structType: StructType, recordAssembler: FieldAssembler[R]) {
     structType.fields foreach {
       field =>
-        val fieldAssembler =
+        val fieldAssembler = 
           if (field.nullable) recordAssembler.name(field.name).`type`().nullable()
           else recordAssembler.name(field.name).`type`()
         addFields(field.dataType, field.name, fieldAssembler)
