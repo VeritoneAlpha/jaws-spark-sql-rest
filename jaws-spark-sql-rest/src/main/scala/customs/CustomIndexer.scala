@@ -12,20 +12,15 @@ class CustomIndexer {
   def indexRdd(rdd: RDD[Array[String]]): RDD[Tuple2[Long, Array[String]]] = {
     val partitionCount = rdd.mapPartitionsWithIndex { (pid, iter) => Iterator((pid, iter.size)) }.collect
 
-    var numberOfPartitions = partitionCount.size
-    var sizes = Array[Int]()
     var indexes = Array[Int](0)
-    Configuration.log4j.debug("NumberOfPartitions is: " + numberOfPartitions)
+    Configuration.log4j.debug("NumberOfPartitions is: " + partitionCount.size)
 
-    //create the sizes array
-    for (a <- partitionCount) {
-      sizes = sizes :+ a._2
-    }
+    val resultsNumber = partitionCount.foldLeft(0)((sizeSum, partInfo) => {
+      indexes = indexes :+ (sizeSum + partInfo._2)
+      sizeSum + partInfo._2
+    })
 
-    //create the indexes array
-    for (i <- 0 to numberOfPartitions - 2) {
-      indexes = indexes :+ sizes(i)
-    }
+    Configuration.log4j.debug("Number of results is: " + resultsNumber)
 
     val broadcastedIndexes = rdd.sparkContext.broadcast(indexes)
 
@@ -41,7 +36,5 @@ class CustomIndexer {
     }
 
     return indexedRdd
-
   }
-
 }
