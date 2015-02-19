@@ -126,7 +126,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
                 
                   Configuration.log4j.info(s"The tablePath is $tablePath and the table name is $table")
                   val future = ask(runScriptActor, RunParquetMessage(query, tablePath, table, limited, numberOfResults, destination))
-                  respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                  respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
                   future.map {
                     case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
                     case result: String => ctx.complete(StatusCodes.OK, result)
@@ -153,7 +153,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
 
                 Configuration.log4j.info(s"The query is limited=$limited and the destination is $destination")
                 val future = ask(runScriptActor, RunScriptMessage(query, limited, numberOfResults, destination.toLowerCase()))
-                respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
                   future.map {
                     case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
                     case result: String => ctx.complete(StatusCodes.OK, result)
