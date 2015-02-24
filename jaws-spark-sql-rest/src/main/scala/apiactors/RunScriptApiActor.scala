@@ -22,6 +22,7 @@ import java.util.regex.Matcher
 import scala.util.Try
 import apiactors.ActorOperations._
 import org.apache.spark.scheduler.RunParquetScriptTask
+import org.apache.spark.scheduler.HiveUtils
 /**
  * Created by emaorhian
  */
@@ -58,6 +59,7 @@ class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCont
 
         val task = new RunScriptTask(dals, message.hqlScript, hiveContext, uuid, false, message.limited, message.maxNumberOfResults, hdfsConf, message.rddDestination)
         taskCache.put(uuid, task)
+        HiveUtils.logMessage(uuid, s"Launching task for $uuid", "hql", dals.loggingDal)
         threadPool.execute(task)
       }
       returnResult(tryRun, uuid, "run query failed with the following message: ", sender)

@@ -187,8 +187,7 @@ class LoggingListener(dals: DAL) extends SparkListener {
   }
 
   def logInfo(uuid: String, jobId: String, message: String) = {
-    dals.loggingDal.addLog(uuid, jobId, System.currentTimeMillis(), message)
-    logsActor ! new PushLogs(uuid, message)
     Configuration.log4j.info(message)
+    HiveUtils.logMessage(uuid, message, jobId, dals.loggingDal)
   }
 }

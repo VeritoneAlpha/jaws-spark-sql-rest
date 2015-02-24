@@ -28,8 +28,8 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
 
       var message = "There are " + nrOfCommands + " commands that need to be executed"
       Configuration.log4j.info(message)
-      logMessage(message)
-
+      HiveUtils.logMessage(uuid, message, "hql", dals.loggingDal)
+     
       val startTime = System.currentTimeMillis()
 
       // job group id used to identify these jobs when trying to cancel them.
@@ -42,7 +42,7 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
           case _ => {
             val message = s"The command ${commands(commandIndex)} was canceled!"
             Configuration.log4j.warn(message)
-            logMessage(message)
+            HiveUtils.logMessage(uuid, message, "hql", dals.loggingDal)
           }
         }
       }
@@ -53,7 +53,7 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
         case _ => {
           val message = s"The command ${commands(nrOfCommands - 1)} was canceled!"
           Configuration.log4j.warn(message)
-          logMessage(message)
+          HiveUtils.logMessage(uuid, message, "hql", dals.loggingDal)
         }
       }
 
@@ -61,7 +61,7 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
       var formattedDuration = DurationFormatUtils.formatDurationHMS(executionTime)
 
       message = "The total execution time was: " + formattedDuration + "!"
-      logMessage(message)
+      HiveUtils.logMessage(uuid, message, "hql", dals.loggingDal)
       isCanceled match {
         case false => {
           Option(result) match {
@@ -73,7 +73,7 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
         case _ => {
           val message = s"The query failed because it was canceled!"
           Configuration.log4j.warn(message)
-          logMessage(message)
+          HiveUtils.logMessage(uuid, message, "hql", dals.loggingDal)
           dals.loggingDal.setState(uuid, QueryState.FAILED)
         }
       }
@@ -82,17 +82,13 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
       case e: Exception => {
         val message = s"${e.getMessage()} : ${e.getStackTraceString}"
         Configuration.log4j.error(message)
-        logMessage(message)
+        HiveUtils.logMessage(uuid, message, "hql", dals.loggingDal)
         throw new RuntimeException(e)
       }
     }
   }
 
-  def logMessage(message: String) {
-    dals.loggingDal.addLog(uuid, "hql", System.currentTimeMillis(), message)
-    MainActors.logsActor ! new PushLogs(uuid, message)
-  }
-
+  
   def runCommand(command: String, nrOfCommands: Integer, commandIndex: Integer, isLimited: Boolean, isLastCommand: Boolean): Result = {
     var message = ""
 
@@ -101,13 +97,13 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
       val result = HiveUtils.runCmdRdd(command, hiveContext, Configuration.numberOfResults.getOrElse("100").toInt, uuid, isLimited, maxNumberOfResults, isLastCommand, Configuration.rddDestinationIp.get, dals.loggingDal, hdfsConf, rddDestination)
       message = "Command progress : There were executed " + (commandIndex + 1) + " commands out of " + nrOfCommands
       Configuration.log4j.info(message)
-      logMessage(message)
+      HiveUtils.logMessage(uuid, message, "hql", dals.loggingDal)
       return result
     } catch {
       case e: Exception => {
         message = s"${e.getMessage()} : ${e.getStackTraceString}"
         Configuration.log4j.error(message)
-        logMessage(e.getStackTraceString)
+        HiveUtils.logMessage(uuid, e.getStackTraceString, "hql", dals.loggingDal)
         dals.loggingDal.setState(uuid, QueryState.FAILED)
         dals.loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, 0, isLimited))
 

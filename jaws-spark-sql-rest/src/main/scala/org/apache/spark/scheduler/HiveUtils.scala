@@ -15,6 +15,8 @@ import spray.json.DefaultJsonProtocol._
 import com.xpatterns.jaws.data.DTO.Column
 import implementation.HiveContextWrapper
 import org.apache.spark.sql.catalyst.types.StructType
+import server.MainActors
+import server.LogsActor.PushLogs
 
 /**
  * Created by emaorhian
@@ -232,5 +234,10 @@ object HiveUtils {
 
   def getTachyonPath(ip: String): String = {
     "tachyon://" + ip.trim() + ":19998"
+  }
+  
+  def logMessage(uuid: String, message: String, jobId : String, loggingDal : TJawsLogging) {
+    loggingDal.addLog(uuid, jobId, System.currentTimeMillis(), message)
+    MainActors.logsActor ! new PushLogs(uuid, message)
   }
 }
