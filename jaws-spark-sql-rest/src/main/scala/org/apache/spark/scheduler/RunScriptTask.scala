@@ -60,15 +60,16 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
       val executionTime = System.currentTimeMillis() - startTime
       var formattedDuration = DurationFormatUtils.formatDurationHMS(executionTime)
 
-      Option(result) match {
-        case None => Configuration.log4j.debug("[RunSharkScriptTask] result is null")
-        case _ => dals.resultsDal.setResults(uuid, result)
-      }
-
       message = "The total execution time was: " + formattedDuration + "!"
       logMessage(message)
       isCanceled match {
-        case false => dals.loggingDal.setState(uuid, QueryState.DONE)
+        case false => {
+          Option(result) match {
+            case None => Configuration.log4j.debug("[RunSharkScriptTask] result is null")
+            case _ => dals.resultsDal.setResults(uuid, result)
+          }
+          dals.loggingDal.setState(uuid, QueryState.DONE)
+        }
         case _ => {
           val message = s"The query failed because it was canceled!"
           Configuration.log4j.warn(message)
@@ -76,7 +77,6 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
           dals.loggingDal.setState(uuid, QueryState.FAILED)
         }
       }
-      
 
     } catch {
       case e: Exception => {
