@@ -236,6 +236,11 @@ object HiveUtils {
     "tachyon://" + ip.trim() + ":19998"
   }
   
+  def logInfoMessage(uuid: String, message: String, jobId : String, loggingDal : TJawsLogging) {
+    Configuration.log4j.info(message)
+    logMessage(uuid, message, jobId, loggingDal)
+  }
+  
   def logMessage(uuid: String, message: String, jobId : String, loggingDal : TJawsLogging) {
     loggingDal.addLog(uuid, jobId, System.currentTimeMillis(), message)
     MainActors.logsActor ! new PushLogs(uuid, message)

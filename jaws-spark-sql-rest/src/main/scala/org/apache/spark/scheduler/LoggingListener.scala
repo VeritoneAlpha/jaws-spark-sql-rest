@@ -43,8 +43,8 @@ class LoggingListener(dals: DAL) extends SparkListener {
                 exception.getMessage.split("\\s+").foreach(info += _ + "_")
               case _ =>
             }
-            logInfo(uuid, jobId.toString, info)
-            logInfo(uuid, jobId.toString, executionTimeMessage)
+            HiveUtils.logInfoMessage(uuid, info, jobId.toString, dals.loggingDal)
+            HiveUtils.logInfoMessage(uuid, executionTimeMessage, jobId.toString, dals.loggingDal)
 
             jobIdToUUID.remove(jobId)
             jobIdToStartTimestamp.remove(jobId)
@@ -70,8 +70,8 @@ class LoggingListener(dals: DAL) extends SparkListener {
         if (!uuid.isEmpty()) {
           jobIdToStartTimestamp.put(jobId, System.currentTimeMillis())
           jobIdToUUID.put(jobId, uuid)
-          logInfo(uuid, jobId.toString, s"The job $jobId has started. Executing command.")
-          logInfo(uuid, jobId.toString, properties.getProperty(SparkContext.SPARK_JOB_DESCRIPTION, ""))
+          HiveUtils.logInfoMessage(uuid, s"The job $jobId has started. Executing command.", jobId.toString, dals.loggingDal)
+          HiveUtils.logInfoMessage(uuid, properties.getProperty(SparkContext.SPARK_JOB_DESCRIPTION, ""), jobId.toString, dals.loggingDal)
         }
       }
     }
@@ -96,7 +96,7 @@ class LoggingListener(dals: DAL) extends SparkListener {
                 stageIdToNrTasks.put(stageId, stageSubmitted.stageInfo.numTasks)
                 stageIdToSuccessullTasks.put(stageId, 0)
 
-                logInfo(uuid, jobId.toString, s"The stage $stageId was submitted for job $jobId. TASK_SIZE=${stageSubmitted.stageInfo.numTasks.toString}")
+                HiveUtils.logInfoMessage(uuid, s"The stage $stageId was submitted for job $jobId. TASK_SIZE=${stageSubmitted.stageInfo.numTasks.toString}", jobId.toString, dals.loggingDal)
               }
               case None => Configuration.log4j.debug("[LoggingListener]- onStageSubmitted :  There is no such jobId " + jobId + "!")
             }
@@ -124,15 +124,15 @@ class LoggingListener(dals: DAL) extends SparkListener {
                   case Some(successfulTasks) => stageIdToSuccessullTasks.put(stageId, successfulTasks + 1)
                   case None => stageIdToSuccessullTasks.put(stageId, 1)
                 }
-                logInfo(uuid, jobId.toString(), s"The task $taskId belonging to stage $stageId for job $jobId has finished in ${taskEnd.taskInfo.duration} ms on ${taskEnd.taskInfo.host} ( progress ${stageIdToSuccessullTasks.get(stageId).get}/${stageIdToNrTasks.get(stageId).get})")
+                HiveUtils.logInfoMessage(uuid, s"The task $taskId belonging to stage $stageId for job $jobId has finished in ${taskEnd.taskInfo.duration} ms on ${taskEnd.taskInfo.host} ( progress ${stageIdToSuccessullTasks.get(stageId).get}/${stageIdToNrTasks.get(stageId).get})", jobId.toString, dals.loggingDal)
               case Resubmitted =>
                 taskStatus += s" STATUS=RESUBMITTED TID=${taskEnd.taskInfo.taskId} STAGE_ID=${taskEnd.stageId}"
               case FetchFailed(bmAddress, shuffleId, mapId, reduceId) =>
                 taskStatus += s" STATUS=FETCHFAILED TID=${taskEnd.taskInfo.taskId} STAGE_ID=${taskEnd.stageId} SHUFFLE_ID=$shuffleId MAP_ID=$mapId REDUCE_ID=$reduceId"
-                logInfo(uuid, jobId.toString(), s"The task $taskId belonging to stage $stageId for job $jobId has failed! Duration was ${taskEnd.taskInfo.duration} ms on ${taskEnd.taskInfo.host}")
+                HiveUtils.logInfoMessage(uuid, s"The task $taskId belonging to stage $stageId for job $jobId has failed! Duration was ${taskEnd.taskInfo.duration} ms on ${taskEnd.taskInfo.host}", jobId.toString, dals.loggingDal)
               case _ =>
             }
-            logInfo(uuid, jobId.toString(), taskStatus)
+            HiveUtils.logInfoMessage(uuid, taskStatus, jobId.toString, dals.loggingDal)
           }
           case None => Configuration.log4j.debug("[LoggingListener]- onTaskEnd :  There is no such jobId " + jobId + "!")
         }
@@ -150,7 +150,7 @@ class LoggingListener(dals: DAL) extends SparkListener {
       case Some(jobId) => {
         jobIdToUUID.get(jobId) match {
           case Some(uuid) => {
-            logInfo(uuid, jobId.toString, s"The task $taskId belonging to stage $stageId for job $jobId has started on ${taskStart.taskInfo.host}")
+            HiveUtils.logInfoMessage(uuid, s"The task $taskId belonging to stage $stageId for job $jobId has started on ${taskStart.taskInfo.host}", jobId.toString, dals.loggingDal)
           }
           case None => Configuration.log4j.debug("[LoggingListener]- onTaskStart :  There is no such jobId " + jobId + "!")
         }
@@ -175,7 +175,7 @@ class LoggingListener(dals: DAL) extends SparkListener {
             if (stageCompleted.stageInfo.failureReason.isEmpty == false) {
               status = "STATUS=FAILED"
             }
-            logInfo(uuid, jobId.toString, s"The stage $stageId for job $jobId has finished in $executionTime s with $status!")
+            HiveUtils.logInfoMessage(uuid, s"The stage $stageId for job $jobId has finished in $executionTime s with $status!", jobId.toString, dals.loggingDal)
 
           }
           case None => Configuration.log4j.debug("[LoggingListener]- onStageCompleted :  There is no such jobId " + jobId + "!")
@@ -184,10 +184,5 @@ class LoggingListener(dals: DAL) extends SparkListener {
       case None => Configuration.log4j.debug("[LoggingListener]- onStageCompleted :  There is no such stageId " + stageId + "!")
     }
 
-  }
-
-  def logInfo(uuid: String, jobId: String, message: String) = {
-    Configuration.log4j.info(message)
-    HiveUtils.logMessage(uuid, message, jobId, dals.loggingDal)
   }
 }

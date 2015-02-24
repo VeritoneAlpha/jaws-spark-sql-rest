@@ -53,7 +53,7 @@ class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCont
       val tryRun = Try {
         Configuration.log4j.info("[RunScriptApiActor -run]: running the following script: " + message.hqlScript)
         Configuration.log4j.info("[RunScriptApiActor -run]: The script will be executed with the limited flag set on " + message.limited + ". The maximum number of results is " + message.maxNumberOfResults)
-        Preconditions.checkArgument(message.hqlScript != null && !message.hqlScript.isEmpty(), Configuration.SCRIPT_EXCEPTION_MESSAGE)
+        Preconditions.checkArgument(message.hqlScript != null && !message.hqlScript.trim.isEmpty(), Configuration.SCRIPT_EXCEPTION_MESSAGE)
         Preconditions.checkArgument(message.limited != null, Configuration.LIMITED_EXCEPTION_MESSAGE)
         Preconditions.checkArgument(message.maxNumberOfResults != null, Configuration.RESULTS_NUMBER_EXCEPTION_MESSAGE)
 
@@ -68,7 +68,7 @@ class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCont
     case message: RunParquetMessage => {
       val uuid = System.currentTimeMillis() + UUID.randomUUID().toString()
       val tryRunParquet = Try {
-        Preconditions.checkArgument(message.script != null && !message.script.isEmpty(), Configuration.SCRIPT_EXCEPTION_MESSAGE)
+        Preconditions.checkArgument(message.script != null && !message.script.trim.isEmpty(), Configuration.SCRIPT_EXCEPTION_MESSAGE)
         Preconditions.checkArgument(message.tablePath != null, Configuration.FILE_EXCEPTION_MESSAGE)
         Preconditions.checkArgument(message.table != null, Configuration.TABLE_EXCEPTION_MESSAGE)
 
