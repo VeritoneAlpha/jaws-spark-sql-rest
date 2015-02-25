@@ -53,10 +53,7 @@ class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCont
       val tryRun = Try {
         Configuration.log4j.info("[RunScriptApiActor -run]: running the following script: " + message.hqlScript)
         Configuration.log4j.info("[RunScriptApiActor -run]: The script will be executed with the limited flag set on " + message.limited + ". The maximum number of results is " + message.maxNumberOfResults)
-        Preconditions.checkArgument(message.hqlScript != null && !message.hqlScript.trim.isEmpty(), Configuration.SCRIPT_EXCEPTION_MESSAGE)
-        Preconditions.checkArgument(message.limited != null, Configuration.LIMITED_EXCEPTION_MESSAGE)
-        Preconditions.checkArgument(message.maxNumberOfResults != null, Configuration.RESULTS_NUMBER_EXCEPTION_MESSAGE)
-
+       
         val task = new RunScriptTask(dals, message.hqlScript, hiveContext, uuid, false, message.limited, message.maxNumberOfResults, hdfsConf, message.rddDestination)
         taskCache.put(uuid, task)
         HiveUtils.logMessage(uuid, s"Launching task for $uuid", "hql", dals.loggingDal)
@@ -68,10 +65,7 @@ class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCont
     case message: RunParquetMessage => {
       val uuid = System.currentTimeMillis() + UUID.randomUUID().toString()
       val tryRunParquet = Try {
-        Preconditions.checkArgument(message.script != null && !message.script.trim.isEmpty(), Configuration.SCRIPT_EXCEPTION_MESSAGE)
-        Preconditions.checkArgument(message.tablePath != null, Configuration.FILE_EXCEPTION_MESSAGE)
-        Preconditions.checkArgument(message.table != null, Configuration.TABLE_EXCEPTION_MESSAGE)
-
+       
         Configuration.log4j.info(s"[RunScriptApiActor -runParquet]: running the following sql: ${message.script}")
         Configuration.log4j.info(s"[RunScriptApiActor -runParquet]: The script will be executed over the ${message.tablePath} file with the ${message.table} table name")
 
@@ -119,7 +113,7 @@ class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCont
     if (matcher.matches())
       (matcher.group(1), matcher.group(2))
     else
-      throw new Exception(s"Invalid file path format : filePath")
+      throw new Exception(s"Invalid file path format : $filePath")
 
   }
 }

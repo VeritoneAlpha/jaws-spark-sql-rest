@@ -31,7 +31,7 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCon
 
         var result : Result= null
         val tryGetResults = Try {
-          Preconditions.checkArgument(message.queryID != null && !message.queryID.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE)
+          
           var offset = message.offset
           var limit = message.limit
 

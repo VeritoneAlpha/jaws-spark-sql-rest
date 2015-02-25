@@ -28,7 +28,6 @@ class GetLogsApiActor(dals: DAL) extends Actor {
       Configuration.log4j.info("[GetLogsApiActor]: retrieving logs for: " + message.queryID)
       var logs : Logs = null
       val tryGetLogs = Try {
-        Preconditions.checkArgument(message.queryID != null && !message.queryID.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE)
         var startDate = message.startDate
         var limit = message.limit
 

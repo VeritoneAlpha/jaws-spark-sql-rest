@@ -22,7 +22,7 @@ class GetQueryInfoApiActor(dals: DAL) extends Actor {
 
       var resultQuery: Query = null;
       val tryGetQueryInfo = Try {
-        Preconditions.checkArgument(message.queryID != null && !message.queryID.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE)
+        
         resultQuery = new Query(dals.loggingDal.getState(message.queryID).toString, message.queryID, dals.loggingDal.getScriptDetails(message.queryID))
       }
       returnResult(tryGetQueryInfo, resultQuery, "GET query info failed with the following message: ", sender)
