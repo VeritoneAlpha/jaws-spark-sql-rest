@@ -19,7 +19,6 @@ import org.apache.spark.FetchFailed
 class LoggingListener(dals: DAL) extends SparkListener {
 
   val JOB_ID: String = "xpatterns.job.id"
-  val commentSize = 2
   val jobIdToUUID = Map[Integer, String]()
   val jobIdToStartTimestamp = Map[Integer, Long]()
   val stageIdToJobId = Map[Integer, Integer]()
