@@ -53,15 +53,14 @@ object HiveUtils {
       }
     }
 
-    return result
+    result
   }
 
   def runCmdRdd(cmd: String, hiveContext: HiveContextWrapper, defaultNumberOfResults: Int, uuid: String, isLimited: Boolean, maxNumberOfResults: Long, isLastCommand: Boolean, hdfsNamenode: String, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration, rddDestination:String): Result = {
     Configuration.log4j.info("[HiveUtils]: execute the following command:" + cmd)
 
-    var cmd_trimmed = cmd.trim
-    val lowerCaseCmd = cmd_trimmed.toLowerCase()
-
+    var cmd_trimmed = cmd.trim.toLowerCase
+   
     val tokens = cmd_trimmed.split("\\s+")
 
     if (tokens(0).equalsIgnoreCase("select")) {
@@ -201,7 +200,7 @@ object HiveUtils {
     if (rddDestination.endsWith("/") == false) {
       finalDestination = rddDestination + "/"
     }
-    return finalDestination + "user/" + System.getProperty("user.name") + "/" + Configuration.resultsFolder.getOrElse("jawsResultsFolder") + "/" + uuid
+     s"${finalDestination}user/${System.getProperty("user.name")}/${Configuration.resultsFolder.getOrElse("jawsResultsFolder")}/$uuid"
   }
 
   def run(hiveContext: HiveContext, cmd: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: TJawsLogging, uuid: String): Result = {
