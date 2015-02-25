@@ -492,31 +492,6 @@ object Configuration {
   val corsFilterAllowedHosts = getStringConfiguration(appConf, "cors-filter-allowed-hosts")
   val jarPath = getStringConfiguration(appConf, "jar-path")
 
-  //spark configuration
-  val sparkMaster = getStringConfiguration(sparkConf, "spark-master")
-  val sparkPath = getStringConfiguration(sparkConf, "spark-path")
-  val sparkExecutorMemory = getStringConfiguration(sparkConf, "spark-executor-memory")
-  val sparkSchedulerMode = getStringConfiguration(sparkConf, "spark-scheduler-mode")
-  val sparkMesosCoarse = getStringConfiguration(sparkConf, "spark-mesos-coarse")
-  val sparkCoresMax = getStringConfiguration(sparkConf, "spark-cores-max")
-  val sparkShuffleSpill = getStringConfiguration(sparkConf, "spark-shuffle-spill")
-  val sparkDefaultParallelism = getStringConfiguration(sparkConf, "spark-default-parallelism")
-  val sparkStorageMemoryFraction = getStringConfiguration(sparkConf, "spark-storage-memoryFraction")
-  val sparkShuffleMemoryFraction = getStringConfiguration(sparkConf, "spark-shuffle-memoryFraction")
-  val sparkShuffleCompress = getStringConfiguration(sparkConf, "spark-shuffle-compress")
-  val sparkShuffleSpillCompress = getStringConfiguration(sparkConf, "spark-shuffle-spill-compress")
-  val sparkReducerMaxMbInFlight = getStringConfiguration(sparkConf, "spark-reducer-maxMbInFlight")
-  val sparkAkkaFrameSize = getStringConfiguration(sparkConf, "spark-akka-frameSize")
-  val sparkAkkaThreads = getStringConfiguration(sparkConf, "spark-akka-threads")
-  val sparkAkkaTimeout = getStringConfiguration(sparkConf, "spark-akka-timeout")
-  val sparkTaskMaxFailures = getStringConfiguration(sparkConf, "spark-task-maxFailures")
-  val sparkShuffleConsolidateFiles = getStringConfiguration(sparkConf, "spark-shuffle-consolidateFiles")
-  val sparkDeploySpreadOut = getStringConfiguration(sparkConf, "spark-deploy-spreadOut")
-  val sparkSerializer = getStringConfiguration(sparkConf, "spark-serializer")
-  val sparkKryosSerializerBufferMb = getStringConfiguration(sparkConf, "spark-kryoserializer-buffer-mb")
-  val sparkKryoSerializerBufferMaxMb = getStringConfiguration(sparkConf, "spark-kryoserializer-buffer-max-mb")
-  val sparkKryoReferenceTracking = getStringConfiguration(sparkConf, "spark-kryo-referenceTracking")
-
   val LIMIT_EXCEPTION_MESSAGE = "The limit is null!"
   val SCRIPT_EXCEPTION_MESSAGE = "The script is empty or null!"
   val UUID_EXCEPTION_MESSAGE = "The uuid is empty or null!"
