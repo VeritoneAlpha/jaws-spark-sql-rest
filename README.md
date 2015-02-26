@@ -41,6 +41,9 @@ For Spark 1.* don't forget to set the following property on false in hive-site.x
              <value>false</value>
        </property>
 
+If you are running on top of mesos, don't forget to add in the jaws-env.sh file the path to the native mesos library.
+
+If your tables are snappy compressed, don't forget to add in the jaws-env.sh the path to the hadoop native libs.
 
 ## Run jaws
 
