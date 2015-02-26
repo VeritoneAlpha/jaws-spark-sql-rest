@@ -99,7 +99,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
 
   implicit val spraySystem: ActorSystem = ActorSystem("spraySystem")
 
-  startServer(interface = InetAddress.getLocalHost().getHostName(), port = Configuration.webServicesPort.getOrElse("8080").toInt) {
+  startServer(interface = Configuration.serverInterface.getOrElse(InetAddress.getLocalHost().getHostName()), port = Configuration.webServicesPort.getOrElse("8080").toInt) {
     path(pathPrefix / "index") {
       get {
 
@@ -478,6 +478,7 @@ object Configuration {
   val namenode = getStringConfiguration(hadoopConf, "namenode")
 
   //app configuration
+  val serverInterface = getStringConfiguration(appConf, "server.interface")
   val loggingType = getStringConfiguration(appConf, "app.logging.type")
   val rddDestinationIp = getStringConfiguration(appConf, "rdd.destination.ip")
   val rddDestinationLocation = getStringConfiguration(appConf, "rdd.destination.location")
