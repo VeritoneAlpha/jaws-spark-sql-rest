@@ -24,7 +24,6 @@ class GetQueriesApiActor(dals: DAL) extends Actor {
       var queriesStates = Queries(Array[Query]())
 
       val tryGetQueries = Try{
-        Preconditions.checkArgument(message.limit != null, Configuration.LIMIT_EXCEPTION_MESSAGE)
         queriesStates = dals.loggingDal.getQueriesStates(message.startQueryID, message.limit)
       }
       Configuration.log4j.debug("[GetQueriesApiActor]: Returning queries")

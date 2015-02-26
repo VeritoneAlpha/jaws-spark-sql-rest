@@ -110,7 +110,7 @@ object Utils {
   		var fs : FileSystem = null
   		try {
   			val filePath = new Path(filename)
-  			fs = FileSystem.get(configuration)
+  			fs = FileSystem.newInstance(configuration)
   			br = new BufferedReader(new InputStreamReader(fs.open(filePath)))
   
   			var line = br.readLine()
@@ -149,7 +149,7 @@ object Utils {
   		val allFiles : SortedSet[String]= new TreeSet[String](comparator)
   		try {
   			val folderPath = new Path(folderName)
-  			fs = FileSystem.get(configuration)
+  			fs = FileSystem.newInstance(configuration)
   			val files = fs.listFiles(folderPath, false)
   			while (files.hasNext()) {
   				val file = files.next()

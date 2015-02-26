@@ -1,34 +1,32 @@
 # jaws-spark-sql-rest
 
 Restful service for running Spark SQL/Shark queries on top of Spark, with Mesos and Tachyon support (codenamed jaws)
-Currently, only Spark 0.9.x and Shark are supported as backend framework for Jaws, will add support for Spark 1.0 and Spark SQL very soon.
+Curently Jaws supports Spark 0.9.1 with Shark and Spark 1.0.1, 1.0.2, 1.1.0 and 1.0.2 with SparkSQL as backend framework.
 
 
 ## Features
 
 Highly scalable and resilient restful (http) interface on top of a managed Spark SQL/Shark session that can concurrently and asynchronously submit HiveQL queries, return persisted results (automatically limited in size or paged), execution logs and query history (Cassandra or hdfs persisted).
 Jaws supports query cancellation even when there are multiple load balanced instances for higher availability and scalability.
-Jaws exposes configuration options for fine-tuning Spark & Shark performance and running against a stand-alone Spark deployment, with or without Tachyon as in-memory distributed file system on top of HDFS, and with or without Mesos as resource manager
+Jaws exposes configuration options for fine-tuning Spark & Shark performance and running against a stand-alone Spark deployment, with or without Tachyon as in-memory distributed file system on top of HDFS, and with or without Mesos as resource manager.
 We are using this service for building a warehouse explorer GUI component, that provides data analysts and scientists with a view into the warehouse through a metadata explorer, provides a query editor with intelligent features like auto-complete, a results viewer, logs viewer and historical queries for asynchronously retrieving persisted results, logs and query information for both running and historical queries.
 
 For Spark 0.9.x Jaws uses Shark against tables created through Hive, Shark or Tachyon.
-For Spark 1.0 it uses SparkSQL against Hive tables and Parquet files stored in hdfs and it is not backward compatible with Shark tables created in 0.9.x.
-
-
+For Spark 1.0 and 1.1 it uses SparkSQL against Hive tables and Parquet files stored in hdfs or tachyon and it is not backward compatible with Shark tables created in 0.9.x.
 
 ## Building Jaws
 
 You need to have Maven installed.
 To build Jaws, follow the below steps:
 
-    cd http-spark-sql-server
+    cd jaws-spark-sql-rest
     mvn clean install -DskipTests
-    cd xpatterns-jaws/target
-    tar -zxvf xpatterns-jaws.tar.gz
+    cd jaws-spark-sql-rest/target
+    tar -zxvf jaws-spark-sql-rest.tar.gz
 
 ## Configure Jaws
 
-In order configure Jaws the following files inside the "http-spark-sql-server/xpatterns-jaws/target/xpatterns-jaws/conf/"  need to be edited.
+In order configure Jaws the following files inside the "jaws-spark-sql-rest/jaws-spark-sql-rest/target/jaws-spark-sql-rest/conf/"  need to be edited.
 
     * application.conf: Contains all the application configurations.
     * hive-site.xml : Used for setting values for the Hive configuration
@@ -36,13 +34,23 @@ In order configure Jaws the following files inside the "http-spark-sql-server/xp
     * log4j.properties : Used for configuring the logger
     * sharkSettings.txt : Used to write all the shark commands that you need to be run before launching jaws. (One command per line. Example: set shark.column.compress=true)
 
+For Spark 1.* don't forget to set the following property on false in hive-site.xml:
+ 
+       <property>
+             <name>hive.support.concurrency</name>
+             <value>false</value>
+       </property>
+
 
 ## Run jaws
 
 After editing all the configuration files Jaws can be run in the following manner:
-    
-    http-spark-sql-server/xpatterns-jaws/target/xpatterns-jaws/bin/start-jaws.sh
-    
+
+    1. go where you decompressed the tar.gz file:
+       cd jaws-spark-sql-rest
+    2. run Jaws:
+       nohup bin/start-jaws.sh &
+
 
 ## Queries examples
 
@@ -52,7 +60,7 @@ Below are some queries with example purpose:
     curl -d "select * from table" 'http://devbox.local:8181/jaws/run?limited=true&numberOfResults=99' -X POST
 
 Parameters:
-   
+
   * limited [required]:  if set on true, the query will be limited to a fixed number of results. The number of results will be the one specified in the "numberOfResults" parameter, and they will be collected (in memory) and persisted in the configured backend database (cassandra or hdfs, no latency difference upon retrieval of small datasets). Otherwise, if not specified, the results number will be retrieved from the configuration file (nr.of.results field, default is 100).
   However, for large datasets that exceed the default number of results (100, configurable), results will not be persisted in memory and the configured database anymore, they will only be stored as an RDD on HDFS, and used for paginated retrieval (offset and limit parameters in the results api).
   If the limited parameter is set on false, then the query will return all the results and this time they will be stored in an RDD on HDFS, this is an indicator that a large dataset is about to be queried.
@@ -69,7 +77,7 @@ Exemple:
     curl -d "select * from testTable" 'http://devbox.local:8181/jaws/run/parquet?tablePath=tachyon://devbox.local:19998/user/jaws/parquetFolder&table=testTable&limited=true&numberOfResults=99' -X POST
 
 Parameters:
-   
+
   * tablePath [required] : the path to the parquet folder which you want to query
   * table : the table name you want to give to your parquet forlder
   * limited [required]:  if set on true, the query will be limited to a fixed number of results. The number of results will be the one specified in the "numberOfResults" parameter, and they will be collected (in memory) and persisted in the configured backend database (cassandra or hdfs, no latency difference upon retrieval of small datasets). Otherwise, if not specified, the results number will be retrieved from the configuration file (nr.of.results field, default is 100).
@@ -84,7 +92,7 @@ The api returns an uuid representing the query that was submitted. The query is 
 
 Exemple:
  1404998257416357bb29d-6801-41ca-82e4-7a265816b50c
- 
+
 
 ### Logs api:
     curl 'http://devbox.local:8181/jaws/logs?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&startTimestamp=0&limit=10' -X GET
@@ -213,7 +221,7 @@ Example:
             "query": "USE test;\n\nselect * from user_predictions limit 3"
         }
 
-### Databases api: 
+### Databases api:
     curl 'http://devbox.local:8181/jaws/databases' -X GET
 
 Results:
@@ -248,7 +256,7 @@ Parameters:
   * queryID [required] : uuid returned by the run api.
 
 This api cancels a running query. Unless Jaws runs in fine-grained mode under Mesos, the underlying Spark job is also cancelled. Spark job cancellation in Mesos fine-grained mode is not implemented in Spark core yet! In this mode, if the query is still in the queue, it won't be executed, but we cannot stop it once it started.
- 
+
 
 ### Tables api:
 
@@ -267,7 +275,7 @@ Results:
 
 If the database parameter is set, the api returns a JSON containing all the tables from the specified database, otherwise, it will return all the databases with all their tables.
 If the describe parameter is set on true, also the tables columns are returned.
-If a table list is provided, then those will be the tables that will be described. (The database is needed) 
+If a table list is provided, then those will be the tables that will be described. (The database is needed)
 
 Example:
 
@@ -364,16 +372,18 @@ Example:
                 ],
                  [
                   "",
-                  " ", 
+                  " ",
                  " "
                ],
                [
-                "Detailed Table Information", 
+                "Detailed Table Information",
                 "Table(tableName:user_predictions, dbName:test, owner:root, createTime:1404128550, lastAccessTime:0, retention:0, sd:StorageDescriptor(cols:[FieldSchema(name:userid, type:int, comment:null), FieldSchema(name:moviename, type:string, comment:null)], location:hdfs://devBox.local:8020/user/hive/warehouse/test.db/user_predictions, inputFormat:org.apache.hadoop.mapred.SequenceFileInputFormat, outputFormat:org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat, compressed:false, numBuckets:-1, serdeInfo:SerDeInfo(name:null, serializationLib:org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe, parameters:{serialization.format=1}), bucketCols:[], sortCols:[], parameters:{}, skewedInfo:SkewedInfo(skewedColNames:[], skewedColValues:[], skewedColValueLocationMaps:{}), storedAsSubDirectories:false), partitionKeys:[], parameters:{numPartitions=0, numFiles=1, transient_lastDdlTime=1405336104, totalSize=1194934, numRows=29665, rawDataSize=797502}, viewOriginalText:null, viewExpandedText:null, tableType:MANAGED_TABLE)"
           ]
        ]
         }
     }
+
+}
 
 
 ### Tables formatted api:
@@ -425,7 +435,7 @@ Example:
                         ],
                          [
                           "",
-                          " ", 
+                          " ",
                          " "
                        ],
                        [
@@ -572,3 +582,167 @@ Example:
         }
     }
 
+
+### Schema api:
+
+    curl 'http://devbox.local:8181/jaws/schema?path=databaseName.tableName&sourceType=hive' -X GET
+    curl 'http://devbox.local:8181/jaws/schema?path=/user/test/location&sourceType=parquet&storageType=tachyon' -X GET
+    curl 'http://devbox.local:8181/jaws/schema?path=/user/test/location&sourceType=parquet' -X GET
+
+Parameters:
+
+  * path [required] : represents the location of the data
+  * sourceType [required]: represents the source you want to read the data from; supported values are HIVE and PARQUET
+  * storageType [not required]: represents the persistence layer the PARQUET data is stored in; supported values are TACHYON and HDFS (default)
+
+
+Results:
+
+The api returns a JSON containing the schema (in AVRO format) of the specified data source.
+
+
+Example:
+
+    {
+    "type": "record",
+    "name": "RECORD",
+    "fields": [
+        {
+            "name": "id",
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        {
+            "name": "owner",
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        {
+            "name": "subject",
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        {
+            "name": "from",
+            "type": [
+                {
+                    "type": "array",
+                    "items": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "null"
+            ]
+        },
+        {
+            "name": "replyTo",
+            "type": [
+                {
+                    "type": "array",
+                    "items": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "null"
+            ]
+        },
+        {
+            "name": "sentDate",
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        {
+            "name": "toRecipients",
+            "type": [
+                {
+                    "type": "array",
+                    "items": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "null"
+            ]
+        },
+        {
+            "name": "ccRecipients",
+            "type": [
+                {
+                    "type": "array",
+                    "items": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "null"
+            ]
+        },
+        {
+            "name": "bccRecipients",
+            "type": [
+                {
+                    "type": "array",
+                    "items": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "null"
+            ]
+        },
+        {
+            "name": "receivedDate",
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        {
+            "name": "content",
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        {
+            "name": "messageId",
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        {
+            "name": "contentId",
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        {
+            "name": "isReplica",
+            "type": "boolean"
+        },
+        {
+            "name": "replicas",
+            "type": [
+                {
+                    "type": "array",
+                    "items": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "null"
+            ]
+        }
+    ]}

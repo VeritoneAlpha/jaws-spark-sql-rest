@@ -2,6 +2,7 @@ package server
 
 import java.net.InetAddress
 import com.typesafe.config.Config
+import implementation.SchemaSettingsFactory.{ SourceType, StorageType }
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.apache.log4j.Logger
 import com.google.gson.Gson
@@ -14,8 +15,7 @@ import akka.util.Timeout
 import apiactors._
 import apiactors.ActorsPaths._
 import customs.CORSDirectives
-import implementation.CassandraDal
-import implementation.HdfsDal
+import implementation.{ SchemaSettingsFactory, CassandraDal, HdfsDal, CustomHiveContextCreator }
 import messages._
 import com.xpatterns.jaws.data.DTO.Queries
 import spray.http.{ StatusCodes, HttpHeaders, HttpMethods, MediaTypes }
@@ -27,11 +27,10 @@ import spray.routing.SimpleRoutingApp
 import spray.routing.directives.ParamDefMagnet.apply
 import traits.DAL
 import messages.GetResultsMessage
-import implementation.CustomHiveContextCreator
 import com.xpatterns.jaws.data.DTO.Logs
 import com.xpatterns.jaws.data.DTO.Result
 import com.xpatterns.jaws.data.DTO.Query
-import scala.util.Try
+import scala.util.{ Failure, Try, Success }
 import server.MainActors._
 
 /**
@@ -92,6 +91,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
   val getResultsActor = createActor(Props(new GetResultsApiActor(hdfsConf, customSharkContext.hiveContext, dals)), GET_RESULTS_ACTOR_NAME, localSupervisor)
   val getQueryInfoActor = createActor(Props(new GetQueryInfoApiActor(dals)), GET_QUERY_INFO_ACTOR_NAME, localSupervisor)
   val getDatabasesActor = createActor(Props(new GetDatabasesApiActor(customSharkContext.hiveContext, dals)), GET_DATABASES_ACTOR_NAME, localSupervisor)
+  val getDatasourceSchemaActor = createActor(Props(new GetDatasourceSchemaActor(customSharkContext.hiveContext)), GET_DATASOURCE_SCHEMA_ACTOR_NAME, localSupervisor)
   val cancelActor = createActor(Props(classOf[CancelActor], runScriptActor), CANCEL_ACTOR_NAME, remoteSupervisor)
 
   val gson = new Gson()
@@ -122,17 +122,23 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
         post {
           parameters('tablePath.as[String], 'table.as[String], 'numberOfResults.as[Int] ? 100, 'limited.as[Boolean], 'destination.as[String] ? Configuration.rddDestinationLocation.getOrElse("hdfs")) { (tablePath, table, numberOfResults, limited, destination) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              entity(as[String]) { query: String =>
-                
-                  Configuration.log4j.info(s"The tablePath is $tablePath and the table name is $table")
-                  val future = ask(runScriptActor, RunParquetMessage(query, tablePath, table, limited, numberOfResults, destination))
-                  respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                  future.map {
-                    case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
-                    case result: String => ctx.complete(StatusCodes.OK, result)
+
+              validate(tablePath != null && !tablePath.trim.isEmpty, Configuration.FILE_EXCEPTION_MESSAGE) {
+                validate(table != null && !table.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
+
+                  entity(as[String]) { query: String =>
+                    validate(query != null && !query.trim.isEmpty(), Configuration.SCRIPT_EXCEPTION_MESSAGE) {
+                      respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
+                        Configuration.log4j.info(s"The tablePath is $tablePath and the table name is $table")
+                        val future = ask(runScriptActor, RunParquetMessage(query, tablePath, table, limited, numberOfResults, destination))
+                        future.map {
+                          case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                          case result: String => ctx.complete(StatusCodes.OK, result)
+                        }
+                      }
+                    }
                   }
                 }
-                
               }
             }
           }
@@ -149,17 +155,18 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
         post {
           parameters('numberOfResults.as[Int] ? 100, 'limited.as[Boolean], 'destination.as[String] ? Configuration.rddDestinationLocation.getOrElse("hdfs")) { (numberOfResults, limited, destination) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              entity(as[String]) { query: String =>
 
-                Configuration.log4j.info(s"The query is limited=$limited and the destination is $destination")
-                val future = ask(runScriptActor, RunScriptMessage(query, limited, numberOfResults, destination.toLowerCase()))
-                respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                  future.map {
-                    case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
-                    case result: String => ctx.complete(StatusCodes.OK, result)
+              entity(as[String]) { query: String =>
+                validate(query != null && !query.trim.isEmpty(), Configuration.SCRIPT_EXCEPTION_MESSAGE) {
+                  respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
+                    Configuration.log4j.info(s"The query is limited=$limited and the destination is $destination")
+                    val future = ask(runScriptActor, RunScriptMessage(query, limited, numberOfResults, destination.toLowerCase()))
+                    future.map {
+                      case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                      case result: String => ctx.complete(StatusCodes.OK, result)
+                    }
                   }
                 }
-
               }
             }
           }
@@ -176,16 +183,17 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
         get {
           parameters('queryID, 'startTimestamp.as[Long].?, 'limit.as[Int]) { (queryID, startTimestamp, limit) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-
-              var timestamp: java.lang.Long = 0
-              if (startTimestamp.isDefined) {
-                timestamp = startTimestamp.get
-              }
-              val future = ask(getLogsActor, GetLogsMessage(queryID, timestamp, limit))
-              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                future.map {
-                  case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
-                  case result: Logs => ctx.complete(StatusCodes.OK, result)
+              validate(queryID != null && !queryID.trim.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE) {
+                respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                  var timestamp: java.lang.Long = 0
+                  if (startTimestamp.isDefined) {
+                    timestamp = startTimestamp.get
+                  }
+                  val future = ask(getLogsActor, GetLogsMessage(queryID, timestamp, limit))
+                  future.map {
+                    case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                    case result: Logs => ctx.complete(StatusCodes.OK, result)
+                  }
                 }
               }
             }
@@ -203,11 +211,13 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
         get {
           parameters('queryID, 'offset.as[Int], 'limit.as[Int]) { (queryID, offset, limit) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              val future = ask(getResultsActor, GetResultsMessage(queryID, offset, limit))
-              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                future.map {
-                  case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
-                  case result: Result => ctx.complete(StatusCodes.OK, result)
+              validate(queryID != null && !queryID.trim.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE) {
+                respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                  val future = ask(getResultsActor, GetResultsMessage(queryID, offset, limit))
+                  future.map {
+                    case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                    case result: Result => ctx.complete(StatusCodes.OK, result)
+                  }
                 }
               }
             }
@@ -225,10 +235,11 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
         get {
           parameters('startQueryID.?, 'limit.as[Int]) { (startQueryID, limit) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              val future = ask(getQueriesActor, GetQueriesMessage(startQueryID.getOrElse(null), limit))
+
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                val future = ask(getQueriesActor, GetQueriesMessage(startQueryID.getOrElse(null), limit))
                 future.map {
-                  case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
                   case result: Queries => ctx.complete(StatusCodes.OK, result)
                 }
               }
@@ -247,11 +258,14 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
         get {
           parameters('queryID) { queryID =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              val future = ask(getQueryInfoActor, GetQueryInfoMessage(queryID))
-              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                future.map {
-                  case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
-                  case result: Query => ctx.complete(StatusCodes.OK, result)
+              validate(queryID != null && !queryID.trim.isEmpty, Configuration.UUID_EXCEPTION_MESSAGE) {
+
+                respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                  val future = ask(getQueryInfoActor, GetQueryInfoMessage(queryID))
+                  future.map {
+                    case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                    case result: Query => ctx.complete(StatusCodes.OK, result)
+                  }
                 }
               }
             }
@@ -265,7 +279,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
             respondWithMediaType(MediaTypes.`application/json`) { ctx =>
               val future = ask(getDatabasesActor, GetDatabasesMessage())
               future.map {
-                case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
                 case result: Result => ctx.complete(StatusCodes.OK, result)
               }
             }
@@ -302,30 +316,31 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
         get {
           parameterMultiMap { params =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              var database = ""
-              var describe = true
-              var tables: List[String] = List()
-
-              params.foreach(touple => touple._1 match {
-                case "database" => {
-                  if (touple._2 != null && !touple._2.isEmpty)
-                    database = touple._2(0)
-                }
-                case "describe" => {
-                  if (touple._2 != null && !touple._2.isEmpty)
-                    describe = Try(touple._2(0).toBoolean).getOrElse(true)
-                }
-                case "tables" => {
-                  tables = touple._2
-                }
-                case _ => Configuration.log4j.warn(s"Unknown parameter ${touple._1}!")
-              })
-              Configuration.log4j.info(s"Retrieving table information for database=$database, tables= $tables, with describe flag set on: $describe")
-              val future = ask(getTablesActor, new GetTablesMessage(database, describe, tables))
 
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                var database = ""
+                var describe = true
+                var tables: List[String] = List()
+
+                params.foreach(touple => touple._1 match {
+                  case "database" => {
+                    if (touple._2 != null && !touple._2.isEmpty)
+                      database = touple._2(0)
+                  }
+                  case "describe" => {
+                    if (touple._2 != null && !touple._2.isEmpty)
+                      describe = Try(touple._2(0).toBoolean).getOrElse(true)
+                  }
+                  case "tables" => {
+                    tables = touple._2
+                  }
+                  case _ => Configuration.log4j.warn(s"Unknown parameter ${touple._1}!")
+                })
+                Configuration.log4j.info(s"Retrieving table information for database=$database, tables= $tables, with describe flag set on: $describe")
+                val future = ask(getTablesActor, new GetTablesMessage(database, describe, tables))
+
                 future.map {
-                  case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
                   case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
                 }
               }
@@ -344,10 +359,11 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
         get {
           parameters('database.as[String], 'table.?) { (database, table) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              val future = ask(getTablesActor, new GetExtendedTablesMessage(database, table.getOrElse("")))
+
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                val future = ask(getTablesActor, new GetExtendedTablesMessage(database, table.getOrElse("")))
                 future.map {
-                  case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
                   case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
                 }
               }
@@ -366,10 +382,11 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
         get {
           parameters('database.as[String], 'table.?) { (database, table) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              val future = ask(getTablesActor, new GetFormattedTablesMessage(database, table.getOrElse("")))
+
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                val future = ask(getTablesActor, new GetFormattedTablesMessage(database, table.getOrElse("")))
                 future.map {
-                  case e: ErrorMessage => ctx.complete(StatusCodes.BadRequest, e.message)
+                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
                   case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
                 }
               }
@@ -383,8 +400,46 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
               }
             }
           }
+      } ~
+      path(pathPrefix / "schema") {
+        get {
+          parameters('path.as[String], 'sourceType.as[String], 'storageType.?) { (path, sourceType, storageType) =>
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+              validate(!path.trim.isEmpty, Configuration.PATH_IS_EMPTY) {
+                var validSourceType: SourceType = null
+                var validStorageType: StorageType = null
+                val validateParams = Try {
+                  validSourceType = SchemaSettingsFactory.getSourceType(sourceType)
+                  validStorageType = SchemaSettingsFactory.getStorageType(storageType.getOrElse("hdfs"))
+                }
+                respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                  validateParams match {
+                    case Failure(e) =>
+                      Configuration.log4j.error(e.getMessage)
+                      ctx.complete(StatusCodes.InternalServerError, e.getMessage)
+                    case Success(_) =>
+                      val schemaRequest: GetDatasourceSchemaMessage = GetDatasourceSchemaMessage(path, validSourceType, validStorageType)
+                      val future = ask(getDatasourceSchemaActor, schemaRequest)
+                      future.map {
+                        case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                        case result: String =>
+                          Configuration.log4j.info("Getting the data source schema was successful!")
+                          ctx.complete(StatusCodes.OK, result)
+                      }
+                  }
+                }
+              }
+            }
+          }
+        } ~
+          options {
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
+              complete {
+                "OK"
+              }
+            }
+          }
       }
-
   }
 
   private val reactiveServer = new ReactiveServer(Configuration.webSocketsPort.getOrElse("8081").toInt, MainActors.logsActor)
@@ -437,41 +492,19 @@ object Configuration {
   val corsFilterAllowedHosts = getStringConfiguration(appConf, "cors-filter-allowed-hosts")
   val jarPath = getStringConfiguration(appConf, "jar-path")
 
-  //spark configuration
-  val sparkMaster = getStringConfiguration(sparkConf, "spark-master")
-  val sparkPath = getStringConfiguration(sparkConf, "spark-path")
-  val sparkExecutorMemory = getStringConfiguration(sparkConf, "spark-executor-memory")
-  val sparkSchedulerMode = getStringConfiguration(sparkConf, "spark-scheduler-mode")
-  val sparkMesosCoarse = getStringConfiguration(sparkConf, "spark-mesos-coarse")
-  val sparkCoresMax = getStringConfiguration(sparkConf, "spark-cores-max")
-  val sparkShuffleSpill = getStringConfiguration(sparkConf, "spark-shuffle-spill")
-  val sparkDefaultParallelism = getStringConfiguration(sparkConf, "spark-default-parallelism")
-  val sparkStorageMemoryFraction = getStringConfiguration(sparkConf, "spark-storage-memoryFraction")
-  val sparkShuffleMemoryFraction = getStringConfiguration(sparkConf, "spark-shuffle-memoryFraction")
-  val sparkShuffleCompress = getStringConfiguration(sparkConf, "spark-shuffle-compress")
-  val sparkShuffleSpillCompress = getStringConfiguration(sparkConf, "spark-shuffle-spill-compress")
-  val sparkReducerMaxMbInFlight = getStringConfiguration(sparkConf, "spark-reducer-maxMbInFlight")
-  val sparkAkkaFrameSize = getStringConfiguration(sparkConf, "spark-akka-frameSize")
-  val sparkAkkaThreads = getStringConfiguration(sparkConf, "spark-akka-threads")
-  val sparkAkkaTimeout = getStringConfiguration(sparkConf, "spark-akka-timeout")
-  val sparkTaskMaxFailures = getStringConfiguration(sparkConf, "spark-task-maxFailures")
-  val sparkShuffleConsolidateFiles = getStringConfiguration(sparkConf, "spark-shuffle-consolidateFiles")
-  val sparkDeploySpreadOut = getStringConfiguration(sparkConf, "spark-deploy-spreadOut")
-  val sparkSerializer = getStringConfiguration(sparkConf, "spark-serializer")
-  val sparkKryosSerializerBufferMb = getStringConfiguration(sparkConf, "spark-kryoserializer-buffer-mb")
-  val sparkKryoSerializerBufferMaxMb = getStringConfiguration(sparkConf, "spark-kryoserializer-buffer-max-mb")
-  val sparkKryoReferenceTracking = getStringConfiguration(sparkConf, "spark-kryo-referenceTracking")
-
-  val LIMIT_EXCEPTION_MESSAGE: Any = "The limit is null!"
-  val SCRIPT_EXCEPTION_MESSAGE: Any = "The script is empty or null!"
-  val UUID_EXCEPTION_MESSAGE: Any = "The uuid is empty or null!"
-  val LIMITED_EXCEPTION_MESSAGE: Any = "The limited flag is null!"
-  val RESULSTS_NUMBER_EXCEPTION_MESSAGE: Any = "The results number is null!"
-  val FILE_EXCEPTION_MESSAGE: Any = "The file is null!"
-  val TABLE_EXCEPTION_MESSAGE: Any = "The table name is null!"
+  val LIMIT_EXCEPTION_MESSAGE = "The limit is null!"
+  val SCRIPT_EXCEPTION_MESSAGE = "The script is empty or null!"
+  val UUID_EXCEPTION_MESSAGE = "The uuid is empty or null!"
+  val LIMITED_EXCEPTION_MESSAGE = "The limited flag is null!"
+  val RESULTS_NUMBER_EXCEPTION_MESSAGE = "The results number is null!"
+  val FILE_EXCEPTION_MESSAGE = "The file is null!"
+  val TABLE_EXCEPTION_MESSAGE = "The table name is null!"
+  val PATH_IS_EMPTY = "Request parameter \'path\' must not be empty!"
+  val UNSUPPORTED_SOURCE_TYPE = "Unsupported value for parameter \'sourceType\' !"
+  val UNSUPPORTED_STORAGE_TYPE = "Unsupported value for parameter \'storageType\' !"
 
   def getStringConfiguration(configuration: Config, configurationPath: String): Option[String] = {
-    return if (configuration.hasPath(configurationPath)) Option(configuration.getString(configurationPath).trim) else Option(null)
+    if (configuration.hasPath(configurationPath)) Option(configuration.getString(configurationPath).trim) else Option(null)
   }
 
 }

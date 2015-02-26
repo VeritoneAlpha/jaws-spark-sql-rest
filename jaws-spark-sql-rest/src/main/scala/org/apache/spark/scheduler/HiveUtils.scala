@@ -15,6 +15,8 @@ import spray.json.DefaultJsonProtocol._
 import com.xpatterns.jaws.data.DTO.Column
 import implementation.HiveContextWrapper
 import org.apache.spark.sql.catalyst.types.StructType
+import server.MainActors
+import server.LogsActor.PushLogs
 
 /**
  * Created by emaorhian
@@ -51,15 +53,14 @@ object HiveUtils {
       }
     }
 
-    return result
+    result
   }
 
   def runCmdRdd(cmd: String, hiveContext: HiveContextWrapper, defaultNumberOfResults: Int, uuid: String, isLimited: Boolean, maxNumberOfResults: Long, isLastCommand: Boolean, hdfsNamenode: String, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration, rddDestination: String): Result = {
     Configuration.log4j.info("[HiveUtils]: execute the following command:" + cmd)
 
-    var cmd_trimmed = cmd.trim
-    val lowerCaseCmd = cmd_trimmed.toLowerCase()
-
+    var cmd_trimmed = cmd.trim.toLowerCase
+   
     val tokens = cmd_trimmed.split("\\s+")
 
     if (tokens(0).equalsIgnoreCase("select")) {
@@ -199,7 +200,7 @@ object HiveUtils {
     if (rddDestination.endsWith("/") == false) {
       finalDestination = rddDestination + "/"
     }
-    return finalDestination + "user/" + System.getProperty("user.name") + "/" + Configuration.resultsFolder.getOrElse("jawsResultsFolder") + "/" + uuid
+     s"${finalDestination}user/${System.getProperty("user.name")}/${Configuration.resultsFolder.getOrElse("jawsResultsFolder")}/$uuid"
   }
 
   def run(hiveContext: HiveContext, cmd: String, maxNumberOfResults: Long, limitedNumberOfResults: Int, isLimited: Boolean, loggingDal: TJawsLogging, uuid: String): Result = {
@@ -226,5 +227,15 @@ object HiveUtils {
 
   def getTachyonPath(ip: String): String = {
     "tachyon://" + ip.trim() + ":19998"
+  }
+  
+  def logInfoMessage(uuid: String, message: String, jobId : String, loggingDal : TJawsLogging) {
+    Configuration.log4j.info(message)
+    logMessage(uuid, message, jobId, loggingDal)
+  }
+  
+  def logMessage(uuid: String, message: String, jobId : String, loggingDal : TJawsLogging) {
+    loggingDal.addLog(uuid, jobId, System.currentTimeMillis(), message)
+    MainActors.logsActor ! new PushLogs(uuid, message)
   }
 }

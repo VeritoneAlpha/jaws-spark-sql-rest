@@ -29,32 +29,10 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCon
       {
         Configuration.log4j.info("[GetResultsMessage]: retrieving results for: " + message.queryID)
 
-        var result : Result= null
+        var result: Result = null
         val tryGetResults = Try {
-          Preconditions.checkArgument(message.queryID != null && !message.queryID.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE)
-          var offset = message.offset
-          var limit = message.limit
 
-          Option(offset) match {
-            case None => {
-              Configuration.log4j.info("[GetResultsMessage]: offset null... setting it on 0")
-              offset = 0
-            }
-            case _ => {
-              Configuration.log4j.info("[GetResultsMessage]: offset = " + offset)
-            }
-          }
-
-          Option(limit) match {
-            case None => {
-              Configuration.log4j.info("[GetResultsMessage]: limit null... setting it on 100")
-              limit = 100
-            }
-            case _ => {
-              Configuration.log4j.info("[GetResultsMessage]: limit = " + limit)
-            }
-          }
-
+          val(offset, limit) = getOffsetAndLimit(message)
           val metaInfo = dals.loggingDal.getMetaInfo(message.queryID)
 
           metaInfo.resultsDestination match {
@@ -103,5 +81,31 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCon
         Result.fromTuples(schema, filteredResults)
 
       }
+  }
+
+  def getOffsetAndLimit(message: GetResultsMessage): Tuple2[Int, Int] = {
+    var offset = message.offset
+    var limit = message.limit
+
+    Option(offset) match {
+      case None => {
+        Configuration.log4j.info("[GetResultsMessage]: offset null... setting it on 0")
+        offset = 0
+      }
+      case _ => {
+        Configuration.log4j.info("[GetResultsMessage]: offset = " + offset)
+      }
+    }
+
+    Option(limit) match {
+      case None => {
+        Configuration.log4j.info("[GetResultsMessage]: limit null... setting it on 100")
+        limit = 100
+      }
+      case _ => {
+        Configuration.log4j.info("[GetResultsMessage]: limit = " + limit)
+      }
+    }
+    (offset, limit)
   }
 }

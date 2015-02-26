@@ -26,9 +26,7 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
       var result: Result = null
       val nrOfCommands = commands.size
 
-      var message = "There are " + nrOfCommands + " commands that need to be executed"
-      Configuration.log4j.info(message)
-      logMessage(message)
+      HiveUtils.logInfoMessage(uuid, s"There are $nrOfCommands commands that need to be executed", "hql", dals.loggingDal)
 
       val startTime = System.currentTimeMillis()
 
@@ -38,63 +36,64 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
       // run each command except the last one
       for (commandIndex <- 0 to nrOfCommands - 2) {
         isCanceled match {
-          case false => result = runCommand(commands(commandIndex), nrOfCommands, commandIndex, isLimited, false)
-          case _ => Configuration.log4j.info("The task " + uuid + " was canceled")
+          case false => {
+            result = HiveUtils.runCmdRdd(commands(commandIndex), hiveContext, Configuration.numberOfResults.getOrElse("100").toInt, uuid, isLimited, maxNumberOfResults, false, Configuration.rddDestinationIp.get, dals.loggingDal, hdfsConf, rddDestination)
+            HiveUtils.logInfoMessage(uuid, s"Command progress : There were executed ${commandIndex + 1} commands out of $nrOfCommands", "hql", dals.loggingDal)
+          }
+          case _ => {
+            val message = s"The command ${commands(commandIndex)} was canceled!"
+            Configuration.log4j.warn(message)
+            HiveUtils.logMessage(uuid, message, "hql", dals.loggingDal)
+          }
         }
       }
 
       // the last command might need to be paginated
       isCanceled match {
-        case false => result = runCommand(commands(nrOfCommands - 1), nrOfCommands, nrOfCommands - 1, isLimited, true)
-        case _ => Configuration.log4j.info("The task " + uuid + " was canceled")
+        case false => {
+            result = HiveUtils.runCmdRdd(commands(nrOfCommands - 1), hiveContext, Configuration.numberOfResults.getOrElse("100").toInt, uuid, isLimited, maxNumberOfResults, true, Configuration.rddDestinationIp.get, dals.loggingDal, hdfsConf, rddDestination)
+            HiveUtils.logInfoMessage(uuid, s"Command progress : There were executed $nrOfCommands commands out of $nrOfCommands", "hql", dals.loggingDal)
+          }
+        case _ => {
+          val message = s"The command ${commands(nrOfCommands - 1)} was canceled!"
+          Configuration.log4j.warn(message)
+          HiveUtils.logMessage(uuid, message, "hql", dals.loggingDal)
+        }
       }
 
       val executionTime = System.currentTimeMillis() - startTime
       var formattedDuration = DurationFormatUtils.formatDurationHMS(executionTime)
 
-      Option(result) match {
-        case None => Configuration.log4j.debug("[RunSharkScriptTask] result is null")
-        case _ => dals.resultsDal.setResults(uuid, result)
-      }
-
-      message = "The total execution time was: " + formattedDuration + "!"
-      logMessage(message)
-      dals.loggingDal.setState(uuid, QueryState.DONE)
-
+      HiveUtils.logInfoMessage(uuid, s"The total execution time was: $formattedDuration!", "hql", dals.loggingDal)
+      writeResults(isCanceled, result)
     } catch {
       case e: Exception => {
         val message = s"${e.getMessage()} : ${e.getStackTraceString}"
-        Configuration.log4j.error( message)
-        logMessage(message)
-        throw new RuntimeException(e)
-      }
-    }
-  }
-
-  def logMessage(message: String) {
-    dals.loggingDal.addLog(uuid, "hql", System.currentTimeMillis(), message)
-    MainActors.logsActor ! new PushLogs(uuid, message)
-  }
-
-  def runCommand(command: String, nrOfCommands: Integer, commandIndex: Integer, isLimited: Boolean, isLastCommand: Boolean): Result = {
-    var message = ""
-
-    try {
-
-      val result = HiveUtils.runCmdRdd(command, hiveContext, Configuration.numberOfResults.getOrElse("100").toInt, uuid, isLimited, maxNumberOfResults, isLastCommand, Configuration.rddDestinationIp.get, dals.loggingDal, hdfsConf, rddDestination)
-      message = "Command progress : There were executed " + (commandIndex + 1) + " commands out of " + nrOfCommands
-      Configuration.log4j.info(message)
-     logMessage(message)
-      return result
-    } catch {
-      case e: Exception => {
-        message = s"${e.getMessage()} : ${e.getStackTraceString}"
         Configuration.log4j.error(message)
-        logMessage(e.getStackTraceString)
+        HiveUtils.logMessage(uuid, e.getStackTraceString, "hql", dals.loggingDal)
         dals.loggingDal.setState(uuid, QueryState.FAILED)
         dals.loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, 0, isLimited))
 
         throw new RuntimeException(e)
+      
+      }
+    }
+  }
+
+  def writeResults(isCanceled: Boolean, result: Result) {
+    isCanceled match {
+      case false => {
+        Option(result) match {
+          case None => Configuration.log4j.debug("[RunSharkScriptTask] result is null")
+          case _ => dals.resultsDal.setResults(uuid, result)
+        }
+        dals.loggingDal.setState(uuid, QueryState.DONE)
+      }
+      case _ => {
+        val message = s"The query failed because it was canceled!"
+        Configuration.log4j.warn(message)
+        HiveUtils.logMessage(uuid, message, "hql", dals.loggingDal)
+        dals.loggingDal.setState(uuid, QueryState.FAILED)
       }
     }
   }
