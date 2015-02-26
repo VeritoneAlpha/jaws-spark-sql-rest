@@ -170,4 +170,6 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
     return json.extract[QueryMetaInfo]
 
   }
+  
+  def deleteQuery(queryId: String) {}
 }

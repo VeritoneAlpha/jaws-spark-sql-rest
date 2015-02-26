@@ -8,4 +8,5 @@ import com.xpatterns.jaws.data.DTO.Result
 trait TJawsResults {
   def getResults(uuid: String): Result
   def setResults(uuid: String, resultDTO: Result)
+  def deleteResults(uuid: String)
 }

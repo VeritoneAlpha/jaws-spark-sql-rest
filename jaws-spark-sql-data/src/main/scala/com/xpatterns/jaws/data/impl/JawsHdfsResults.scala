@@ -20,12 +20,12 @@ class JawsHdfsResults(configuration: Configuration) extends TJawsResults {
   val forcedMode = configuration.getBoolean(Utils.FORCED_MODE, false)
   Utils.createFolderIfDoesntExist(configuration, configuration.get(Utils.RESULTS_FOLDER), forcedMode)
 
-  override def setResults(uuid: String, resultDTO: Result) {
+  def setResults(uuid: String, resultDTO: Result) {
 	  logger.debug("Writing results to query " + uuid)
 	  Utils.rewriteFile(resultDTO.toJson.toString, configuration, configuration.get(Utils.RESULTS_FOLDER) + "/" + uuid)
   }
 
-  override def getResults(uuid: String): Result = {
+  def getResults(uuid: String): Result = {
     logger.debug("Reading results for query: " + uuid)
     implicit val formats = DefaultFormats
 
@@ -34,4 +34,6 @@ class JawsHdfsResults(configuration: Configuration) extends TJawsResults {
     return json.extract[Result]
 
   }
+  
+  def deleteResults(uuid: String){}
 }
