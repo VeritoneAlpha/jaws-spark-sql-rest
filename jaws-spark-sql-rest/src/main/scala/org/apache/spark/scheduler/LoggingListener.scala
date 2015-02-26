@@ -63,10 +63,10 @@ class LoggingListener(dals: DAL) extends SparkListener {
     Option(properties) match {
       case None => Configuration.log4j.info("[LoggingListener - onJobStart] properties file is null")
       case _ => {
-        val uuid = properties.getProperty("spark.jobGroup.id")
-        val jobId = jobStart.jobId        
+        val jobId = jobStart.jobId
         jobStart.properties.setProperty(JOB_ID, jobId.toString())
-        if (!uuid.isEmpty()) {
+        val uuid = properties.getProperty("spark.jobGroup.id")
+        if (uuid != null && !uuid.isEmpty()) {
           jobIdToStartTimestamp.put(jobId, System.currentTimeMillis())
           jobIdToUUID.put(jobId, uuid)
           HiveUtils.logInfoMessage(uuid, s"The job $jobId has started. Executing command.", jobId.toString, dals.loggingDal)
