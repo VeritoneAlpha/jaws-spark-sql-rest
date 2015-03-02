@@ -398,33 +398,42 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
       logger.debug(s"Deleting query: $queryId")
       val key = computeRowKey(queryId)
       val mutator = HFactory.createMutator(keyspace, is)
-      
+
       logger.debug(s"Deleting query state for: $queryId")
       val columnState = new Composite()
       columnState.setComponent(LEVEL_UUID, queryId, ss)
       columnState.setComponent(LEVEL_TYPE, TYPE_QUERY_STATE, is)
       mutator.addDeletion(key, CF_SPARK_LOGS, columnState, cs)
-      
+
       logger.debug(s"Deleting query details for: $queryId")
       val columnScriptDetails = new Composite()
       columnScriptDetails.setComponent(LEVEL_TYPE, TYPE_SCRIPT_DETAILS, is)
       columnScriptDetails.setComponent(LEVEL_UUID, queryId, ss)
       mutator.addDeletion(key, CF_SPARK_LOGS, columnScriptDetails, cs)
-      
-      logger.debug(s"Deleting query logs for: $queryId")
-      val columnLogs = new Composite()
-      columnLogs.setComponent(LEVEL_TYPE, TYPE_LOG, is)
-      columnLogs.setComponent(LEVEL_UUID, queryId, ss)
-      mutator.addDeletion(key, CF_SPARK_LOGS, columnLogs, cs)
-      
+
       logger.debug(s"Deleting meta info for: $queryId")
       val columnMetaInfo = new Composite()
       columnMetaInfo.setComponent(LEVEL_TYPE, TYPE_META, is)
       columnMetaInfo.setComponent(LEVEL_UUID, queryId, ss)
       mutator.addDeletion(key, CF_SPARK_LOGS, columnMetaInfo, cs)
-      
+
+      logger.debug(s"Deleting query logs for: $queryId")
+      var logs = getLogs(queryId, 0, 100)     
+      while (logs.logs.isEmpty == false) {
+        logs.logs.foreach(log => {
+          println(log.timestamp)
+          var columnLogs = new Composite()
+          columnLogs.setComponent(LEVEL_TYPE, TYPE_LOG, is)
+          columnLogs.setComponent(LEVEL_UUID, queryId, ss)
+	      columnLogs.setComponent(LEVEL_TIME_STAMP, log.timestamp, ls)
+          mutator.addDeletion(key, CF_SPARK_LOGS, columnLogs, cs)
+        })
+         mutator.execute()
+         logs = getLogs(queryId, logs.logs(logs.logs.length -1).timestamp + 1, 100)
+      }
+
       mutator.execute()
-      
+
     }
   }
 }

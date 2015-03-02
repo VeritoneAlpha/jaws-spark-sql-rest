@@ -13,7 +13,10 @@ import com.typesafe.config.ConfigFactory
 import me.prettyprint.cassandra.service.ThriftCluster
 import me.prettyprint.hector.api.factory.HFactory
 import me.prettyprint.cassandra.model.AllOneConsistencyLevelPolicy
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
 
+@RunWith(classOf[JUnitRunner])
 class JawsResultsTest extends FunSuite with BeforeAndAfter {
 
   var resultsDal: TJawsResults = _
@@ -51,4 +54,19 @@ class JawsResultsTest extends FunSuite with BeforeAndAfter {
 
   }
 
+  test("testDeleteResults") {
+    val uuid = Randomizer.getRandomString(10)
+    val resultDTO = Randomizer.getResult
+    resultsDal.setResults(uuid, resultDTO)
+
+    val results = resultsDal.getResults(uuid)
+
+    resultsDal.deleteResults(uuid)
+
+    val resultsDeleted = resultsDal.getResults(uuid)
+
+    assert(resultDTO === results)
+    assert(new Result() === resultsDeleted)
+
+  }
 }
