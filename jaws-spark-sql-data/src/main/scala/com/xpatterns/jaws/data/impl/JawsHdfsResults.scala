@@ -13,7 +13,6 @@ import java.io.InputStream
 import org.apache.commons.io.output.ByteArrayOutputStream
 import com.xpatterns.jaws.data.utils.Utils
 
-
 class JawsHdfsResults(configuration: Configuration) extends TJawsResults {
 
   val logger = Logger.getLogger("JawsHdfsResults")
@@ -21,19 +20,26 @@ class JawsHdfsResults(configuration: Configuration) extends TJawsResults {
   Utils.createFolderIfDoesntExist(configuration, configuration.get(Utils.RESULTS_FOLDER), forcedMode)
 
   def setResults(uuid: String, resultDTO: Result) {
-	  logger.debug("Writing results to query " + uuid)
-	  Utils.rewriteFile(resultDTO.toJson.toString, configuration, configuration.get(Utils.RESULTS_FOLDER) + "/" + uuid)
+    logger.debug("Writing results to query " + uuid)
+    Utils.rewriteFile(resultDTO.toJson.toString, configuration, getResultsFilePath(uuid))
   }
 
   def getResults(uuid: String): Result = {
     logger.debug("Reading results for query: " + uuid)
     implicit val formats = DefaultFormats
+    val filePath = getResultsFilePath(uuid)
+    
+    if (Utils.checkFileExistence(filePath, configuration)) parse(Utils.readFile(configuration, filePath)).extract[Result] else new Result
+  }
 
-    val resultsString = Utils.readFile(configuration, configuration.get(Utils.RESULTS_FOLDER) + "/" + uuid)
-    val json = parse(resultsString)
-    return json.extract[Result]
+  def deleteResults(uuid: String) {
+    logger.debug(s"Deleting results for query $uuid")
+    val filePath = getResultsFilePath(uuid)
+    Utils.deleteFile(configuration, filePath)
 
   }
-  
-  def deleteResults(uuid: String){}
+
+  def getResultsFilePath(queryId: String): String = {
+    configuration.get(Utils.RESULTS_FOLDER) + "/" + queryId
+  }
 }
