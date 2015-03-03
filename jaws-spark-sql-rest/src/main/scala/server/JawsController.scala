@@ -93,6 +93,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
   val getDatabasesActor = createActor(Props(new GetDatabasesApiActor(customSharkContext.hiveContext, dals)), GET_DATABASES_ACTOR_NAME, localSupervisor)
   val getDatasourceSchemaActor = createActor(Props(new GetDatasourceSchemaActor(customSharkContext.hiveContext)), GET_DATASOURCE_SCHEMA_ACTOR_NAME, localSupervisor)
   val cancelActor = createActor(Props(classOf[CancelActor], runScriptActor), CANCEL_ACTOR_NAME, remoteSupervisor)
+  val deleteQueryActor = createActor(Props(new DeleteQueryApiActor(dals)), DELETE_QUERY_ACTOR_NAME, localSupervisor)
 
   val gson = new Gson()
   val pathPrefix = "jaws"
@@ -426,6 +427,30 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
                           Configuration.log4j.info("Getting the data source schema was successful!")
                           ctx.complete(StatusCodes.OK, result)
                       }
+                  }
+                }
+              }
+            }
+          }
+        } ~
+          options {
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
+              complete {
+                "OK"
+              }
+            }
+          }
+      } ~
+      path(pathPrefix / "query") {
+        delete {
+          parameters('queryID.as[String]) { queryID =>
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+              validate(queryID != null && !queryID.trim.isEmpty, Configuration.UUID_EXCEPTION_MESSAGE) {
+                respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                  val future = ask(deleteQueryActor, new DeleteQueryMessage(queryID))
+                  future.map {
+                    case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                    case message: String => ctx.complete(StatusCodes.OK, message)
                   }
                 }
               }
