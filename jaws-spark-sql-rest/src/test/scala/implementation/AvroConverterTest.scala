@@ -11,20 +11,20 @@ import scala.util.Try
 
 @RunWith(classOf[JUnitRunner])
 class AvroConverterTest extends FunSuite {
-  val intField = new StructField("int", DataType("IntegerType"), false)
-  val strField = new StructField("str", DataType("StringType"), true)
-  val arrOfStrField = new StructField("arr", DataType("ArrayType(StringType,false)"), true)
-  val arrOfStrFieldNotNullable = new StructField("arr", DataType("ArrayType(StringType,false)"), false)
-  val arrOfRecField = new StructField("arrOfRec", DataType("ArrayType(StructType(List(StructField(str,StringType,true))),false)"), true)
-  val mapOfStrField = new StructField("map", DataType("MapType(StringType,StringType,true)"), false)
-  val mapOfRecField = new StructField("mapOfRec", DataType("MapType(StringType,StructType(List(StructField(str,StringType,true))),true)"), false)
+  val intField = new StructField("int", DataType.fromCaseClassString("IntegerType"), false)
+  val strField = new StructField("str", DataType.fromCaseClassString("StringType"), true)
+  val arrOfStrField = new StructField("arr", DataType.fromCaseClassString("ArrayType(StringType,false)"), true)
+  val arrOfStrFieldNotNullable = new StructField("arr", DataType.fromCaseClassString("ArrayType(StringType,false)"), false)
+  val arrOfRecField = new StructField("arrOfRec", DataType.fromCaseClassString("ArrayType(StructType(List(StructField(str,StringType,true))),false)"), true)
+  val mapOfStrField = new StructField("map", DataType.fromCaseClassString("MapType(StringType,StringType,true)"), false)
+  val mapOfRecField = new StructField("mapOfRec", DataType.fromCaseClassString("MapType(StringType,StructType(List(StructField(str,StringType,true))),true)"), false)
   val structType = new StructType(Seq(intField, strField))
   val recordType = new StructField("record", structType, false)
-  val byteField = new StructField("byte", DataType("ByteType"), false)
-  val binaryField = new StructField("binary", DataType("BinaryType"), true)
-  val arrOfArrString = new StructField("arrOfArrayString", DataType("ArrayType(ArrayType(StringType,false),false)"), true)
-  val mapOfMap = new StructField("mapOfMap", DataType("MapType(StringType, MapType(StringType,StringType,true),true)"), false)
-  val arrOfMapofArr = new StructField("arrOfMapOfArr", DataType("ArrayType(MapType(StringType, ArrayType(ArrayType(StringType,false),false),true),false)"), true)
+  val byteField = new StructField("byte", DataType.fromCaseClassString("ByteType"), false)
+  val binaryField = new StructField("binary", DataType.fromCaseClassString("BinaryType"), true)
+  val arrOfArrString = new StructField("arrOfArrayString", DataType.fromCaseClassString("ArrayType(ArrayType(StringType,false),false)"), true)
+  val mapOfMap = new StructField("mapOfMap", DataType.fromCaseClassString("MapType(StringType, MapType(StringType,StringType,true),true)"), false)
+  val arrOfMapofArr = new StructField("arrOfMapOfArr", DataType.fromCaseClassString("ArrayType(MapType(StringType, ArrayType(ArrayType(StringType,false),false),true),false)"), true)
 
   test("simple schema") {
     val result = AvroConverter.getAvroSchema(structType)
@@ -111,7 +111,7 @@ class AvroConverterTest extends FunSuite {
   test("schema with lot of fields") {
     var lots = Seq[StructField]()
     for (i <- 0 until 10000) {
-      lots = lots ++ Seq(new StructField(s"str$i", DataType("StringType"), true))
+      lots = lots ++ Seq(new StructField(s"str$i", DataType.fromCaseClassString("StringType"), true))
     }
     val lotsStruct = new StructType(lots)
     val tryGetLogs = Try(AvroConverter.getAvroSchema(lotsStruct))
