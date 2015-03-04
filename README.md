@@ -749,3 +749,25 @@ Example:
             ]
         }
     ]}
+
+### Delete query api:
+
+This is an API that deletes from the database all the information about a query:
+	- query state
+	- query details
+	- query logs
+	- query meta info
+	- query results
+
+    curl 'http://devbox.local:8181/jaws/query?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7' -X DELETE
+    
+
+Parameters:
+
+  * queryID [required] : represents the query that needs to be deleted
+
+If the query is in progress or it is not found, an explanatory error message will be thrown.   
+
+ Results:
+
+"Query 140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7 was deleted"

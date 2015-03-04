@@ -446,7 +446,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
           parameters('queryID.as[String]) { queryID =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
               validate(queryID != null && !queryID.trim.isEmpty, Configuration.UUID_EXCEPTION_MESSAGE) {
-                respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
                   val future = ask(deleteQueryActor, new DeleteQueryMessage(queryID))
                   future.map {
                     case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
