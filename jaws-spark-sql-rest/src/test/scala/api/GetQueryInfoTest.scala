@@ -29,6 +29,7 @@ import com.xpatterns.jaws.data.contracts.TJawsLogging
 import com.xpatterns.jaws.data.utils.QueryState
 import messages.GetQueryInfoMessage
 import java.util.UUID
+import com.xpatterns.jaws.data.DTO.QueryMetaInfo
 
 @RunWith(classOf[JUnitRunner])
 class GetQueryInfoTest extends FunSuite with BeforeAndAfter with ScalaFutures {
@@ -53,7 +54,7 @@ class GetQueryInfoTest extends FunSuite with BeforeAndAfter with ScalaFutures {
     val tAct = TestActorRef(new GetQueryInfoApiActor(dals))
     val queryId = System.currentTimeMillis() + UUID.randomUUID().toString()
     val f = tAct ? GetQueryInfoMessage(queryId)
-    whenReady(f)(s => assert(s === new Query("NOT_FOUND", queryId, "")))
+    whenReady(f)(s => assert(s === new Query("NOT_FOUND", queryId, "", new QueryMetaInfo)))
 
   }
 
@@ -62,11 +63,13 @@ class GetQueryInfoTest extends FunSuite with BeforeAndAfter with ScalaFutures {
 
     val tAct = TestActorRef(new GetQueryInfoApiActor(dals))
     val queryId = System.currentTimeMillis() + UUID.randomUUID().toString()
+    val metaInfo = new QueryMetaInfo(100, 150, 1, true)
     dals.loggingDal.setState(queryId, QueryState.IN_PROGRESS)
     dals.loggingDal.setScriptDetails(queryId, "test script")
+    dals.loggingDal.setMetaInfo(queryId, metaInfo)
     
     val f = tAct ? GetQueryInfoMessage(queryId)
-    whenReady(f)(s => assert(s === new Query("IN_PROGRESS", queryId, "test script")))
+    whenReady(f)(s => assert(s === new Query("IN_PROGRESS", queryId, "test script", metaInfo)))
     
     dals.loggingDal.deleteQuery(queryId)
 

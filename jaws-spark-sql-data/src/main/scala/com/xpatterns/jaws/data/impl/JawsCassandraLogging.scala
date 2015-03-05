@@ -311,7 +311,8 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
           columns.foreach(column => {
             val name = column.getName
             if (name.get(LEVEL_TYPE, is) == TYPE_QUERY_STATE) {
-              val query = new Query(column.getValue(), name.get(LEVEL_UUID, ss), getScriptDetails(name.get(LEVEL_UUID, ss)))
+              val queryId = name.get(LEVEL_UUID, ss)
+              val query = new Query(column.getValue(), queryId, getScriptDetails(queryId), getMetaInfo(queryId))
               map.put(name.get(LEVEL_UUID, ss), query)
             }
           })

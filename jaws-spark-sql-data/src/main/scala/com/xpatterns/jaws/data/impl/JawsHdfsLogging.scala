@@ -149,7 +149,7 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
 
     filesToBeRead.foreach(file => {
       val currentUuid = Utils.getNameFromPath(file)
-      stateList = stateList ++ Array(new Query(Utils.readFile(configuration, folderName + "/" + file), currentUuid, getScriptDetails(currentUuid)))
+      stateList = stateList ++ Array(new Query(Utils.readFile(configuration, folderName + "/" + file), currentUuid, getScriptDetails(currentUuid), getMetaInfo(queryId)))
     })
 
     return new Queries(stateList)
