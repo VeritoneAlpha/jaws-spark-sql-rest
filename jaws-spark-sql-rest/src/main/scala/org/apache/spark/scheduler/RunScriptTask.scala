@@ -18,9 +18,6 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
 
   override def run() {
     try {
-      dals.loggingDal.setState(uuid, QueryState.IN_PROGRESS)
-      dals.loggingDal.setScriptDetails(uuid, hqlScript)
-
       // parse the hql into independent commands
       val commands = HiveUtils.parseHql(hqlScript)
       var result: Result = null
