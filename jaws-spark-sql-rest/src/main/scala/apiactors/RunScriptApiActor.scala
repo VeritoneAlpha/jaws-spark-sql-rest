@@ -68,7 +68,9 @@ class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCont
        
         Configuration.log4j.info(s"[RunScriptApiActor -runParquet]: running the following sql: ${message.script}")
         Configuration.log4j.info(s"[RunScriptApiActor -runParquet]: The script will be executed over the ${message.tablePath} file with the ${message.table} table name")
-
+        
+        HiveUtils.logMessage(uuid, s"Launching task for $uuid", "hql", dals.loggingDal)
+        
         //load the parquet file
         val (namenode, folderPath) = splitPath(message.tablePath)
         Configuration.log4j.info(s"[RunScriptApiActor -runParquet]: namenode = $namenode, path = $folderPath ")      
