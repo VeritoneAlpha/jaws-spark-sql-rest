@@ -59,7 +59,7 @@ object HiveUtils {
   def runCmdRdd(cmd: String, hiveContext: HiveContextWrapper, defaultNumberOfResults: Int, uuid: String, isLimited: Boolean, maxNumberOfResults: Long, isLastCommand: Boolean, hdfsNamenode: String, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration, rddDestination:String): Result = {
     Configuration.log4j.info("[HiveUtils]: execute the following command:" + cmd)
 
-    var cmd_trimmed = cmd.trim.toLowerCase
+    var cmd_trimmed = cmd.trim
    
     val tokens = cmd_trimmed.split("\\s+")
 
