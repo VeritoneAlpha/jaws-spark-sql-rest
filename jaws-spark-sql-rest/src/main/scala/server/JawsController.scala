@@ -120,7 +120,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
           }
         }
     } ~
-      path(pathPrefix / "run" / "parquet") {
+      path(pathPrefix / "parquet" / "run") {
         post {
           parameters('tablePath.as[String], 'table.as[String], 'numberOfResults.as[Int] ? 100, 'limited.as[Boolean], 'destination.as[String] ? Configuration.rddDestinationLocation.getOrElse("hdfs")) { (tablePath, table, numberOfResults, limited, destination) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {

@@ -77,7 +77,7 @@ Exemple:
  1404998257416357bb29d-6801-41ca-82e4-7a265816b50c
 
 ### Run parquet api:
-    curl -d "select * from testTable" 'http://devbox.local:8181/jaws/run/parquet?tablePath=tachyon://devbox.local:19998/user/jaws/parquetFolder&table=testTable&limited=true&numberOfResults=99' -X POST
+    curl -d "select * from testTable" 'http://devbox.local:8181/jaws/parquet/run?tablePath=tachyon://devbox.local:19998/user/jaws/parquetFolder&table=testTable&limited=true&numberOfResults=99' -X POST
 
 Parameters:
 
