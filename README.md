@@ -77,7 +77,7 @@ Exemple:
  1404998257416357bb29d-6801-41ca-82e4-7a265816b50c
 
 ### Run parquet api:
-    curl -d "select * from testTable" 'http://devbox.local:8181/jaws/parquet/run?tablePath=tachyon://devbox.local:19998/user/jaws/parquetFolder&table=testTable&limited=true&numberOfResults=99' -X POST
+    curl -d "select * from testTable" 'http://devbox.local:8181/jaws/parquet/run?tablePath=tachyon://devbox.local:19998/user/jaws/parquetFolder&table=testTable&limited=true&numberOfResults=99&overwrite=false' -X POST
 
 Parameters:
 
@@ -87,6 +87,7 @@ Parameters:
   However, for large datasets that exceed the default number of results (100, configurable), results will not be persisted in memory and the configured database anymore, they will only be stored as an RDD on HDFS, and used for paginated retrieval (offset and limit parameters in the results api).
   If the limited parameter is set on false, then the query will return all the results and this time they will be stored in an RDD on HDFS, this is an indicator that a large dataset is about to be queried.
   * numberOfResults [not required]: The parameter is considered only if the "limited" parameter is set on true
+  * overwrite [not required, default false] : if set on false and the table already exists, an error message will be returned to the client saying that the table already exists. If set on true, the table will be overwritten
 
 
 Results:

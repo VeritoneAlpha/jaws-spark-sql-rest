@@ -78,7 +78,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
     configuration.set(Utils.METAINFO_FOLDER, Configuration.metaInfoFolder.getOrElse("jawsMetainfoFolder"))
     configuration.set(Utils.RESULTS_FOLDER, Configuration.resultsFolder.getOrElse("jawsResultsFolder"))
     configuration.set(Utils.PARQUET_TABLES_FOLDER, Configuration.parquetTablesFolder.getOrElse("parquetTablesFolder"))
-    
+
     return configuration
   }
 
@@ -122,7 +122,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
     } ~
       path(pathPrefix / "parquet" / "run") {
         post {
-          parameters('tablePath.as[String], 'table.as[String], 'numberOfResults.as[Int] ? 100, 'limited.as[Boolean], 'destination.as[String] ? Configuration.rddDestinationLocation.getOrElse("hdfs")) { (tablePath, table, numberOfResults, limited, destination) =>
+          parameters('tablePath.as[String], 'table.as[String], 'numberOfResults.as[Int] ? 100, 'limited.as[Boolean], 'destination.as[String] ? Configuration.rddDestinationLocation.getOrElse("hdfs"), 'overwrite.as[Boolean] ? false) { (tablePath, table, numberOfResults, limited, destination, overwrite) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
 
               validate(tablePath != null && !tablePath.trim.isEmpty, Configuration.FILE_EXCEPTION_MESSAGE) {
@@ -130,12 +130,14 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
 
                   entity(as[String]) { query: String =>
                     validate(query != null && !query.trim.isEmpty(), Configuration.SCRIPT_EXCEPTION_MESSAGE) {
-                      respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
-                        Configuration.log4j.info(s"The tablePath is $tablePath and the table name is $table")
-                        val future = ask(runScriptActor, RunParquetMessage(query, tablePath, table, limited, numberOfResults, destination))
-                        future.map {
-                          case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                          case result: String => ctx.complete(StatusCodes.OK, result)
+                      validate(overwrite == true || dals.parquetTableDal.tableExists(table) == false, Configuration.TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE) {
+                        respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
+                          Configuration.log4j.info(s"The tablePath is $tablePath and the table name is $table")
+                          val future = ask(runScriptActor, RunParquetMessage(query, tablePath, table, limited, numberOfResults, destination))
+                          future.map {
+                            case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                            case result: String => ctx.complete(StatusCodes.OK, result)
+                          }
                         }
                       }
                     }
@@ -528,6 +530,7 @@ object Configuration {
   val FILE_EXCEPTION_MESSAGE = "The file is null!"
   val TABLE_EXCEPTION_MESSAGE = "The table name is null!"
   val PATH_IS_EMPTY = "Request parameter \'path\' must not be empty!"
+  val TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE = "The table already exists!"
   val UNSUPPORTED_SOURCE_TYPE = "Unsupported value for parameter \'sourceType\' !"
   val UNSUPPORTED_STORAGE_TYPE = "Unsupported value for parameter \'storageType\' !"
 

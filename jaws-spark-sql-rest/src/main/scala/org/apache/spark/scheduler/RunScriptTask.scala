@@ -10,6 +10,7 @@ import com.xpatterns.jaws.data.utils.QueryState
 import implementation.HiveContextWrapper
 import com.xpatterns.jaws.data.DTO.QueryMetaInfo
 import org.apache.spark.sql.parquet.ParquetUtils._
+import com.xpatterns.jaws.data.DTO.ParquetTable
 
 /**
  * Created by emaorhian
@@ -119,6 +120,7 @@ class RunParquetScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContex
 
     // register table
     parquetFile.registerTempTable(tableName)
+    dals.parquetTableDal.addParquetTable(new ParquetTable(tableName, tablePath))
     super.run
   }
 

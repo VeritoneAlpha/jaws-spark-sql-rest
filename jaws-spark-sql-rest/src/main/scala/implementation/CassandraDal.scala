@@ -10,6 +10,8 @@ import me.prettyprint.hector.api.factory.HFactory
 import traits.DAL
 import com.xpatterns.jaws.data.contracts.TJawsLogging
 import com.xpatterns.jaws.data.contracts.TJawsResults
+import com.xpatterns.jaws.data.contracts.TJawsParquetTables
+import com.xpatterns.jaws.data.impl.JawsCassandraParquetTables
 
 /**
  * Created by emaorhian
@@ -21,5 +23,5 @@ class CassandraDal extends DAL {
 
   val loggingDal: TJawsLogging = new JawsCassandraLogging(keyspace)
   val resultsDal: TJawsResults = new JawsCassandraResults(keyspace)
-
+  val parquetTableDal: TJawsParquetTables = new JawsCassandraParquetTables(keyspace)
 }
