@@ -9,7 +9,7 @@ import java.util.Comparator
 
 class JawsHdfsParquetTables(configuration: Configuration) extends TJawsParquetTables {
 
-  val logger = Logger.getLogger("JawsHdfsLogging")
+  val logger = Logger.getLogger("JawsHdfsParquetTables")
 
   val forcedMode = configuration.getBoolean(Utils.FORCED_MODE, false)
   Utils.createFolderIfDoesntExist(configuration, configuration.get(Utils.PARQUET_TABLES_FOLDER), forcedMode)

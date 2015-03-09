@@ -77,7 +77,8 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
     configuration.set(Utils.DETAILS_FOLDER, Configuration.detailsFolder.getOrElse("jawsDetails"))
     configuration.set(Utils.METAINFO_FOLDER, Configuration.metaInfoFolder.getOrElse("jawsMetainfoFolder"))
     configuration.set(Utils.RESULTS_FOLDER, Configuration.resultsFolder.getOrElse("jawsResultsFolder"))
-
+    configuration.set(Utils.PARQUET_TABLES_FOLDER, Configuration.parquetTablesFolder.getOrElse("parquetTablesFolder"))
+    
     return configuration
   }
 
@@ -501,6 +502,7 @@ object Configuration {
   val resultsFolder = getStringConfiguration(hadoopConf, "resultsFolder")
   val metaInfoFolder = getStringConfiguration(hadoopConf, "metaInfoFolder")
   val namenode = getStringConfiguration(hadoopConf, "namenode")
+  val parquetTablesFolder = getStringConfiguration(hadoopConf, "parquetTablesFolder")
 
   //app configuration
   val serverInterface = getStringConfiguration(appConf, "server.interface")
