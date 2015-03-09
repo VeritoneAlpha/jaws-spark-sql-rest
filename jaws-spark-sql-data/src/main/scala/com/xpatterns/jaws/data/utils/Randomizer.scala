@@ -7,6 +7,7 @@ import com.xpatterns.jaws.data.DTO.Result
 import com.xpatterns.jaws.data.DTO.Column
 import com.xpatterns.jaws.data.DTO.Log
 import com.xpatterns.jaws.data.DTO.QueryMetaInfo
+import com.xpatterns.jaws.data.DTO.ParquetTable
 
 
 object Randomizer {
@@ -19,6 +20,19 @@ object Randomizer {
 		return RandomUtils.nextLong()
 	}
 
+	
+	def getParquetTable : ParquetTable ={
+	   new ParquetTable(Randomizer.getRandomString(5), Randomizer.getRandomString(5))
+	}
+	
+	def getParquetTables (size : Int): Array[ParquetTable] = {
+		val result : Array[ParquetTable] = new Array(size)	
+	  for (i <- 0 until size){
+			  result(i) = getParquetTable
+			}
+		result
+	}
+	
 	def getResult : Result = {
 		
 		var schema = Array[Column]()

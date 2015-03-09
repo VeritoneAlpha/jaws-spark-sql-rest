@@ -15,4 +15,10 @@ create column family results
 with comparator = 'UTF8Type'
 AND key_validation_class = 'Int32Type'
 AND default_validation_class = 'BytesType';
+
+
+create column family parquet_tables
+with comparator = 'UTF8Type'
+AND key_validation_class = 'UTF8Type'
+AND default_validation_class = 'BytesType';
 	

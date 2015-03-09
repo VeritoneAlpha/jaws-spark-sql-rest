@@ -26,8 +26,9 @@ object Utils {
   val DETAILS_FOLDER = "detailsFolder"
   val RESULTS_FOLDER = "resultsFolder"
   val SCHEMA_FOLDER = "schemaFolder"
+  val PARQUET_TABLES_FOLDER = "parquetTablesFolder"
   val REPLICATION_FACTOR = "replicationFactor"
-
+  
   private val log = Logger.getLogger("Utils")
 
   def createFolderIfDoesntExist(configuration: Configuration, folder: String, forcedMode: Boolean) {
