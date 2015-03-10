@@ -5,9 +5,9 @@ import spray.json.DefaultJsonProtocol._
 /**
  * Created by emaorhian
  */
-case class Query(state: String, queryID: String, query: String)
+case class Query(state: String, queryID: String, query: String, runMetaInfo : QueryMetaInfo)
 
 object Query {
-  implicit val logJson = jsonFormat3(apply)
+  implicit val logJson = jsonFormat4(apply)
 
 }

@@ -23,4 +23,6 @@ trait TJawsLogging {
   def getMetaInfo(queryId: String): QueryMetaInfo
 
   def getQueriesStates(queryId: String, limit: Int): Queries
+  
+  def deleteQuery(queryId: String)
 }

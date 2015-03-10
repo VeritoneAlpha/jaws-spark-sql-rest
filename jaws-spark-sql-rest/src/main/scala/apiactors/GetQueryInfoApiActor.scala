@@ -23,7 +23,7 @@ class GetQueryInfoApiActor(dals: DAL) extends Actor {
       var resultQuery: Query = null;
       val tryGetQueryInfo = Try {
         
-        resultQuery = new Query(dals.loggingDal.getState(message.queryID).toString, message.queryID, dals.loggingDal.getScriptDetails(message.queryID))
+        resultQuery = new Query(dals.loggingDal.getState(message.queryID).toString, message.queryID, dals.loggingDal.getScriptDetails(message.queryID), dals.loggingDal.getMetaInfo(message.queryID))
       }
       returnResult(tryGetQueryInfo, resultQuery, "GET query info failed with the following message: ", sender)
     }

@@ -33,14 +33,14 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
   override def setState(uuid: String, queryState: QueryState.QueryState) {
 
     logger.debug("Writing query state " + queryState.toString() + " to query " + uuid)
-    Utils.rewriteFile(queryState.toString(), configuration, configuration.get(Utils.STATUS_FOLDER) + "/" + uuid)
+    Utils.rewriteFile(queryState.toString(), configuration, getQueryStateFilePath(uuid))
 
   }
 
   override def setScriptDetails(queryId: String, scriptDetails: String) {
 
     logger.debug("Writing script details " + scriptDetails + " to query " + queryId)
-    Utils.rewriteFile(scriptDetails, configuration, configuration.get(Utils.DETAILS_FOLDER) + "/" + queryId)
+    Utils.rewriteFile(scriptDetails, configuration, getQueryDetailsFilePath(queryId))
 
   }
 
@@ -49,7 +49,7 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
     logger.debug("Writing log " + log + " to query " + queryId + " at time " + time)
 
     logger.debug("Writing log " + log + " to query " + queryId + " at time " + time)
-    val folderName = configuration.get(Utils.LOGGING_FOLDER) + "/" + queryId
+    val folderName = getQueryLogsFolderPath(queryId)
     val fileName = folderName + "/" + time.toString()
     val logMessage = jobId + QUERYID_SEPARATOR + log
     Utils.createFolderIfDoesntExist(configuration, folderName, false)
@@ -60,7 +60,7 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
   override def getState(queryId: String): QueryState.QueryState = {
 
     logger.debug("Reading query state for query: " + queryId)
-    val filename = configuration.get(Utils.STATUS_FOLDER) + "/" + queryId
+    val filename = getQueryStateFilePath(queryId)
 
     if (Utils.checkFileExistence(filename, configuration)) {
       val state = Utils.readFile(configuration, filename)
@@ -71,7 +71,7 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
 
   override def getScriptDetails(queryId: String): String = {
     logger.info("Reading script details for query: " + queryId)
-    val filename = configuration.get(Utils.DETAILS_FOLDER) + "/" + queryId
+    val filename = getQueryDetailsFilePath(queryId)
     return if (Utils.checkFileExistence(filename, configuration)) Utils.readFile(configuration, filename) else ""
 
   }
@@ -81,29 +81,31 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
     logger.debug("Reading logs for query: " + queryId + " from date: " + time)
 
     val state = getState(queryId).toString
-    val folderName = configuration.get(Utils.LOGGING_FOLDER) + "/" + queryId
+    val folderName = getQueryLogsFolderPath(queryId)
     var logs = Array[Log]()
-    var files = Utils.listFiles(configuration, folderName, new Comparator[String]() {
+    if (Utils.checkFileExistence(folderName, configuration)) {
+      var files = Utils.listFiles(configuration, folderName, new Comparator[String]() {
 
-      override def compare(o1: String, o2: String): Int = {
-        return o1.compareTo(o2)
+        override def compare(o1: String, o2: String): Int = {
+          return o1.compareTo(o2)
+        }
+
+      })
+
+      if (files.contains(time.toString())) {
+        files = files.tailSet(time.toString())
       }
 
-    })
+      val filesToBeRead = getSubset(limit, files)
 
-    if (files.contains(time.toString())) {
-      files = files.tailSet(time.toString())
+      filesToBeRead.foreach(file => {
+        val logedInfo = Utils.readFile(configuration, folderName + "/" + file).split(QUERYID_SEPARATOR)
+        if (logedInfo.length == 2) {
+          logs = logs ++ Array(new Log(logedInfo(1), logedInfo(0), file.toLong))
+
+        }
+      })
     }
-
-    val filesToBeRead = getSubset(limit, files)
-
-    filesToBeRead.foreach(file => {
-      val logedInfo = Utils.readFile(configuration, folderName + "/" + file).split(QUERYID_SEPARATOR)
-      if (logedInfo.length == 2) {
-        logs = logs ++ Array(new Log(logedInfo(1), logedInfo(0), file.toLong))
-
-      }
-    })
 
     return new Logs(logs, state)
   }
@@ -113,7 +115,7 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
     var limitMutable = limit
 
     val iterator = files.iterator()
-   
+
     while (iterator.hasNext() && limitMutable > 0) {
       val file = iterator.next()
       filesToBeRead = filesToBeRead ++ List(file)
@@ -147,7 +149,7 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
 
     filesToBeRead.foreach(file => {
       val currentUuid = Utils.getNameFromPath(file)
-      stateList = stateList ++ Array(new Query(Utils.readFile(configuration, folderName + "/" + file), currentUuid, getScriptDetails(currentUuid)))
+      stateList = stateList ++ Array(new Query(Utils.readFile(configuration, folderName + "/" + file), currentUuid, getScriptDetails(currentUuid), getMetaInfo(queryId)))
     })
 
     return new Queries(stateList)
@@ -156,18 +158,58 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
   override def setMetaInfo(queryId: String, metainfo: QueryMetaInfo) {
     logger.debug("Writing script meta info " + metainfo + " to query " + queryId)
     val buffer = metainfo.toJson.toString
-    Utils.rewriteFile(buffer, configuration, configuration.get(Utils.METAINFO_FOLDER) + "/" + queryId)
+    Utils.rewriteFile(buffer, configuration, getQueryMetaInfoFilePath(queryId))
   }
 
   override def getMetaInfo(queryId: String): QueryMetaInfo = {
     logger.debug("Reading meta info for for query: " + queryId)
+    val filePath = getQueryMetaInfoFilePath(queryId)
+    if (Utils.checkFileExistence(filePath, configuration)) {
+      val value = Utils.readFile(configuration, getQueryMetaInfoFilePath(queryId))
 
-    val value = Utils.readFile(configuration, configuration.get(Utils.METAINFO_FOLDER) + "/" + queryId)
+      implicit val formats = DefaultFormats
 
-    implicit val formats = DefaultFormats
+      val json = parse(value)
+      json.extract[QueryMetaInfo]
+    }
+    else {
+      new QueryMetaInfo()
+    }
+  }
 
-    val json = parse(value)
-    return json.extract[QueryMetaInfo]
+  def deleteQuery(queryId: String) {
+    logger.debug(s"Deleting query: $queryId")
 
+    logger.debug(s"Deleting query state for: $queryId")
+    var filePath = getQueryStateFilePath(queryId)
+    Utils.deleteFile(configuration, filePath)
+
+    logger.debug(s"Deleting query details for: $queryId")
+    filePath = getQueryDetailsFilePath(queryId)
+    Utils.deleteFile(configuration, filePath)
+
+    logger.debug(s"Deleting meta info for: $queryId")
+    filePath = getQueryMetaInfoFilePath(queryId)
+    Utils.deleteFile(configuration, filePath)
+
+    logger.debug(s"Deleting query logs for: $queryId")
+    filePath = getQueryLogsFolderPath(queryId)
+    Utils.deleteFile(configuration, filePath)
+  }
+
+  def getQueryStateFilePath(queryId: String): String = {
+    configuration.get(Utils.STATUS_FOLDER) + "/" + queryId
+  }
+
+  def getQueryDetailsFilePath(queryId: String): String = {
+    configuration.get(Utils.DETAILS_FOLDER) + "/" + queryId
+  }
+
+  def getQueryMetaInfoFilePath(queryId: String): String = {
+    configuration.get(Utils.METAINFO_FOLDER) + "/" + queryId
+  }
+
+  def getQueryLogsFolderPath(queryId: String): String = {
+    configuration.get(Utils.LOGGING_FOLDER) + "/" + queryId
   }
 }

@@ -1,6 +1,6 @@
 package com.xpatterns.jaws.data.utils
 
-import me.prettyprint.hector.api.exceptions.{HectorException, HUnavailableException, HTimedOutException}
+import me.prettyprint.hector.api.exceptions.{ HectorException, HUnavailableException, HTimedOutException }
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.Path
@@ -15,7 +15,7 @@ import java.util.SortedSet
 import java.util.Comparator
 import java.util.TreeSet
 
-class Utils{}
+class Utils {}
 
 object Utils {
   val NAMENODE = "namenode"
@@ -103,69 +103,86 @@ object Utils {
 
     }
   }
- 
-  	def readFile( configuration : Configuration,  filename : String) : String =  {
-  		var content = ""
-  		var br : BufferedReader = null
-  		var fs : FileSystem = null
-  		try {
-  			val filePath = new Path(filename)
-  			fs = FileSystem.newInstance(configuration)
-  			br = new BufferedReader(new InputStreamReader(fs.open(filePath)))
-  
-  			var line = br.readLine()
-  			while (line != null) {
-  				content = content + line + "\n"
-  				line = br.readLine()
-  			}
-  			return content.toString().trim()
-  		} finally {
-  			if (br != null) {
-  				br.close()
-  			}
-  			if (fs != null) {
-  				fs.close()
-  			}
-  		}
-  
-  	}
-  
-  
-  	def  getNameFromPath( path : String) : String ={
-  		var name = ""
-  		var mutablePath = path
-  		if (mutablePath.charAt(path.length() - 1) == '/')
-  			mutablePath = mutablePath.substring(0, mutablePath.length() - 1)
-  
-  		if (mutablePath.contains("/"))
-  			name = mutablePath.substring(path.lastIndexOf("/") + 1, mutablePath.length())
-  		else
-  			name = mutablePath
-  		return name
-  	}
-  
-  	def listFiles( configuration : Configuration,  folderName : String,  comparator : Comparator[String]) : SortedSet[String] = {
-  		var fs : FileSystem = null
-  		val allFiles : SortedSet[String]= new TreeSet[String](comparator)
-  		try {
-  			val folderPath = new Path(folderName)
-  			fs = FileSystem.newInstance(configuration)
-  			val files = fs.listFiles(folderPath, false)
-  			while (files.hasNext()) {
-  				val file = files.next()
-  				allFiles.add(file.getPath().getName())
-  			}
-  
-  			return allFiles
-  
-  		} finally {
-  			if (fs != null) {
-  				fs.close()
-  			}
-  		}
-  	}
 
-  def checkFileExistence(filename : String, configuration : Configuration) : Boolean = {
+  def readFile(configuration: Configuration, filename: String): String = {
+    var content = ""
+    var br: BufferedReader = null
+    var fs: FileSystem = null
+    try {
+      val filePath = new Path(filename)
+      fs = FileSystem.newInstance(configuration)
+      br = new BufferedReader(new InputStreamReader(fs.open(filePath)))
+
+      var line = br.readLine()
+      while (line != null) {
+        content = content + line + "\n"
+        line = br.readLine()
+      }
+      return content.toString().trim()
+    } finally {
+      if (br != null) {
+        br.close()
+      }
+      if (fs != null) {
+        fs.close()
+      }
+    }
+
+  }
+
+  def deleteFile(configuration: Configuration, filename: String) = {
+    var fs: FileSystem = null
+    try {
+      val filePath = new Path(filename)
+      fs = FileSystem.newInstance(configuration)
+      if (fs.exists(filePath)) {
+        fs.delete(filePath)
+      }
+
+    } finally {
+
+      if (fs != null) {
+        fs.close()
+      }
+    }
+
+  }
+
+  def getNameFromPath(path: String): String = {
+    var name = ""
+    var mutablePath = path
+    if (mutablePath.charAt(path.length() - 1) == '/')
+      mutablePath = mutablePath.substring(0, mutablePath.length() - 1)
+
+    if (mutablePath.contains("/"))
+      name = mutablePath.substring(path.lastIndexOf("/") + 1, mutablePath.length())
+    else
+      name = mutablePath
+    return name
+  }
+
+  def listFiles(configuration: Configuration, folderName: String, comparator: Comparator[String]): SortedSet[String] = {
+    var fs: FileSystem = null
+    val allFiles: SortedSet[String] = new TreeSet[String](comparator)
+    try {
+      val folderPath = new Path(folderName)
+      fs = FileSystem.newInstance(configuration)
+      val files = fs.listFiles(folderPath, false)
+      while (files.hasNext()) {
+        val file = files.next()
+        allFiles.add(file.getPath().getName())
+      }
+
+      return allFiles
+
+    } finally {
+      if (fs != null) {
+        fs.close()
+      }
+    }
+  }
+
+  def checkFileExistence(filename: String, configuration: Configuration): Boolean = {
     val file = new Path(filename)
     val fs = FileSystem.newInstance(configuration)
 
@@ -187,31 +204,31 @@ object Utils {
         result = f
       } catch {
         case ex: HTimedOutException =>
-        {
-          retries += 1
-          finished = false
-          logger.warn("Retrying " + retries + "/" + maxRetries + " at " + sleepRetry + "ms " + ex.getStackTraceString)
-          try {
-            Thread.sleep(sleepRetry);
-          } catch {
-            case ex: InterruptedException => logger.warn(ex.getStackTraceString)
+          {
+            retries += 1
+            finished = false
+            logger.warn("Retrying " + retries + "/" + maxRetries + " at " + sleepRetry + "ms " + ex.getStackTraceString)
+            try {
+              Thread.sleep(sleepRetry);
+            } catch {
+              case ex: InterruptedException => logger.warn(ex.getStackTraceString)
+            }
+            if (retries > maxRetries)
+              throw ex
           }
-          if (retries > maxRetries)
-            throw ex
-        }
         case ex: HUnavailableException =>
-        {
-          retries += 1
-          finished = false
-          logger.warn("Retrying " + retries + "/" + maxRetries + " at " + sleepRetry + "ms " + ex.getStackTraceString)
-          try {
-            Thread.sleep(sleepRetry);
-          } catch {
-            case ex: InterruptedException => logger.warn(ex.getStackTraceString)
+          {
+            retries += 1
+            finished = false
+            logger.warn("Retrying " + retries + "/" + maxRetries + " at " + sleepRetry + "ms " + ex.getStackTraceString)
+            try {
+              Thread.sleep(sleepRetry);
+            } catch {
+              case ex: InterruptedException => logger.warn(ex.getStackTraceString)
+            }
+            if (retries > maxRetries)
+              throw ex
           }
-          if (retries > maxRetries)
-            throw ex
-        }
         case ex: HectorException => {
           if (ex.getMessage().contains("All host pools marked down. Retry burden pushed out to client.")) {
             retries += 1
@@ -231,8 +248,5 @@ object Utils {
     }
     result
   }
-
-
-
 
 }

@@ -23,6 +23,7 @@ import scala.util.Try
 import apiactors.ActorOperations._
 import org.apache.spark.scheduler.RunParquetScriptTask
 import org.apache.spark.scheduler.HiveUtils
+import com.xpatterns.jaws.data.utils.QueryState
 /**
  * Created by emaorhian
  */
@@ -53,10 +54,10 @@ class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCont
       val tryRun = Try {
         Configuration.log4j.info("[RunScriptApiActor -run]: running the following script: " + message.hqlScript)
         Configuration.log4j.info("[RunScriptApiActor -run]: The script will be executed with the limited flag set on " + message.limited + ". The maximum number of results is " + message.maxNumberOfResults)
-       
+
         val task = new RunScriptTask(dals, message.hqlScript, hiveContext, uuid, false, message.limited, message.maxNumberOfResults, hdfsConf, message.rddDestination)
         taskCache.put(uuid, task)
-        HiveUtils.logMessage(uuid, s"Launching task for $uuid", "hql", dals.loggingDal)
+        writeLaunchStatus(uuid, message.hqlScript)
         threadPool.execute(task)
       }
       returnResult(tryRun, uuid, "run query failed with the following message: ", sender)
@@ -65,16 +66,17 @@ class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCont
     case message: RunParquetMessage => {
       val uuid = System.currentTimeMillis() + UUID.randomUUID().toString()
       val tryRunParquet = Try {
-       
+
         Configuration.log4j.info(s"[RunScriptApiActor -runParquet]: running the following sql: ${message.script}")
         Configuration.log4j.info(s"[RunScriptApiActor -runParquet]: The script will be executed over the ${message.tablePath} file with the ${message.table} table name")
 
         //load the parquet file
         val (namenode, folderPath) = splitPath(message.tablePath)
-        Configuration.log4j.info(s"[RunScriptApiActor -runParquet]: namenode = $namenode, path = $folderPath ")      
-       
+        Configuration.log4j.info(s"[RunScriptApiActor -runParquet]: namenode = $namenode, path = $folderPath ")
+
         val task = new RunParquetScriptTask(dals, message.script, hiveContext, uuid, false, message.limited, message.maxNumberOfResults, hdfsConf, message.rddDestination, message.table, namenode, folderPath)
         taskCache.put(uuid, task)
+        writeLaunchStatus(uuid, message.script)
         threadPool.execute(task)
       }
       returnResult(tryRunParquet, uuid, "run parquet query failed with the following message: ", sender)
@@ -105,6 +107,12 @@ class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCont
       }
 
     }
+  }
+
+  private def writeLaunchStatus(uuid: String, script: String) {
+    HiveUtils.logMessage(uuid, s"Launching task for $uuid", "hql", dals.loggingDal)
+    dals.loggingDal.setState(uuid, QueryState.IN_PROGRESS)
+    dals.loggingDal.setScriptDetails(uuid, script)
   }
 
   private def splitPath(filePath: String): Tuple2[String, String] = {

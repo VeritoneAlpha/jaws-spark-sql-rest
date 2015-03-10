@@ -13,7 +13,11 @@ import com.xpatterns.jaws.data.utils.Randomizer
 import com.xpatterns.jaws.data.DTO.Log
 import com.xpatterns.jaws.data.utils.QueryState
 import com.xpatterns.jaws.data.utils.Randomizer
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
+import com.xpatterns.jaws.data.DTO.QueryMetaInfo
 
+@RunWith(classOf[JUnitRunner])
 class JawsLoggingOnHdfsTest extends FunSuite with BeforeAndAfter {
 
   var logingDal: TJawsLogging = _
@@ -183,5 +187,61 @@ class JawsLoggingOnHdfsTest extends FunSuite with BeforeAndAfter {
 
   }
 
+   test("testDeleteQuery") {
+    val uuid = DateTime.now().getMillis.toString
+
+    //state
+    logingDal.setState(uuid, QueryState.IN_PROGRESS)
+
+    //details
+    val details = Randomizer.getRandomString(10)
+    logingDal.setScriptDetails(uuid, details)
+
+    //logs
+    val queryId = Randomizer.getRandomString(5)
+    val log1 = Randomizer.getRandomString(300)
+    val log2 = Randomizer.getRandomString(300)
+    val log3 = Randomizer.getRandomString(300)
+    val log4 = Randomizer.getRandomString(300)
+
+    val now = System.currentTimeMillis()
+    val logDto = new Log(log1, queryId, now)
+
+    logingDal.addLog(uuid, queryId, now, log1)
+    logingDal.addLog(uuid, queryId, System.currentTimeMillis() + 100, log2)
+    logingDal.addLog(uuid, queryId, System.currentTimeMillis() + 200, log3)
+    logingDal.addLog(uuid, queryId, System.currentTimeMillis() + 300, log4)
+
+    //meta info
+    val metaInfo = Randomizer.createQueryMetainfo
+    logingDal.setMetaInfo(uuid, metaInfo)
+
+    // read information about query
+    val state1 = logingDal.getState(uuid)
+    val resultDetails = logingDal.getScriptDetails(uuid)
+    var logs = logingDal.getLogs(uuid, now, 100)
+    val resultMeta = logingDal.getMetaInfo(uuid)
+
+    // delete query
+    logingDal.deleteQuery(uuid)
+    
+    // read information about query after delete
+    val stateDeleted = logingDal.getState(uuid)
+    val resultDetailsDeleted = logingDal.getScriptDetails(uuid)
+    var logsDeleted = logingDal.getLogs(uuid, now, 100)
+    val resultMetaDeleted = logingDal.getMetaInfo(uuid)
+    
+    
+    assert(QueryState.IN_PROGRESS === state1)
+    assert(details === resultDetails)
+    assert(4 === logs.logs.size)
+    assert(metaInfo === resultMeta)
+    
+    assert(QueryState.NOT_FOUND === stateDeleted)
+    assert("" === resultDetailsDeleted)
+    assert(0 === logsDeleted.logs.size)
+    assert(new QueryMetaInfo === resultMetaDeleted)
+
+  }
 
 }

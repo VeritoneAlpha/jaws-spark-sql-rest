@@ -93,13 +93,14 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
   val getDatabasesActor = createActor(Props(new GetDatabasesApiActor(customSharkContext.hiveContext, dals)), GET_DATABASES_ACTOR_NAME, localSupervisor)
   val getDatasourceSchemaActor = createActor(Props(new GetDatasourceSchemaActor(customSharkContext.hiveContext)), GET_DATASOURCE_SCHEMA_ACTOR_NAME, localSupervisor)
   val cancelActor = createActor(Props(classOf[CancelActor], runScriptActor), CANCEL_ACTOR_NAME, remoteSupervisor)
+  val deleteQueryActor = createActor(Props(new DeleteQueryApiActor(dals)), DELETE_QUERY_ACTOR_NAME, localSupervisor)
 
   val gson = new Gson()
   val pathPrefix = "jaws"
 
   implicit val spraySystem: ActorSystem = ActorSystem("spraySystem")
 
-  startServer(interface = InetAddress.getLocalHost().getHostName(), port = Configuration.webServicesPort.getOrElse("8080").toInt) {
+  startServer(interface = Configuration.serverInterface.getOrElse(InetAddress.getLocalHost().getHostName()), port = Configuration.webServicesPort.getOrElse("8080").toInt) {
     path(pathPrefix / "index") {
       get {
 
@@ -439,6 +440,30 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
               }
             }
           }
+      } ~
+      path(pathPrefix / "query") {
+        delete {
+          parameters('queryID.as[String]) { queryID =>
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+              validate(queryID != null && !queryID.trim.isEmpty, Configuration.UUID_EXCEPTION_MESSAGE) {
+                respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
+                  val future = ask(deleteQueryActor, new DeleteQueryMessage(queryID))
+                  future.map {
+                    case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                    case message: String => ctx.complete(StatusCodes.OK, message)
+                  }
+                }
+              }
+            }
+          }
+        } ~
+          options {
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
+              complete {
+                "OK"
+              }
+            }
+          }
       }
   }
 
@@ -478,6 +503,7 @@ object Configuration {
   val namenode = getStringConfiguration(hadoopConf, "namenode")
 
   //app configuration
+  val serverInterface = getStringConfiguration(appConf, "server.interface")
   val loggingType = getStringConfiguration(appConf, "app.logging.type")
   val rddDestinationIp = getStringConfiguration(appConf, "rdd.destination.ip")
   val rddDestinationLocation = getStringConfiguration(appConf, "rdd.destination.location")

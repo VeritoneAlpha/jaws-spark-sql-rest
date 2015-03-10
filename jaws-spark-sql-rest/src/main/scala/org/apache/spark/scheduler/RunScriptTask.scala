@@ -18,9 +18,6 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
 
   override def run() {
     try {
-      dals.loggingDal.setState(uuid, QueryState.IN_PROGRESS)
-      dals.loggingDal.setScriptDetails(uuid, hqlScript)
-
       // parse the hql into independent commands
       val commands = HiveUtils.parseHql(hqlScript)
       var result: Result = null
@@ -67,19 +64,29 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
       HiveUtils.logInfoMessage(uuid, s"The total execution time was: $formattedDuration!", "hql", dals.loggingDal)
       writeResults(isCanceled, result)
     } catch {
-      case e: Exception => {
-        val message = s"${e.getMessage()} : ${e.getStackTraceString}"
+      case e: Exception => {      
+        var message = getCompleteStackTrace(e)
         Configuration.log4j.error(message)
-        HiveUtils.logMessage(uuid, e.getStackTraceString, "hql", dals.loggingDal)
+        HiveUtils.logMessage(uuid, message, "hql", dals.loggingDal)
         dals.loggingDal.setState(uuid, QueryState.FAILED)
         dals.loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, 0, isLimited))
 
         throw new RuntimeException(e)
       
       }
-    }
+    }	
   }
 
+  def getCompleteStackTrace(e: Exception) : String= {
+    var message = s"${e.getMessage()} : ${e.getStackTraceString}\n"
+        var cause = e.getCause
+        while(cause != null){
+          message = s"$message Caused by \n ${cause.getMessage} \n ${cause.getStackTraceString}"
+          cause = cause.getCause
+        }
+     message
+  }
+  
   def writeResults(isCanceled: Boolean, result: Result) {
     isCanceled match {
       case false => {

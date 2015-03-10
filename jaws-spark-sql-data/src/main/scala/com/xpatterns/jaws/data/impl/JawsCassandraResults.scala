@@ -87,4 +87,17 @@ class JawsCassandraResults(keyspace: Keyspace) extends TJawsResults {
   private def computeRowKey(uuid: String): Integer = {
     Math.abs(uuid.hashCode() % CF_SPARK_RESULTS_NUMBER_OF_ROWS)
   }
+  
+  def deleteResults(uuid: String){
+     Utils.TryWithRetry {
+
+      logger.debug(s"Deleting results for query $uuid")
+
+      val key = computeRowKey(uuid)
+      val mutator = HFactory.createMutator(keyspace, is)
+
+      mutator.addDeletion(key, CF_SPARK_RESULTS, uuid, ss)
+      mutator.execute()
+    }
+  }
 }

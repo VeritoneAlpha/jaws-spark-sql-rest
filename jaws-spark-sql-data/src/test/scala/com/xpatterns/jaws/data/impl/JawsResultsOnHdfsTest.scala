@@ -1,13 +1,17 @@
 package com.xpatterns.jaws.data.impl
 
-import org.scalatest.{BeforeAndAfter, FunSuite}
+import org.scalatest.{ BeforeAndAfter, FunSuite }
 import com.typesafe.config.ConfigFactory
-import com.xpatterns.jaws.data.utils.{Randomizer, Utils}
+import com.xpatterns.jaws.data.utils.{ Randomizer, Utils }
 import com.xpatterns.jaws.data.contracts.TJawsResults
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
+import com.xpatterns.jaws.data.DTO.Result
 
 /**
  * Created by emaorhian on 7/28/14.
  */
+@RunWith(classOf[JUnitRunner])
 class JawsResultsOnHdfsTest extends FunSuite with BeforeAndAfter {
 
   var resultsDal: TJawsResults = _
@@ -62,6 +66,22 @@ class JawsResultsOnHdfsTest extends FunSuite with BeforeAndAfter {
     val results = resultsDal.getResults(uuid)
 
     assert(resultDTO === results)
+
+  }
+
+  test("testDeleteResults") {
+    val uuid = Randomizer.getRandomString(10)
+    val resultDTO = Randomizer.getResult
+    resultsDal.setResults(uuid, resultDTO)
+
+    val results = resultsDal.getResults(uuid)
+
+    resultsDal.deleteResults(uuid)
+
+    val resultsDeleted = resultsDal.getResults(uuid)
+
+    assert(resultDTO === results)
+    assert(new Result() === resultsDeleted)
 
   }
 
