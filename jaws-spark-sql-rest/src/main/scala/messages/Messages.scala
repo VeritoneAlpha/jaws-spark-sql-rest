@@ -19,3 +19,4 @@ case class RunParquetMessage(script: String, tablePath: String, table: String, l
 case class GetDatasourceSchemaMessage(path: String, sourceType: SourceType, storageType: StorageType)
 case class ErrorMessage(message: String)
 case class DeleteQueryMessage(queryID: String)
+case class RegisterTableMessage(name: String, path: String)

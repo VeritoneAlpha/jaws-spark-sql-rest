@@ -1,6 +1,7 @@
 package org.apache.spark.scheduler
 
 import java.io.InputStream
+import org.apache.spark.sql.parquet.ParquetUtils._
 import org.apache.commons.lang.RandomStringUtils
 import org.apache.commons.lang.StringUtils
 import com.xpatterns.jaws.data.utils.Utils
@@ -17,6 +18,10 @@ import implementation.HiveContextWrapper
 import org.apache.spark.sql.catalyst.types.StructType
 import server.MainActors
 import server.LogsActor.PushLogs
+import traits.DAL
+import com.xpatterns.jaws.data.DTO.ParquetTable
+import java.util.regex.Pattern
+import java.util.regex.Matcher
 
 /**
  * Created by emaorhian
@@ -56,11 +61,11 @@ object HiveUtils {
     result
   }
 
-  def runCmdRdd(cmd: String, hiveContext: HiveContextWrapper, defaultNumberOfResults: Int, uuid: String, isLimited: Boolean, maxNumberOfResults: Long, isLastCommand: Boolean, hdfsNamenode: String, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration, rddDestination:String): Result = {
+  def runCmdRdd(cmd: String, hiveContext: HiveContextWrapper, defaultNumberOfResults: Int, uuid: String, isLimited: Boolean, maxNumberOfResults: Long, isLastCommand: Boolean, hdfsNamenode: String, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration, rddDestination: String): Result = {
     Configuration.log4j.info("[HiveUtils]: execute the following command:" + cmd)
 
     var cmd_trimmed = cmd.trim
-   
+
     val tokens = cmd_trimmed.split("\\s+")
 
     if (tokens(0).equalsIgnoreCase("select")) {
@@ -147,7 +152,7 @@ object HiveUtils {
     return new Result(schema, result)
   }
 
-  def runRdd(hiveContext: HiveContext, uuid: String, cmd: String, destinationIp: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration, userDefinedDestination:String): Result = {
+  def runRdd(hiveContext: HiveContext, uuid: String, cmd: String, destinationIp: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: TJawsLogging, conf: org.apache.hadoop.conf.Configuration, userDefinedDestination: String): Result = {
     // we need to run sqlToRdd. Needed for pagination
     Configuration.log4j.info("[HiveUtils]: we will execute sqlToRdd command")
     Configuration.log4j.info("[HiveUtils]: the final command is " + cmd)
@@ -200,7 +205,7 @@ object HiveUtils {
     if (rddDestination.endsWith("/") == false) {
       finalDestination = rddDestination + "/"
     }
-     s"${finalDestination}user/${System.getProperty("user.name")}/${Configuration.resultsFolder.getOrElse("jawsResultsFolder")}/$uuid"
+    s"${finalDestination}user/${System.getProperty("user.name")}/${Configuration.resultsFolder.getOrElse("jawsResultsFolder")}/$uuid"
   }
 
   def run(hiveContext: HiveContext, cmd: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: TJawsLogging, uuid: String): Result = {
@@ -234,14 +239,34 @@ object HiveUtils {
   def getTachyonPath(ip: String): String = {
     "tachyon://" + ip.trim() + ":19998"
   }
-  
-  def logInfoMessage(uuid: String, message: String, jobId : String, loggingDal : TJawsLogging) {
+
+  def logInfoMessage(uuid: String, message: String, jobId: String, loggingDal: TJawsLogging) {
     Configuration.log4j.info(message)
     logMessage(uuid, message, jobId, loggingDal)
   }
-  
-  def logMessage(uuid: String, message: String, jobId : String, loggingDal : TJawsLogging) {
+
+  def logMessage(uuid: String, message: String, jobId: String, loggingDal: TJawsLogging) {
     loggingDal.addLog(uuid, jobId, System.currentTimeMillis(), message)
     MainActors.logsActor ! new PushLogs(uuid, message)
+  }
+
+  val pattern: Pattern = Pattern.compile("^([^/]+://[^/]+)(.+?)/*$")
+  def splitPath(filePath: String): Tuple2[String, String] = {
+    val matcher: Matcher = pattern.matcher(filePath)
+
+    if (matcher.matches())
+      (matcher.group(1), matcher.group(2))
+    else
+      throw new Exception(s"Invalid file path format : $filePath")
+
+  }
+
+  def registerParquetTable(hiveContext: HiveContextWrapper, tableName: String, parquetNamenode: String, tablePath: String, dals: DAL) {
+    Configuration.log4j.info(s"[HiveUtils] registering table $tableName")
+    val parquetFile = hiveContext.readXPatternsParquet(parquetNamenode, tablePath)
+
+    // register table
+    parquetFile.registerTempTable(tableName)
+    dals.parquetTableDal.addParquetTable(new ParquetTable(tableName, tablePath))
   }
 }

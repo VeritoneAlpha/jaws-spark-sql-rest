@@ -11,7 +11,17 @@ import implementation.HiveContextWrapper
 import com.xpatterns.jaws.data.DTO.QueryMetaInfo
 import org.apache.spark.sql.parquet.ParquetUtils._
 import com.xpatterns.jaws.data.DTO.ParquetTable
-
+import akka.actor.ActorSelection
+import akka.pattern.ask
+import messages.RegisterTableMessage
+import akka.util.Timeout
+import scala.util.Success
+import scala.util.Failure
+import scala.concurrent.ExecutionContext.Implicits.global
+import messages.ErrorMessage
+import scala.util.Success
+import server.JawsController
+import scala.concurrent.Future
 /**
  * Created by emaorhian
  */
@@ -49,9 +59,9 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
       // the last command might need to be paginated
       isCanceled match {
         case false => {
-            result = HiveUtils.runCmdRdd(commands(nrOfCommands - 1), hiveContext, Configuration.numberOfResults.getOrElse("100").toInt, uuid, isLimited, maxNumberOfResults, true, Configuration.rddDestinationIp.get, dals.loggingDal, hdfsConf, rddDestination)
-            HiveUtils.logInfoMessage(uuid, s"Command progress : There were executed $nrOfCommands commands out of $nrOfCommands", "hql", dals.loggingDal)
-          }
+          result = HiveUtils.runCmdRdd(commands(nrOfCommands - 1), hiveContext, Configuration.numberOfResults.getOrElse("100").toInt, uuid, isLimited, maxNumberOfResults, true, Configuration.rddDestinationIp.get, dals.loggingDal, hdfsConf, rddDestination)
+          HiveUtils.logInfoMessage(uuid, s"Command progress : There were executed $nrOfCommands commands out of $nrOfCommands", "hql", dals.loggingDal)
+        }
         case _ => {
           val message = s"The command ${commands(nrOfCommands - 1)} was canceled!"
           Configuration.log4j.warn(message)
@@ -65,7 +75,7 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
       HiveUtils.logInfoMessage(uuid, s"The total execution time was: $formattedDuration!", "hql", dals.loggingDal)
       writeResults(isCanceled, result)
     } catch {
-      case e: Exception => {      
+      case e: Exception => {
         var message = getCompleteStackTrace(e)
         Configuration.log4j.error(message)
         HiveUtils.logMessage(uuid, message, "hql", dals.loggingDal)
@@ -73,21 +83,21 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
         dals.loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, 0, isLimited))
 
         throw new RuntimeException(e)
-      
+
       }
-    }	
+    }
   }
 
-  def getCompleteStackTrace(e: Exception) : String= {
+  def getCompleteStackTrace(e: Throwable): String = {
     var message = s"${e.getMessage()} : ${e.getStackTraceString}\n"
-        var cause = e.getCause
-        while(cause != null){
-          message = s"$message Caused by \n ${cause.getMessage} \n ${cause.getStackTraceString}"
-          cause = cause.getCause
-        }
-     message
+    var cause = e.getCause
+    while (cause != null) {
+      message = s"$message Caused by \n ${cause.getMessage} \n ${cause.getStackTraceString}"
+      cause = cause.getCause
+    }
+    message
   }
-  
+
   def writeResults(isCanceled: Boolean, result: Result) {
     isCanceled match {
       case false => {
@@ -112,16 +122,31 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
 
 }
 
-class RunParquetScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrapper, uuid: String, isCanceled: Boolean, isLimited: Boolean, maxNumberOfResults: Long, hdfsConf: org.apache.hadoop.conf.Configuration, rddDestination: String, tableName: String, parquetNamenode: String, tablePath: String)
+class RunParquetScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrapper, uuid: String, isCanceled: Boolean, isLimited: Boolean, maxNumberOfResults: Long, hdfsConf: org.apache.hadoop.conf.Configuration, rddDestination: String, tableName: String, tablePath: String)
   extends RunScriptTask(dals, hqlScript, hiveContext, uuid, isCanceled, isLimited, maxNumberOfResults, hdfsConf, rddDestination) {
 
   override def run() {
-    val parquetFile = hiveContext.readXPatternsParquet(parquetNamenode, tablePath)
+    implicit val timeout = Timeout(Configuration.timeout.toInt)
+    val future = ask(JawsController.balancerActor, RegisterTableMessage(tableName, tablePath))
+    				.map(innerFuture => innerFuture.asInstanceOf[Future[Any]])
+    				.flatMap(identity)
 
-    // register table
-    parquetFile.registerTempTable(tableName)
-    dals.parquetTableDal.addParquetTable(new ParquetTable(tableName, tablePath))
-    super.run
+    future onComplete {
+      case Success(x) => x match {
+        case e: ErrorMessage => {
+          HiveUtils.logMessage(uuid, e.message, "hql", dals.loggingDal)
+          dals.loggingDal.setState(uuid, QueryState.FAILED)
+        }
+        case result: String => {
+          Configuration.log4j.info(result)
+          super.run
+        }    
+      }
+      case Failure(ex) => {
+        HiveUtils.logMessage(uuid, getCompleteStackTrace(ex), "hql", dals.loggingDal)
+        dals.loggingDal.setState(uuid, QueryState.FAILED)
+      }
+    }
   }
 
 }

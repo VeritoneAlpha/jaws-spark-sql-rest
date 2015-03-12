@@ -1,6 +1,7 @@
 package server
 
 import java.net.InetAddress
+import scala.collection.JavaConverters._
 import com.typesafe.config.Config
 import implementation.SchemaSettingsFactory.{ SourceType, StorageType }
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -15,7 +16,7 @@ import akka.util.Timeout
 import apiactors._
 import apiactors.ActorsPaths._
 import customs.CORSDirectives
-import implementation.{ SchemaSettingsFactory, CassandraDal, HdfsDal, CustomHiveContextCreator }
+import implementation.{ SchemaSettingsFactory, CassandraDal, HdfsDal }
 import messages._
 import com.xpatterns.jaws.data.DTO.Queries
 import spray.http.{ StatusCodes, HttpHeaders, HttpMethods, MediaTypes }
@@ -30,15 +31,21 @@ import messages.GetResultsMessage
 import com.xpatterns.jaws.data.DTO.Logs
 import com.xpatterns.jaws.data.DTO.Result
 import com.xpatterns.jaws.data.DTO.Query
-import scala.util.{ Failure, Try, Success }
+import scala.util.{ Failure, Success, Try }
 import server.MainActors._
+import org.apache.spark.scheduler.HiveUtils
+import implementation.HiveContextWrapper
+import org.apache.spark.SparkContext
+import org.apache.spark.scheduler.LoggingListener
+import org.apache.spark.SparkConf
+import scala.concurrent.Future
 
 /**
  * Created by emaorhian
  */
 object JawsController extends App with SimpleRoutingApp with CORSDirectives {
   var hdfsConf: org.apache.hadoop.conf.Configuration = _
-  var customSharkContext: CustomHiveContextCreator = _
+  var hiveContext: HiveContextWrapper = _
   var dals: DAL = _
 
   def initialize() = {
@@ -52,7 +59,37 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
       case _ => dals = new HdfsDal(hdfsConf)
     }
 
-    customSharkContext = new CustomHiveContextCreator(dals)
+    hiveContext = createHiveContext(dals)
+  }
+
+  def createHiveContext(dal: DAL): HiveContextWrapper = {
+    val jars = Array(Configuration.jarPath.get)
+
+    def configToSparkConf(config: Config, contextName: String, jars: Array[String]): SparkConf = {
+      val sparkConf = new SparkConf().setAppName(contextName).setJars(jars)
+      for (
+        property <- config.entrySet().asScala if (property.getKey.startsWith("spark") && property.getValue() != null)
+      ) {
+        val key = property.getKey().replaceAll("-", ".");
+        println(key + " | " + property.getValue.unwrapped())
+        sparkConf.set(key, property.getValue.unwrapped().toString)
+      }
+      sparkConf
+    }
+
+    val hContext: HiveContextWrapper = {
+      var sparkConf = configToSparkConf(Configuration.sparkConf, Configuration.applicationName.getOrElse("Jaws"), jars)
+      var sContext = new SparkContext(sparkConf)
+
+      var hContext = new HiveContextWrapper(sContext)
+      hContext.sparkContext.addSparkListener(new LoggingListener(dal))
+
+      HiveUtils.setSharkProperties(hContext, this.getClass().getClassLoader().getResourceAsStream("sharkSettings.txt"))
+      //make sure that lazy variable hiveConf gets initialized
+      hContext.runMetadataSql("use default")
+      hContext
+    }
+    hContext
   }
 
   def getHadoopConf(): org.apache.hadoop.conf.Configuration = {
@@ -85,17 +122,21 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
   initialize()
   implicit val timeout = Timeout(Configuration.timeout.toInt)
 
+  // local actors
   val getQueriesActor = createActor(Props(new GetQueriesApiActor(dals)), GET_QUERIES_ACTOR_NAME, localSupervisor)
-  val getTablesActor = createActor(Props(new GetTablesApiActor(customSharkContext.hiveContext, dals)), GET_TABLES_ACTOR_NAME, localSupervisor)
-  val runScriptActor = createActor(Props(new RunScriptApiActor(hdfsConf, customSharkContext.hiveContext, dals)), RUN_SCRIPT_ACTOR_NAME, remoteSupervisor)
+  val getTablesActor = createActor(Props(new GetTablesApiActor(hiveContext, dals)), GET_TABLES_ACTOR_NAME, localSupervisor)
   val getLogsActor = createActor(Props(new GetLogsApiActor(dals)), GET_LOGS_ACTOR_NAME, localSupervisor)
-  val getResultsActor = createActor(Props(new GetResultsApiActor(hdfsConf, customSharkContext.hiveContext, dals)), GET_RESULTS_ACTOR_NAME, localSupervisor)
+  val getResultsActor = createActor(Props(new GetResultsApiActor(hdfsConf, hiveContext, dals)), GET_RESULTS_ACTOR_NAME, localSupervisor)
   val getQueryInfoActor = createActor(Props(new GetQueryInfoApiActor(dals)), GET_QUERY_INFO_ACTOR_NAME, localSupervisor)
-  val getDatabasesActor = createActor(Props(new GetDatabasesApiActor(customSharkContext.hiveContext, dals)), GET_DATABASES_ACTOR_NAME, localSupervisor)
-  val getDatasourceSchemaActor = createActor(Props(new GetDatasourceSchemaActor(customSharkContext.hiveContext)), GET_DATASOURCE_SCHEMA_ACTOR_NAME, localSupervisor)
-  val cancelActor = createActor(Props(classOf[CancelActor], runScriptActor), CANCEL_ACTOR_NAME, remoteSupervisor)
+  val getDatabasesActor = createActor(Props(new GetDatabasesApiActor(hiveContext, dals)), GET_DATABASES_ACTOR_NAME, localSupervisor) 
+  val getDatasourceSchemaActor = createActor(Props(new GetDatasourceSchemaActor(hiveContext)), GET_DATASOURCE_SCHEMA_ACTOR_NAME, localSupervisor)
   val deleteQueryActor = createActor(Props(new DeleteQueryApiActor(dals)), DELETE_QUERY_ACTOR_NAME, localSupervisor)
-
+  
+  //remote actors
+  val runScriptActor = createActor(Props(new RunScriptApiActor(hdfsConf, hiveContext, dals)), RUN_SCRIPT_ACTOR_NAME, remoteSupervisor)
+  val balancerActor = createActor(Props(classOf[BalancerActor]), BALANCER_ACTOR_NAME, remoteSupervisor)
+  val registerParquetTableActor = createActor(Props(new RegisterParquetTableApiActor(hiveContext, dals)), REGISTER_PARQUET_TABLE_ACTOR_NAME, remoteSupervisor)
+ 
   val gson = new Gson()
   val pathPrefix = "jaws"
 
@@ -141,6 +182,61 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
                         }
                       }
                     }
+                  }
+                }
+              }
+            }
+          }
+        } ~
+          options {
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.POST))) {
+              complete {
+                "OK"
+              }
+            }
+          }
+      } ~
+      path(pathPrefix / "parquet" / "registerTable") {
+        post {
+          parameters('name.as[String], 'path.as[String], 'overwrite.as[Boolean] ? false) { (name, path, overwrite) =>
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+              {
+                validate(path != null && !path.trim.isEmpty, Configuration.FILE_EXCEPTION_MESSAGE) {
+                  validate(name != null && !name.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
+                    validate(overwrite == true || dals.parquetTableDal.tableExists(name) == false, Configuration.TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE) {
+                      respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
+                        Configuration.log4j.info(s"Registering table $name having the path $path")
+                        val future = ask(balancerActor, RegisterTableMessage(name, path))
+                        				.map(innerFuture => innerFuture.asInstanceOf[Future[Any]])
+                        				.flatMap(identity)
+                        future.map {
+                          case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                          case result: String => ctx.complete(StatusCodes.OK, result)
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        } ~
+          options {
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.POST))) {
+              complete {
+                "OK"
+              }
+            }
+          }
+      } ~
+      path(pathPrefix / "parquet" / "table") {
+        delete {
+          parameters('name.as[String]) { (name) =>
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+              {
+                validate(name != null && !name.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
+                  respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
+                    Configuration.log4j.info(s"Deleting table $name ")
                   }
                 }
               }
@@ -301,7 +397,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
         post {
           parameters('queryID.as[String]) { queryID =>
             complete {
-              cancelActor ! CancelMessage(queryID)
+              balancerActor ! CancelMessage(queryID)
 
               Configuration.log4j.info("Cancel message was sent")
               "Cancel message was sent"
@@ -489,7 +585,7 @@ object Configuration {
   val appConf = conf.getConfig("appConf")
   val hadoopConf = conf.getConfig("hadoopConf")
   val cassandraConf = conf.getConfig("cassandraConf")
-
+  
   // cassandra configuration
   val cassandraHost = getStringConfiguration(cassandraConf, "cassandra.host")
   val cassandraKeyspace = getStringConfiguration(cassandraConf, "cassandra.keyspace")
@@ -527,8 +623,8 @@ object Configuration {
   val UUID_EXCEPTION_MESSAGE = "The uuid is empty or null!"
   val LIMITED_EXCEPTION_MESSAGE = "The limited flag is null!"
   val RESULTS_NUMBER_EXCEPTION_MESSAGE = "The results number is null!"
-  val FILE_EXCEPTION_MESSAGE = "The file is null!"
-  val TABLE_EXCEPTION_MESSAGE = "The table name is null!"
+  val FILE_EXCEPTION_MESSAGE = "The file is null or empty!"
+  val TABLE_EXCEPTION_MESSAGE = "The table name is null or empty!"
   val PATH_IS_EMPTY = "Request parameter \'path\' must not be empty!"
   val TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE = "The table already exists!"
   val UNSUPPORTED_SOURCE_TYPE = "Unsupported value for parameter \'sourceType\' !"

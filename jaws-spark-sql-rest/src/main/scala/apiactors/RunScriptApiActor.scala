@@ -17,8 +17,7 @@ import org.apache.spark.scheduler.RunScriptTask
 import implementation.HiveContextWrapper
 import messages.RunParquetMessage
 import org.apache.spark.sql.parquet.ParquetUtils._
-import java.util.regex.Pattern
-import java.util.regex.Matcher
+import apiactors.ActorsPaths._
 import scala.util.Try
 import apiactors.ActorOperations._
 import org.apache.spark.scheduler.RunParquetScriptTask
@@ -30,7 +29,7 @@ import com.xpatterns.jaws.data.utils.QueryState
 class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveContext: HiveContextWrapper, dals: DAL) extends Actor {
   var taskCache: Cache[String, RunScriptTask] = _
   var threadPool: ThreadPoolTaskExecutor = _
-  val pattern: Pattern = Pattern.compile("^([^/]+://[^/]+)(.+?)/*$")
+ 
 
   override def preStart() {
     taskCache = {
@@ -69,12 +68,8 @@ class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCont
 
         Configuration.log4j.info(s"[RunScriptApiActor -runParquet]: running the following sql: ${message.script}")
         Configuration.log4j.info(s"[RunScriptApiActor -runParquet]: The script will be executed over the ${message.tablePath} file with the ${message.table} table name")
-
-        //load the parquet file
-        val (namenode, folderPath) = splitPath(message.tablePath)
-        Configuration.log4j.info(s"[RunScriptApiActor -runParquet]: namenode = $namenode, path = $folderPath ")
-
-        val task = new RunParquetScriptTask(dals, message.script, hiveContext, uuid, false, message.limited, message.maxNumberOfResults, hdfsConf, message.rddDestination, message.table, namenode, folderPath)
+     
+        val task = new RunParquetScriptTask(dals, message.script, hiveContext, uuid, false, message.limited, message.maxNumberOfResults, hdfsConf, message.rddDestination, message.table, message.tablePath)
         taskCache.put(uuid, task)
         writeLaunchStatus(uuid, message.script)
         threadPool.execute(task)
@@ -115,13 +110,5 @@ class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCont
     dals.loggingDal.setScriptDetails(uuid, script)
   }
 
-  private def splitPath(filePath: String): Tuple2[String, String] = {
-    val matcher: Matcher = pattern.matcher(filePath)
-
-    if (matcher.matches())
-      (matcher.group(1), matcher.group(2))
-    else
-      throw new Exception(s"Invalid file path format : $filePath")
-
-  }
+ 
 }
