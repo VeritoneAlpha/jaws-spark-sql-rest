@@ -10,6 +10,10 @@ class HiveContextWrapper(sc: SparkContext) extends HiveContext(sc: SparkContext)
 	}
   
 	def getSparkContext() : SparkContext = {
-	  sc;
+	  sc
+	}
+	
+	def getCatalog = {
+	  catalog
 	}
 }

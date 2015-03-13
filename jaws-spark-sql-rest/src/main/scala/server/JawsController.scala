@@ -207,8 +207,8 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
                       respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
                         Configuration.log4j.info(s"Registering table $name having the path $path")
                         val future = ask(balancerActor, RegisterTableMessage(name, path))
-                        				.map(innerFuture => innerFuture.asInstanceOf[Future[Any]])
-                        				.flatMap(identity)
+                          .map(innerFuture => innerFuture.asInstanceOf[Future[Any]])
+                          .flatMap(identity)
                         future.map {
                           case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
                           case result: String => ctx.complete(StatusCodes.OK, result)
@@ -236,7 +236,14 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
               {
                 validate(name != null && !name.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
                   respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
-                    Configuration.log4j.info(s"Deleting table $name ")
+                    Configuration.log4j.info(s"Unregistering table $name ")
+                    val future = ask(balancerActor, UnregisterTableMessage(name))
+                      .map(innerFuture => innerFuture.asInstanceOf[Future[Any]])
+                      .flatMap(identity)
+                    future.map {
+                      case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                      case result: String => ctx.complete(StatusCodes.OK, result)
+                    }
                   }
                 }
               }

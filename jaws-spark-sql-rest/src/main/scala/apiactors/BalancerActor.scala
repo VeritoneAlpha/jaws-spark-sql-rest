@@ -10,6 +10,7 @@ import apiactors.ActorsPaths._
 import messages.RegisterTableMessage
 import akka.pattern._
 import akka.util.Timeout
+import messages.UnregisterTableMessage
 
 class BalancerActor extends Actor {
   var runActors: Array[ActorSelection] = null
@@ -30,14 +31,15 @@ class BalancerActor extends Actor {
         case _ => runActors.foreach { dom => dom ! message }
       }
 
-    case message: RegisterTableMessage => {
+    case message @ (_: RegisterTableMessage | _: UnregisterTableMessage) => {
       Option(registerParquetTableActors) match {
         case None => Configuration.log4j.info("[BalancerActor] There aren't any remote register parquet actors to send the register table message to!")
         case _ => registerParquetTableActors.foreach { dom => dom ! message }
       }
-      
+
       sender ! JawsController.registerParquetTableActor ? message
     }
+
   }
 
 }
