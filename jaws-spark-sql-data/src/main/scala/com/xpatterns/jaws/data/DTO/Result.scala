@@ -50,6 +50,10 @@ case class Result(schema: Array[Column], results: Array[Array[String]]) {
   def this(schema: StructType, result: Array[Row]) {
 	  this(Result.getSchema(schema), Result.getResults(result))
   }
+  
+  def this(schema: Array[Column], res: StructType) {
+	this(schema, res.fields.map(field => Array (field.name.toString.trim, field.dataType.toString.trim)) toArray)
+  }
 }
 
 object Result {

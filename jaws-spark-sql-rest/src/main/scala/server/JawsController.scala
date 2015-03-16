@@ -128,15 +128,16 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
   val getLogsActor = createActor(Props(new GetLogsApiActor(dals)), GET_LOGS_ACTOR_NAME, localSupervisor)
   val getResultsActor = createActor(Props(new GetResultsApiActor(hdfsConf, hiveContext, dals)), GET_RESULTS_ACTOR_NAME, localSupervisor)
   val getQueryInfoActor = createActor(Props(new GetQueryInfoApiActor(dals)), GET_QUERY_INFO_ACTOR_NAME, localSupervisor)
-  val getDatabasesActor = createActor(Props(new GetDatabasesApiActor(hiveContext, dals)), GET_DATABASES_ACTOR_NAME, localSupervisor) 
+  val getDatabasesActor = createActor(Props(new GetDatabasesApiActor(hiveContext, dals)), GET_DATABASES_ACTOR_NAME, localSupervisor)
   val getDatasourceSchemaActor = createActor(Props(new GetDatasourceSchemaActor(hiveContext)), GET_DATASOURCE_SCHEMA_ACTOR_NAME, localSupervisor)
   val deleteQueryActor = createActor(Props(new DeleteQueryApiActor(dals)), DELETE_QUERY_ACTOR_NAME, localSupervisor)
-  
+  val getParquetTablesActor = createActor(Props(new GetParquetTablesApiActor(hiveContext, dals)), GET_PARQUET_TABLES_ACTOR_NAME, localSupervisor)
+
   //remote actors
   val runScriptActor = createActor(Props(new RunScriptApiActor(hdfsConf, hiveContext, dals)), RUN_SCRIPT_ACTOR_NAME, remoteSupervisor)
   val balancerActor = createActor(Props(classOf[BalancerActor]), BALANCER_ACTOR_NAME, remoteSupervisor)
   val registerParquetTableActor = createActor(Props(new RegisterParquetTableApiActor(hiveContext, dals)), REGISTER_PARQUET_TABLE_ACTOR_NAME, remoteSupervisor)
- 
+
   val gson = new Gson()
   val pathPrefix = "jaws"
 
@@ -252,6 +253,44 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
         } ~
           options {
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.POST))) {
+              complete {
+                "OK"
+              }
+            }
+          }
+      } ~
+      path(pathPrefix / "parquet" / "tables") {
+        get {
+          parameterMultiMap { params =>
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+
+              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                var tables: List[String] = List()
+                var describe = false
+
+                params.foreach(touple => touple._1 match {
+                  case "tables" => {
+                    tables = touple._2
+                  }
+                  case "describe" => {
+                    if (touple._2 != null && !touple._2.isEmpty)
+                      describe = Try(touple._2(0).toBoolean).getOrElse(false)
+                  }
+                  case _ => Configuration.log4j.warn(s"Unknown parameter ${touple._1}!")
+                })
+                Configuration.log4j.info(s"Retrieving table information for parquet tables= $tables")
+                val future = ask(getParquetTablesActor, new GetParquetTablesMessage(tables, describe))
+
+                future.map {
+                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                  case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
+                }
+              }
+            }
+          }
+        } ~
+          options {
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
               complete {
                 "OK"
               }
@@ -592,7 +631,7 @@ object Configuration {
   val appConf = conf.getConfig("appConf")
   val hadoopConf = conf.getConfig("hadoopConf")
   val cassandraConf = conf.getConfig("cassandraConf")
-  
+
   // cassandra configuration
   val cassandraHost = getStringConfiguration(cassandraConf, "cassandra.host")
   val cassandraKeyspace = getStringConfiguration(cassandraConf, "cassandra.keyspace")

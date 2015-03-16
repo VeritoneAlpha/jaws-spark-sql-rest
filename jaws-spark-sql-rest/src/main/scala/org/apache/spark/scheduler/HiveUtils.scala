@@ -214,7 +214,7 @@ object HiveUtils {
     val result = resultRdd.collect
     val schema = resultRdd.schema
     loggingDal.setMetaInfo(uuid, new QueryMetaInfo(result.size, maxNumberOfResults, 0, isLimited))
-    return new Result(schema, result)
+    new Result(schema, result)
   }
 
   def limitQuery(numberOfResults: Long, cmd: String): String = {
