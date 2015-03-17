@@ -97,6 +97,107 @@ The api returns an uuid representing the query that was submitted. The query is 
 Exemple:
  1404998257416357bb29d-6801-41ca-82e4-7a265816b50c
 
+### Register parquet table api:
+    curl 'http://devbox.local:8181/jaws/parquet/registerTable?path=tachyon://devbox.local:19998/user/jaws/parquetFolder&name=testTable&overwrite=false' -X POST
+
+Parameters:
+
+  * path [required] : the path to the parquet folder you want to register as table
+  * name [reqired] : the table name you want to give to your parquet folder
+  * overwrite [not required, default false] : if set on false and the table already exists, an error message will be returned to the client saying that the table already exists. If set on true, the table will be overwritten
+
+
+Results:
+
+The api returns message confirming the table registration or an error message in case of failure
+
+Exemple:
+ Table testTable was registered
+ 
+### Unregister parquet table api:
+    curl 'http://devbox.local:8181/jaws/parquet/table?name=testTable' -X DELETE
+
+Parameters:
+
+  * name [reqired] : the table name you want to give to unregister
+  
+
+Results:
+
+The api returns message confirming that table was unregistered successfully, or an error message in case of failure
+
+Exemple:
+ Table testTable was unregistered
+
+### Get parquet tables api:
+
+    curl 'http://devbox.local:8181/jaws/parquet/tables' -X GET
+    curl 'http://devbox.local:8181/jaws/parquet/tables?describe=false' -X GET
+    curl 'http://devbox.local:8181/jaws/parquet/tables?tables=table1&tables=table2' -X GET
+
+Parameters:
+
+  * describe [not required] : the default value is false. Flag that specifies if describe table should be performed
+  * tables [not required] : lists the tables that will be described.
+
+Results:
+
+If no parameter is set, the api returns a JSON containing all the registered parquet tables without their schema.
+If the describe parameter is set on true, the api will return all the registered parquet tables with their schema.
+If a table list is provided, then those will be the tables that will be described.
+
+Example:
+
+{
+
+    "test": {
+        "user_predictions": {
+            "schema": [
+                {
+                    "name": "result",
+                    "dataType": "StringType"
+                }
+            ],
+            "results": [
+                [
+                    "userid",
+                    "int"                 
+                ],
+                [
+                    "moviename",
+                    "string"
+                ]
+            ]
+        },
+        "testsimple": {
+            "schema": [
+               {
+                    "name": "result",
+                    "dataType": "StringType"
+                }
+            ],
+            "results": [
+                [
+                    "ip",
+                    "string"
+                ],
+                [
+                    "time",
+                    "string"
+                ],
+                [
+                    "state",
+                    "string"
+                ],
+                [
+                    "reason",
+                    "string"
+                ]
+            ]
+        },
+    }
+}
+
 
 ### Logs api:
     curl 'http://devbox.local:8181/jaws/logs?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&startTimestamp=0&limit=10' -X GET
