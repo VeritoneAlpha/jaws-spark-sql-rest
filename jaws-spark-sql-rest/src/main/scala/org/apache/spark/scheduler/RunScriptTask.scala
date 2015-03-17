@@ -76,7 +76,7 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
       writeResults(isCanceled, result)
     } catch {
       case e: Exception => {
-        var message = getCompleteStackTrace(e)
+        var message = HiveUtils.getCompleteStackTrace(e)
         Configuration.log4j.error(message)
         HiveUtils.logMessage(uuid, message, "hql", dals.loggingDal)
         dals.loggingDal.setState(uuid, QueryState.FAILED)
@@ -86,16 +86,6 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
 
       }
     }
-  }
-
-  def getCompleteStackTrace(e: Throwable): String = {
-    var message = s"${e.getMessage()} : ${e.getStackTraceString}\n"
-    var cause = e.getCause
-    while (cause != null) {
-      message = s"$message Caused by \n ${cause.getMessage} \n ${cause.getStackTraceString}"
-      cause = cause.getCause
-    }
-    message
   }
 
   def writeResults(isCanceled: Boolean, result: Result) {
@@ -143,7 +133,7 @@ class RunParquetScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContex
         }    
       }
       case Failure(ex) => {
-        HiveUtils.logMessage(uuid, getCompleteStackTrace(ex), "hql", dals.loggingDal)
+        HiveUtils.logMessage(uuid, HiveUtils.getCompleteStackTrace(ex), "hql", dals.loggingDal)
         dals.loggingDal.setState(uuid, QueryState.FAILED)
       }
     }

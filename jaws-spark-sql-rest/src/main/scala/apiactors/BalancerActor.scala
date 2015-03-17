@@ -34,7 +34,12 @@ class BalancerActor extends Actor {
     case message @ (_: RegisterTableMessage | _: UnregisterTableMessage) => {
       Option(registerParquetTableActors) match {
         case None => Configuration.log4j.info("[BalancerActor] There aren't any remote register parquet actors to send the register table message to!")
-        case _ => registerParquetTableActors.foreach { dom => dom ! message }
+        case _ => registerParquetTableActors.foreach { dom =>
+          {
+            Configuration.log4j.info(s"Sending message to the registering actor at ${dom}")
+            dom ! message
+          }
+        }
       }
 
       sender ! JawsController.registerParquetTableActor ? message

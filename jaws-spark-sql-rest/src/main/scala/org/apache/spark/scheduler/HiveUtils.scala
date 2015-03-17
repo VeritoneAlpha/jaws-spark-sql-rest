@@ -267,6 +267,16 @@ object HiveUtils {
 
     // register table
     parquetFile.registerTempTable(tableName)
-    dals.parquetTableDal.addParquetTable(new ParquetTable(tableName, tablePath))
+    dals.parquetTableDal.addParquetTable(new ParquetTable(tableName, parquetNamenode + tablePath))
+  }
+  
+  def getCompleteStackTrace(e: Throwable): String = {
+    var message = s"${e.getMessage()} : ${e.getStackTraceString}\n"
+    var cause = e.getCause
+    while (cause != null) {
+      message = s"$message Caused by \n ${cause.getMessage} \n ${cause.getStackTraceString}"
+      cause = cause.getCause
+    }
+    message
   }
 }

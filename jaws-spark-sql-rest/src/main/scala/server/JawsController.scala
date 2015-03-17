@@ -39,6 +39,9 @@ import org.apache.spark.SparkContext
 import org.apache.spark.scheduler.LoggingListener
 import org.apache.spark.SparkConf
 import scala.concurrent.Future
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import scala.concurrent.duration.Duration._
 
 /**
  * Created by emaorhian
@@ -47,77 +50,6 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
   var hdfsConf: org.apache.hadoop.conf.Configuration = _
   var hiveContext: HiveContextWrapper = _
   var dals: DAL = _
-
-  def initialize() = {
-    Configuration.log4j.info("Initializing...")
-
-    hdfsConf = getHadoopConf
-    Utils.createFolderIfDoesntExist(hdfsConf, Configuration.schemaFolder.getOrElse("jawsSchemaFolder"), false)
-
-    Configuration.loggingType.getOrElse("cassandra") match {
-      case "cassandra" => dals = new CassandraDal()
-      case _ => dals = new HdfsDal(hdfsConf)
-    }
-
-    hiveContext = createHiveContext(dals)
-  }
-
-  def createHiveContext(dal: DAL): HiveContextWrapper = {
-    val jars = Array(Configuration.jarPath.get)
-
-    def configToSparkConf(config: Config, contextName: String, jars: Array[String]): SparkConf = {
-      val sparkConf = new SparkConf().setAppName(contextName).setJars(jars)
-      for (
-        property <- config.entrySet().asScala if (property.getKey.startsWith("spark") && property.getValue() != null)
-      ) {
-        val key = property.getKey().replaceAll("-", ".");
-        println(key + " | " + property.getValue.unwrapped())
-        sparkConf.set(key, property.getValue.unwrapped().toString)
-      }
-      sparkConf
-    }
-
-    val hContext: HiveContextWrapper = {
-      var sparkConf = configToSparkConf(Configuration.sparkConf, Configuration.applicationName.getOrElse("Jaws"), jars)
-      var sContext = new SparkContext(sparkConf)
-
-      var hContext = new HiveContextWrapper(sContext)
-      hContext.sparkContext.addSparkListener(new LoggingListener(dal))
-
-      HiveUtils.setSharkProperties(hContext, this.getClass().getClassLoader().getResourceAsStream("sharkSettings.txt"))
-      //make sure that lazy variable hiveConf gets initialized
-      hContext.runMetadataSql("use default")
-      hContext
-    }
-    hContext
-  }
-
-  def getHadoopConf(): org.apache.hadoop.conf.Configuration = {
-    val configuration = new org.apache.hadoop.conf.Configuration()
-    configuration.setBoolean(Utils.FORCED_MODE, Configuration.forcedMode.getOrElse("false").toBoolean)
-
-    // set hadoop name node and job tracker
-    Configuration.namenode match {
-      case None => {
-        val message = "You need to set the namenode! "
-        Configuration.log4j.error(message)
-        throw new RuntimeException(message)
-      }
-      case _ => configuration.set("fs.defaultFS", Configuration.namenode.get)
-
-    }
-
-    configuration.set("dfs.replication", Configuration.replicationFactor.getOrElse("1"))
-
-    configuration.set(Utils.LOGGING_FOLDER, Configuration.loggingFolder.getOrElse("jawsLogs"))
-    configuration.set(Utils.STATUS_FOLDER, Configuration.stateFolder.getOrElse("jawsStates"))
-    configuration.set(Utils.DETAILS_FOLDER, Configuration.detailsFolder.getOrElse("jawsDetails"))
-    configuration.set(Utils.METAINFO_FOLDER, Configuration.metaInfoFolder.getOrElse("jawsMetainfoFolder"))
-    configuration.set(Utils.RESULTS_FOLDER, Configuration.resultsFolder.getOrElse("jawsResultsFolder"))
-    configuration.set(Utils.PARQUET_TABLES_FOLDER, Configuration.parquetTablesFolder.getOrElse("parquetTablesFolder"))
-
-    return configuration
-  }
 
   initialize()
   implicit val timeout = Timeout(Configuration.timeout.toInt)
@@ -138,7 +70,9 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
   val balancerActor = createActor(Props(classOf[BalancerActor]), BALANCER_ACTOR_NAME, remoteSupervisor)
   val registerParquetTableActor = createActor(Props(new RegisterParquetTableApiActor(hiveContext, dals)), REGISTER_PARQUET_TABLE_ACTOR_NAME, remoteSupervisor)
 
-  val gson = new Gson()
+  //initialize parquet tables
+  initializeParquetTables
+
   val pathPrefix = "jaws"
 
   implicit val spraySystem: ActorSystem = ActorSystem("spraySystem")
@@ -614,6 +548,104 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
 
   private val reactiveServer = new ReactiveServer(Configuration.webSocketsPort.getOrElse("8081").toInt, MainActors.logsActor)
   reactiveServer.start()
+
+  def initialize() = {
+    Configuration.log4j.info("Initializing...")
+
+    hdfsConf = getHadoopConf
+    Utils.createFolderIfDoesntExist(hdfsConf, Configuration.schemaFolder.getOrElse("jawsSchemaFolder"), false)
+
+    Configuration.loggingType.getOrElse("cassandra") match {
+      case "cassandra" => dals = new CassandraDal()
+      case _ => dals = new HdfsDal(hdfsConf)
+    }
+
+    hiveContext = createHiveContext(dals)
+  }
+
+  def createHiveContext(dal: DAL): HiveContextWrapper = {
+    val jars = Array(Configuration.jarPath.get)
+
+    def configToSparkConf(config: Config, contextName: String, jars: Array[String]): SparkConf = {
+      val sparkConf = new SparkConf().setAppName(contextName).setJars(jars)
+      for (
+        property <- config.entrySet().asScala if (property.getKey.startsWith("spark") && property.getValue() != null)
+      ) {
+        val key = property.getKey().replaceAll("-", ".");
+        println(key + " | " + property.getValue.unwrapped())
+        sparkConf.set(key, property.getValue.unwrapped().toString)
+      }
+      sparkConf
+    }
+
+    val hContext: HiveContextWrapper = {
+      var sparkConf = configToSparkConf(Configuration.sparkConf, Configuration.applicationName.getOrElse("Jaws"), jars)
+      var sContext = new SparkContext(sparkConf)
+
+      var hContext = new HiveContextWrapper(sContext)
+      hContext.sparkContext.addSparkListener(new LoggingListener(dal))
+
+      HiveUtils.setSharkProperties(hContext, this.getClass().getClassLoader().getResourceAsStream("sharkSettings.txt"))
+      //make sure that lazy variable hiveConf gets initialized
+      hContext.runMetadataSql("use default")
+      hContext
+    }
+    hContext
+  }
+
+  def getHadoopConf(): org.apache.hadoop.conf.Configuration = {
+    val configuration = new org.apache.hadoop.conf.Configuration()
+    configuration.setBoolean(Utils.FORCED_MODE, Configuration.forcedMode.getOrElse("false").toBoolean)
+
+    // set hadoop name node and job tracker
+    Configuration.namenode match {
+      case None => {
+        val message = "You need to set the namenode! "
+        Configuration.log4j.error(message)
+        throw new RuntimeException(message)
+      }
+      case _ => configuration.set("fs.defaultFS", Configuration.namenode.get)
+
+    }
+
+    configuration.set("dfs.replication", Configuration.replicationFactor.getOrElse("1"))
+
+    configuration.set(Utils.LOGGING_FOLDER, Configuration.loggingFolder.getOrElse("jawsLogs"))
+    configuration.set(Utils.STATUS_FOLDER, Configuration.stateFolder.getOrElse("jawsStates"))
+    configuration.set(Utils.DETAILS_FOLDER, Configuration.detailsFolder.getOrElse("jawsDetails"))
+    configuration.set(Utils.METAINFO_FOLDER, Configuration.metaInfoFolder.getOrElse("jawsMetainfoFolder"))
+    configuration.set(Utils.RESULTS_FOLDER, Configuration.resultsFolder.getOrElse("jawsResultsFolder"))
+    configuration.set(Utils.PARQUET_TABLES_FOLDER, Configuration.parquetTablesFolder.getOrElse("parquetTablesFolder"))
+
+    return configuration
+  }
+
+  def initializeParquetTables() {
+    Configuration.log4j.info("Initializing parquet tables on the current spark context")
+    val parquetTables = dals.parquetTableDal.listParquetTables
+    parquetTables.foreach(pTable => {
+      if (Utils.checkFileExistence(pTable.filePath, hdfsConf)) {
+        val future = ask(registerParquetTableActor, RegisterTableMessage(pTable.name, pTable.filePath))
+        Await.ready(future, Inf).value.get match {
+          case Success(x) => x match {
+            case e: ErrorMessage => {
+              Configuration.log4j.warn(s"The table ${pTable.name} at path ${pTable.filePath} failed during registration with message : \n ${e.message}\n The table will be deleted!")
+              dals.parquetTableDal.deleteParquetTable(pTable.name)
+            }
+            case result: String => Configuration.log4j.info(result)
+          }
+          case Failure(ex) => {
+            Configuration.log4j.warn(s"The table ${pTable.name} at path ${pTable.filePath} failed during registration with the following stack trace : \n ${HiveUtils.getCompleteStackTrace(ex)}\n The table will be deleted!")
+            dals.parquetTableDal.deleteParquetTable(pTable.name)
+          }
+        }
+
+      } else {
+        Configuration.log4j.warn(s"The table ${pTable.name} doesn't exists at path ${pTable.filePath}. The table will be deleted")
+        dals.parquetTableDal.deleteParquetTable(pTable.name)
+      }
+    })
+  }
 
 }
 
