@@ -1,0 +1,6 @@
+Ana,5,f
+George,10,m
+Alina,20,f
+Paul,12,m
+Pavel,16,m
+Ioana,30,f

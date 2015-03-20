@@ -57,7 +57,7 @@ case class Result(schema: Array[Column], results: Array[Array[String]]) {
 }
 
 object Result {
-  implicit val logsJson = jsonFormat2(apply)
+  implicit val resultJson = jsonFormat2(apply)
 
   def fromTuples(schema: Array[Column], filteredResults: Array[Tuple2[Object, Array[Object]]]): Result = {
 
