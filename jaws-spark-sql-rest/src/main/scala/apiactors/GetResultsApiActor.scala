@@ -1,6 +1,7 @@
 package apiactors
 
 import apiactors.ActorOperations._
+import scala.concurrent._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.hive.HiveContext
 import com.google.common.base.Preconditions
@@ -15,8 +16,11 @@ import net.liftweb.json._
 import net.liftweb.json.DefaultFormats
 import traits.DAL
 import org.apache.spark.scheduler.HiveUtils
-
+import ExecutionContext.Implicits.global
 import scala.util.Try
+import scala.util.Success
+import scala.util.Failure
+import messages.ErrorMessage
 
 /**
  * Created by emaorhian
@@ -28,11 +32,11 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCon
     case message: GetResultsMessage =>
       {
         Configuration.log4j.info("[GetResultsMessage]: retrieving results for: " + message.queryID)
+        val currentSender = sender
 
-        var result: Result = null
-        val tryGetResults = Try {
+        val getResultsFuture = future {
 
-          val(offset, limit) = getOffsetAndLimit(message)
+          val (offset, limit) = getOffsetAndLimit(message)
           val metaInfo = dals.loggingDal.getMetaInfo(message.queryID)
 
           metaInfo.resultsDestination match {
@@ -43,30 +47,33 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCon
               if (endIndex > result.results.length) {
                 endIndex = result.results.length
               }
-              val res = result.results.slice(offset, endIndex)
-              sender ! new Result(result.schema, res)
+              new Result(result.schema, result.results.slice(offset, endIndex))
 
             }
             //hdfs
             case 1 => {
               val destinationPath = HiveUtils.getHdfsPath(Configuration.rddDestinationIp.get)
-              result = getResults(offset, limit, destinationPath)
+              getResults(offset, limit, destinationPath)
 
             }
             //tachyon
             case 2 => {
               val destinationPath = HiveUtils.getTachyonPath(Configuration.rddDestinationIp.get)
-              result = getResults(offset, limit, destinationPath)
+              getResults(offset, limit, destinationPath)
 
             }
             case _ => {
               Configuration.log4j.info("[GetResultsMessage]: Unidentified results path : " + metaInfo.resultsDestination)
-              result = new Result
+              new Result
             }
           }
         }
 
-        returnResult(tryGetResults, result, "GET results failed with the following message: ", sender)
+        getResultsFuture onComplete {
+          case Success(results) => currentSender ! results
+          case Failure(e) => currentSender ! ErrorMessage(s"GET results failed with the following message: ${e.getMessage}") 
+        }
+       
       }
 
       def getResults(offset: Int, limit: Int, destinationPath: String): Result = {
