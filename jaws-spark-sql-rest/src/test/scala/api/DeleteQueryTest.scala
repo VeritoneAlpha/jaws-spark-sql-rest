@@ -8,11 +8,11 @@ import org.scalamock.proxy.ProxyMockFactory
 import org.scalatest.WordSpecLike
 import org.scalatest.concurrent._
 import server.JawsController
-import traits.DAL
+import com.xpatterns.jaws.data.contracts.DAL
 import akka.actor.ActorRef
 import server.Configuration
-import implementation.CassandraDal
-import implementation.HdfsDal
+import com.xpatterns.jaws.data.impl.CassandraDal
+import com.xpatterns.jaws.data.impl.HdfsDal
 import scala.concurrent.ExecutionContext.Implicits.global
 import akka.actor.ActorSystem
 import akka.actor.Props
@@ -44,7 +44,7 @@ class DeleteQueryTest  extends FunSuite with BeforeAndAfter with ScalaFutures {
 
   before {
     Configuration.loggingType.getOrElse("cassandra") match {
-      case "cassandra" => dals = new CassandraDal()
+      case "cassandra" => dals = new CassandraDal(Configuration.cassandraHost.get, Configuration.cassandraClusterName.get, Configuration.cassandraKeyspace.get)
       case _ => dals = new HdfsDal(hdfsConf)
     }
   }

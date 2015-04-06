@@ -18,7 +18,7 @@ import implementation.HiveContextWrapper
 import org.apache.spark.sql.catalyst.types.StructType
 import server.MainActors
 import server.LogsActor.PushLogs
-import traits.DAL
+import com.xpatterns.jaws.data.contracts.DAL
 import com.xpatterns.jaws.data.DTO.ParquetTable
 import java.util.regex.Pattern
 import java.util.regex.Matcher

@@ -7,7 +7,7 @@ import messages.GetQueriesMessage
 import com.google.common.base.Preconditions
 import server.LogsActor
 import akka.actor.ActorLogging
-import traits.DAL
+import com.xpatterns.jaws.data.contracts.DAL
 import messages.GetLogsMessage
 import org.joda.time.DateTime
 import java.util.Collection

@@ -16,7 +16,9 @@ import akka.util.Timeout
 import apiactors._
 import apiactors.ActorsPaths._
 import customs.CORSDirectives
-import implementation.{ SchemaSettingsFactory, CassandraDal, HdfsDal }
+import implementation.{ SchemaSettingsFactory }
+import com.xpatterns.jaws.data.impl.CassandraDal
+import com.xpatterns.jaws.data.impl.HdfsDal
 import messages._
 import com.xpatterns.jaws.data.DTO.Queries
 import spray.http.{ StatusCodes, HttpHeaders, HttpMethods, MediaTypes }
@@ -26,7 +28,7 @@ import spray.json.DefaultJsonProtocol._
 import spray.routing.Directive.pimpApply
 import spray.routing.SimpleRoutingApp
 import spray.routing.directives.ParamDefMagnet.apply
-import traits.DAL
+import com.xpatterns.jaws.data.contracts.DAL
 import messages.GetResultsMessage
 import com.xpatterns.jaws.data.DTO.Logs
 import com.xpatterns.jaws.data.DTO.Result
@@ -556,7 +558,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
     Utils.createFolderIfDoesntExist(hdfsConf, Configuration.schemaFolder.getOrElse("jawsSchemaFolder"), false)
 
     Configuration.loggingType.getOrElse("cassandra") match {
-      case "cassandra" => dals = new CassandraDal()
+      case "cassandra" => dals = new CassandraDal(Configuration.cassandraHost.get, Configuration.cassandraClusterName.get, Configuration.cassandraKeyspace.get)
       case _ => dals = new HdfsDal(hdfsConf)
     }
 

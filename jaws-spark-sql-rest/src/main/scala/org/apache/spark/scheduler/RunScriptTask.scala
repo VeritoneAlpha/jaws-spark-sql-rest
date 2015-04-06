@@ -1,6 +1,6 @@
 package org.apache.spark.scheduler
 
-import traits.DAL
+import com.xpatterns.jaws.data.contracts.DAL
 import server.MainActors
 import server.Configuration
 import server.LogsActor.PushLogs

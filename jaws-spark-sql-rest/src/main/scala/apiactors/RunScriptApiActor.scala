@@ -3,7 +3,7 @@ package apiactors
 import akka.actor.Actor
 import akka.actor.actorRef2Scala
 import com.google.common.base.Preconditions
-import traits.DAL
+import com.xpatterns.jaws.data.contracts.DAL
 import messages.RunScriptMessage
 import java.util.UUID
 import server.Configuration

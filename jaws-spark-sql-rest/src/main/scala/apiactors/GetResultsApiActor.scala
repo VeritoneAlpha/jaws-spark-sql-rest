@@ -13,7 +13,7 @@ import akka.actor.actorRef2Scala
 import messages.GetResultsMessage
 import net.liftweb.json._
 import net.liftweb.json.DefaultFormats
-import traits.DAL
+import com.xpatterns.jaws.data.contracts.DAL
 import org.apache.spark.scheduler.HiveUtils
 
 import scala.util.Try

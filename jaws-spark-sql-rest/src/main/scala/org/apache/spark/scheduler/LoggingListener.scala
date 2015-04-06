@@ -5,7 +5,7 @@ import org.json4s.jackson.JsonMethods._
 import server.Configuration
 import server.LogsActor.PushLogs
 import server.MainActors._
-import traits.DAL
+import com.xpatterns.jaws.data.contracts.DAL
 import org.apache.spark.util.JsonProtocol
 import org.apache.spark.SparkContext
 import org.apache.spark.Success

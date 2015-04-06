@@ -2,7 +2,7 @@ package apiactors
 
 import apiactors.ActorOperations._
 import messages.GetQueryInfoMessage
-import traits.DAL
+import com.xpatterns.jaws.data.contracts.DAL
 import server.Configuration
 import akka.actor.Actor
 import com.google.common.base.Preconditions

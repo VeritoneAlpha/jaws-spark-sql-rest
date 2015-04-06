@@ -1,6 +1,6 @@
 package apiactors
 
-import traits.DAL
+import com.xpatterns.jaws.data.contracts.DAL
 import akka.actor.Actor
 import messages.DeleteQueryMessage
 import server.Configuration

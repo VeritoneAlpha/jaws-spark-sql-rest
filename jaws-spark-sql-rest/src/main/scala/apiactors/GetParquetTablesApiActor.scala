@@ -3,7 +3,7 @@ package apiactors
 import messages._
 import spray.http.StatusCodes
 import scala.concurrent.Await
-import traits.DAL
+import com.xpatterns.jaws.data.contracts.DAL
 import java.util.UUID
 import akka.util.Timeout
 import server.Configuration
