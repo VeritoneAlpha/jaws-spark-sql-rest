@@ -1,6 +1,7 @@
 package apiactors
 
 import server.Configuration
+import sys.process._
 import scala.collection.mutable.ListBuffer
 import akka.actor.Actor
 import scala.util.Try
@@ -30,34 +31,67 @@ class HiveRunnerActor(dals: DAL) extends Actor {
 
     case message: RunQueryMessage => {
       Configuration.log4j.info(s"[HiveRunnerActor]: Running script=${message.script}")
-      val stdOutBaos = new ByteArrayOutputStream
-      val osWriter = new OutputStreamWriter(stdOutBaos)
       val uuid = System.currentTimeMillis() + UUID.randomUUID().toString()
       implicit val ec = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(Configuration.nrOfThreads.getOrElse("10").toInt))
+      var script = ""
 
-      val tryRunScript = Try {
+      val tryPreRunScript = Try {
         writeLaunchStatus(uuid, message.script)
-        val command = Seq("hive", "-e", prepareCommands(message.script))
-        val runResponse = future {
-          print ("do something")
-        }
-        sender ! uuid
-        
-        runResponse onComplete(null)
+        script = prepareCommands(message.script)
       }
 
-      tryRunScript match {
-        case Success(v) => sender ! tryRunScript.get
+      tryPreRunScript match {
+        case Success(v) => sender ! uuid
         case Failure(e) => sender ! ErrorMessage(s"Run hive query failed with the following message: ${e.getMessage}")
       }
+
+      val runResponse = future {
+        Configuration.log4j.info(s"[HiveRunnerActor]: Executing commands")
+
+      }
+
+      runResponse onComplete {
+        case Success(s) => {
+          Configuration.log4j.info(s"[HiveRunnerActor]: Query $uuid has successfully finished")
+
+        }
+        case Failure(t) => {
+          Configuration.log4j.info(s"[HiveRunnerActor]: Query $uuid has failed")
+        }
+      }
+
     }
   }
-  
+
+  private def runHiveScript(script: String, limit: Int, uuid: String) {
+    val stdOutBaos = new ByteArrayOutputStream
+    val osWriter = new OutputStreamWriter(stdOutBaos)
+    val command = Seq("hive", "-e", script)
+    var resultIndex = 0;
+    try {
+      command ! ProcessLogger(
+        stdOutLine => {
+          if (resultIndex < limit) {
+            osWriter.write(s"$stdOutLine\n")
+            resultIndex += 1
+          }
+        },
+        stdErrLine => {
+          Configuration.log4j.info(stdErrLine)
+          dals.loggingDal.addLog(uuid, "hive", System.currentTimeMillis(), stdErrLine)
+        })
+      osWriter flush ()
+      
+    } finally {
+
+      osWriter close ()
+    }
+  }
+
   private def writeLaunchStatus(uuid: String, script: String) {
     dals.loggingDal.addLog(uuid, "hive", System.currentTimeMillis(), s"Launching task for $uuid")
     dals.loggingDal.setState(uuid, QueryState.IN_PROGRESS)
     dals.loggingDal.setScriptDetails(uuid, script)
   }
-
 
 }

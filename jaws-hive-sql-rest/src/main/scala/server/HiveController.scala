@@ -71,14 +71,16 @@ object HiveController extends App with SimpleRoutingApp with CORSDirectives {
           post {
             parameters('limit.as[Int] ? 100) { (limit) =>
               corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-                entity(as[String]) { query: String =>
-                  validate(query != null && !query.trim.isEmpty(), "Script is empty!") {
-                    respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
-                      Configuration.log4j.info(s"The query has the limit=$limit")
-                      val future = ask(hiveRunnerActor, RunQueryMessage(query, limit))
-                      future.map {
-                        case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                        case result: String => ctx.complete(StatusCodes.OK, result)
+                validate(limit > 0, "Limit must be higher than 0") {
+                  entity(as[String]) { query: String =>
+                    validate(query != null && !query.trim.isEmpty(), "Script is empty!") {
+                      respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
+                        Configuration.log4j.info(s"The query has the limit=$limit")
+                        val future = ask(hiveRunnerActor, RunQueryMessage(query, limit))
+                        future.map {
+                          case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                          case result: String => ctx.complete(StatusCodes.OK, result)
+                        }
                       }
                     }
                   }
