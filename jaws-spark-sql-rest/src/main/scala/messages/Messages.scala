@@ -19,6 +19,6 @@ case class RunParquetMessage(script: String, tablePath: String, table: String, l
 case class GetDatasourceSchemaMessage(path: String, sourceType: SourceType, storageType: StorageType)
 case class ErrorMessage(message: String)
 case class DeleteQueryMessage(queryID: String)
-case class RegisterTableMessage(name: String, path: String)
+case class RegisterTableMessage(name: String, path: String, namenode: String = "") 
 case class UnregisterTableMessage(name: String)
 case class GetParquetTablesMessage(tables: List[String], describe: Boolean)

@@ -22,7 +22,7 @@ object Randomizer {
 
 	
 	def getParquetTable : ParquetTable ={
-	   new ParquetTable(Randomizer.getRandomString(5), Randomizer.getRandomString(5))
+	   new ParquetTable(Randomizer.getRandomString(5), Randomizer.getRandomString(5), Randomizer.getRandomString(5))
 	}
 	
 	def getParquetTables (size : Int): Array[ParquetTable] = {

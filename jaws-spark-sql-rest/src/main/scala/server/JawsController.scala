@@ -624,8 +624,10 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
     Configuration.log4j.info("Initializing parquet tables on the current spark context")
     val parquetTables = dals.parquetTableDal.listParquetTables
     parquetTables.foreach(pTable => {
-      if (Utils.checkFileExistence(pTable.filePath, hdfsConf)) {
-        val future = ask(registerParquetTableActor, RegisterTableMessage(pTable.name, pTable.filePath))
+      val newConf = new org.apache.hadoop.conf.Configuration(hdfsConf)
+      newConf.set("fs.defaultFS", pTable.namenode)
+      if (Utils.checkFileExistence(pTable.filePath, newConf)) {
+        val future = ask(registerParquetTableActor, RegisterTableMessage(pTable.name, pTable.filePath, pTable.namenode))
         Await.ready(future, Inf).value.get match {
           case Success(x) => x match {
             case e: ErrorMessage => {

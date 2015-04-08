@@ -1,6 +1,8 @@
 package com.xpatterns.jaws.data.impl
 
 import com.xpatterns.jaws.data.contracts.TJawsParquetTables
+import spray.json._
+import spray.json.DefaultJsonProtocol._
 import com.xpatterns.jaws.data.DTO.ParquetTable
 import org.apache.hadoop.conf.Configuration
 import com.xpatterns.jaws.data.utils.Utils
@@ -16,7 +18,8 @@ class JawsHdfsParquetTables(configuration: Configuration) extends TJawsParquetTa
 
   override def addParquetTable(pTable: ParquetTable) {
     logger.debug(s"Writing parquet table ${pTable.name} with path ${pTable.filePath} ")
-    Utils.rewriteFile(pTable.filePath, configuration, getParquetTableFilePath(pTable.name))
+    val valueTouple = (pTable.namenode, pTable.filePath).toJson.prettyPrint
+    Utils.rewriteFile(valueTouple, configuration, getParquetTableFilePath(pTable.name))
   }
 
   override def deleteParquetTable(name: String) {
@@ -42,7 +45,9 @@ class JawsHdfsParquetTables(configuration: Configuration) extends TJawsParquetTa
 
     while (iterator.hasNext()) {
       val tableName = iterator.next()
-      tables = tables :+ new ParquetTable(tableName, Utils.readFile(configuration, Utils.PARQUET_TABLES_FOLDER + "/" + tableName)) 
+      
+      val (namenode, filepath) = Utils.readFile(configuration, Utils.PARQUET_TABLES_FOLDER + "/" + tableName).parseJson.fromJson[Tuple2[String, String]]
+      tables = tables :+ new ParquetTable(tableName, filepath, namenode) 
     }
     
     tables
@@ -59,8 +64,11 @@ class JawsHdfsParquetTables(configuration: Configuration) extends TJawsParquetTa
     logger.debug(s"Reading table $name")
     val filename = getParquetTableFilePath(name)
 
-    if (Utils.checkFileExistence(filename, configuration))
-      new ParquetTable(name, Utils.readFile(configuration, filename))
+    if (Utils.checkFileExistence(filename, configuration)){
+      val (namenode, filepath) = Utils.readFile(configuration, filename).parseJson.fromJson[Tuple2[String, String]]
+      new ParquetTable(name, filepath, namenode)
+    }
+      
     else new ParquetTable
 
   }

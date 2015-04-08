@@ -1,11 +1,11 @@
 package com.xpatterns.jaws.data.DTO
 import spray.json.DefaultJsonProtocol._
 
-case class ParquetTable(name: String, filePath: String){
+case class ParquetTable(name: String, filePath: String, namenode : String){
    def this() = {
-     this("","")
+     this("","","")
    } 
 }
 object ParquetTable {
-  implicit val logJson = jsonFormat2(apply)
+  implicit val logJson = jsonFormat3(apply)
 }

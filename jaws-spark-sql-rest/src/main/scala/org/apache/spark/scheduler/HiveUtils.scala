@@ -267,7 +267,7 @@ object HiveUtils {
 
     // register table
     parquetFile.registerTempTable(tableName)
-    dals.parquetTableDal.addParquetTable(new ParquetTable(tableName, parquetNamenode + tablePath))
+    dals.parquetTableDal.addParquetTable(new ParquetTable(tableName, tablePath, parquetNamenode))
   }
   
   def getCompleteStackTrace(e: Throwable): String = {

@@ -14,6 +14,8 @@ import me.prettyprint.cassandra.serializers.CompositeSerializer
 import me.prettyprint.cassandra.serializers.LongSerializer
 import me.prettyprint.hector.api.query.ColumnQuery
 import me.prettyprint.cassandra.model.thrift.ThriftColumnQuery
+import spray.json._
+import spray.json.DefaultJsonProtocol._
 
 class JawsCassandraParquetTables(keyspace: Keyspace) extends TJawsParquetTables {
 
@@ -26,11 +28,14 @@ class JawsCassandraParquetTables(keyspace: Keyspace) extends TJawsParquetTables 
   val ls = LongSerializer.get.asInstanceOf[Serializer[Long]]
 
   val logger = Logger.getLogger("JawsCassandraParquetTables")
+
   override def addParquetTable(pTable: ParquetTable) {
     Utils.TryWithRetry {
       logger.debug(s"Adding the parquet table ${pTable.name} for the filepath ${pTable.filePath}")
       val mutator = HFactory.createMutator(keyspace, ss)
-      mutator.addInsertion(ROW_ID, CF_PARQUET_TABLES, HFactory.createColumn(pTable.name, pTable.filePath, ss, ss))
+
+      val valueTouple = (pTable.namenode, pTable.filePath).toJson.prettyPrint
+      mutator.addInsertion(ROW_ID, CF_PARQUET_TABLES, HFactory.createColumn(pTable.name, valueTouple, ss, ss))
       mutator.execute()
     }
   }
@@ -67,7 +72,8 @@ class JawsCassandraParquetTables(keyspace: Keyspace) extends TJawsParquetTables 
                     case size: Int => {
                       for (index <- 0 until size) {
                         val column = columns.get(index)
-                        result = result :+ new ParquetTable(column.getName, column.getValue)
+                        val (namenode, filepath) = column.getValue.parseJson.fromJson[Tuple2[String, String]]
+                        result = result :+ new ParquetTable(column.getName, filepath, namenode)
                       }
                       result
                     }
@@ -114,7 +120,12 @@ class JawsCassandraParquetTables(keyspace: Keyspace) extends TJawsParquetTables 
           val column = queryResult.get
           Option(column) match {
             case None => new ParquetTable
-            case _ => new ParquetTable(column.getName, column.getValue)
+            case _ => 
+              {
+                 val (namenode, filepath) = column.getValue.parseJson.fromJson[Tuple2[String, String]]
+                 new ParquetTable(column.getName, filepath, namenode)
+              }
+             
           }
         }
       }

@@ -17,21 +17,21 @@ class RegisterParquetTableApiActor(hiveContext: HiveContextWrapper, dals: DAL) e
       Configuration.log4j.info(s"[RegisterParquetTableApiActor]: registering table ${message.name} at ${message.path}")
 
       val tryRegisterTable = Try {
-        val (namenode, folderPath) = HiveUtils.splitPath(message.path)
+        val (namenode, folderPath) = if (message.namenode.isEmpty()) HiveUtils.splitPath(message.path) else (message.namenode, message.path)
         HiveUtils.registerParquetTable(hiveContext, message.name, namenode, folderPath, dals)
       }
 
       returnResult(tryRegisterTable, s"Table ${message.name} was registered", "RegisterTable failed with the following message: ", sender)
 
     }
-    
+
     case message: UnregisterTableMessage => {
       Configuration.log4j.info(s"[RegisterParquetTableApiActor]: Unregistering table ${message.name}")
 
       val tryUnregisterTable = Try {
         // unregister table
         hiveContext.getCatalog.unregisterTable(None, message.name)
-    	dals.parquetTableDal.deleteParquetTable(message.name)
+        dals.parquetTableDal.deleteParquetTable(message.name)
       }
 
       returnResult(tryUnregisterTable, s"Table ${message.name} was unregistered", "UnregisterTable failed with the following message: ", sender)
