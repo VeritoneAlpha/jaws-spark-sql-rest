@@ -83,8 +83,7 @@ class HiveRunnerActor(dals: DAL) extends Actor {
       osWriter flush ()
       
     } finally {
-
-      osWriter close ()
+      if (osWriter != null) osWriter close ()
     }
   }
 
