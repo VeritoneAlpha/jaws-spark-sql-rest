@@ -46,6 +46,6 @@ def prepareCommands(script: String, numberOfResults : Int) = {
   def limitQuery(numberOfResults: Long, cmd: String): String = {
     val temporaryTableName = RandomStringUtils.randomAlphabetic(10)
     // take only x results
-    return "select " + temporaryTableName + ".* from ( " + cmd + ") " + temporaryTableName + " limit " + numberOfResults
+    return s"select $temporaryTableName.* from ( $cmd ) $temporaryTableName limit $numberOfResults"
   }
 }
