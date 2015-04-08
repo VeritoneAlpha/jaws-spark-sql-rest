@@ -37,7 +37,7 @@ class HiveRunnerActor(dals: DAL) extends Actor {
 
       val tryPreRunScript = Try {
         writeLaunchStatus(uuid, message.script)
-        script = prepareCommands(message.script)
+        script = prepareCommands(message.script, message.limit)
       }
 
       tryPreRunScript match {
@@ -63,19 +63,14 @@ class HiveRunnerActor(dals: DAL) extends Actor {
     }
   }
 
-  private def runHiveScript(script: String, limit: Int, uuid: String) {
+  private def runHiveScript(script: String, uuid: String) {
     val stdOutBaos = new ByteArrayOutputStream
     val osWriter = new OutputStreamWriter(stdOutBaos)
     val command = Seq("hive", "-e", script)
-    var resultIndex = 0;
+  
     try {
       command ! ProcessLogger(
-        stdOutLine => {
-          if (resultIndex < limit) {
-            osWriter.write(s"$stdOutLine\n")
-            resultIndex += 1
-          }
-        },
+        stdOutLine => osWriter.write(s"$stdOutLine\n"),
         stdErrLine => {
           Configuration.log4j.info(stdErrLine)
           dals.loggingDal.addLog(uuid, "hive", System.currentTimeMillis(), stdErrLine)

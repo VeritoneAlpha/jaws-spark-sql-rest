@@ -2,13 +2,14 @@ package customs
 
 import scala.collection.mutable.ListBuffer
 import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang.RandomStringUtils
 
 class CommandsProcessor
 object CommandsProcessor {
   
   val MORE_THAT_ONE_SELECT_EXCEPTION_MESSAGE = "The query must contain only one select, at the end"
   
-def prepareCommands(script: String) = {
+def prepareCommands(script: String, numberOfResults : Int) = {
     val commandList = filterCommands(script)
     val commandsNb = commandList.size
     
@@ -19,7 +20,8 @@ def prepareCommands(script: String) = {
     }
     
     firstCommands += "set hive.cli.print.header=true" 
-    firstCommands += commandList(commandsNb -1)
+    val lastCommand = if (commandList(commandsNb -1).trim().toLowerCase().startsWith("select")) limitQuery(numberOfResults, commandList(commandsNb -1)) else commandList(commandsNb -1)
+    firstCommands += lastCommand
     firstCommands addString(new StringBuilder, ";") toString
 }
   
@@ -39,5 +41,11 @@ def prepareCommands(script: String) = {
 
     })
     commandsList
+  }
+  
+  def limitQuery(numberOfResults: Long, cmd: String): String = {
+    val temporaryTableName = RandomStringUtils.randomAlphabetic(10)
+    // take only x results
+    return "select " + temporaryTableName + ".* from ( " + cmd + ") " + temporaryTableName + " limit " + numberOfResults
   }
 }
