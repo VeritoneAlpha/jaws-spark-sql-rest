@@ -17,6 +17,11 @@ import java.util.concurrent.Executors
 import java.util.UUID
 import com.xpatterns.jaws.data.utils.QueryState
 import scala.concurrent._
+import java.io.ByteArrayInputStream
+import java.io.InputStreamReader
+import java.io.BufferedReader
+import scala.io.Source
+import scala.io.BufferedSource
 
 /**
  * Created by emaorhian
@@ -46,7 +51,8 @@ class HiveRunnerActor(dals: DAL) extends Actor {
       }
 
       val runResponse = future {
-        Configuration.log4j.info(s"[HiveRunnerActor]: Executing commands")
+        Configuration.log4j.info(s"[HiveRunnerActor]: Executing commands $script")
+        runHiveScript(script, uuid)
 
       }
 
@@ -55,19 +61,20 @@ class HiveRunnerActor(dals: DAL) extends Actor {
           Configuration.log4j.info(s"[HiveRunnerActor]: Query $uuid has successfully finished")
 
         }
-        case Failure(t) => {
-          Configuration.log4j.info(s"[HiveRunnerActor]: Query $uuid has failed")
+        case Failure(e) => {
+          Configuration.log4j.info(s"[HiveRunnerActor]: Query $uuid has failed with the following exception ${e.getMessage()}")
         }
       }
 
     }
   }
 
-  private def runHiveScript(script: String, uuid: String) {
+  private def runHiveScript(script: String, uuid: String) = {
     val stdOutBaos = new ByteArrayOutputStream
     val osWriter = new OutputStreamWriter(stdOutBaos)
+    var reader : BufferedSource = null
     val command = Seq("hive", "-e", script)
-  
+
     try {
       command ! ProcessLogger(
         stdOutLine => osWriter.write(s"$stdOutLine\n"),
@@ -76,9 +83,15 @@ class HiveRunnerActor(dals: DAL) extends Actor {
           dals.loggingDal.addLog(uuid, "hive", System.currentTimeMillis(), stdErrLine)
         })
       osWriter flush ()
+
+      val stdOutBais = new ByteArrayInputStream(stdOutBaos.toByteArray())
+      reader = Source.fromInputStream(stdOutBais)
+      reader.getLines.foreach(line => println(line))
+      
       
     } finally {
       if (osWriter != null) osWriter close ()
+      if (reader != null) reader close
     }
   }
 
