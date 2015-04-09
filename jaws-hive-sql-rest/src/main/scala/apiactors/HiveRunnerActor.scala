@@ -70,9 +70,9 @@ class HiveRunnerActor(dals: DAL) extends Actor {
   }
 
   private def runHiveScript(script: String, uuid: String) = {
-    val stdOutBaos = new ByteArrayOutputStream
-    val osWriter = new OutputStreamWriter(stdOutBaos)
-    var reader : BufferedSource = null
+    val stdOutOS = new ByteArrayOutputStream
+    val osWriter = new OutputStreamWriter(stdOutOS)
+
     val command = Seq("hive", "-e", script)
 
     try {
@@ -84,17 +84,22 @@ class HiveRunnerActor(dals: DAL) extends Actor {
         })
       osWriter flush ()
 
-      val stdOutBais = new ByteArrayInputStream(stdOutBaos.toByteArray())
-      reader = Source.fromInputStream(stdOutBais)
-      reader.getLines.foreach(line => println(line))
-      
-      
+      getLastResults(new ByteArrayInputStream(stdOutOS.toByteArray()))
+
     } finally {
       if (osWriter != null) osWriter close ()
-      if (reader != null) reader close
     }
   }
 
+  def getLastResults(inputStream: ByteArrayInputStream) = {
+    val reader = Source.fromInputStream(inputStream)
+    try {
+      reader.getLines.foreach(line => println(line))
+    } finally {
+      if (reader != null) reader close ()
+    }
+
+  }
   private def writeLaunchStatus(uuid: String, script: String) {
     dals.loggingDal.addLog(uuid, "hive", System.currentTimeMillis(), s"Launching task for $uuid")
     dals.loggingDal.setState(uuid, QueryState.IN_PROGRESS)

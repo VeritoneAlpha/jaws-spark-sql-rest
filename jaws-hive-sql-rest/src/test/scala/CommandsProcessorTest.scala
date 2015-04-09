@@ -11,8 +11,8 @@ class CommandsProcessorTest extends FunSuite {
   test("filterCommands : ok") {
     val filteredResults = filterCommands("use databaseName  ;show tables;  ;select * from table")
 
-    assert(filteredResults.size === 4, "Different number of commands")
-    assert(filteredResults === ListBuffer("set hive.cli.print.header=true", "use databaseName", "show tables", "select * from table"))
+    assert(filteredResults.size === 3, "Different number of commands")
+    assert(filteredResults === ListBuffer("use databaseName", "show tables", "select * from table"))
 
   }
 
@@ -25,7 +25,7 @@ class CommandsProcessorTest extends FunSuite {
   test("prepareCommands : ok-last command is a select") {
 
     val tryPrepareCommands = Try(prepareCommands("use databaseName  ;show tables;  ;select * from table", 2))
-    val requiredCommandString = s"set hive.cli.print.header=true;select '$QUERY_DELIMITATOR';use databaseName;select '$QUERY_DELIMITATOR';show tables;select '$QUERY_DELIMITATOR';select\\s+([\\w]+)\\.\\* from \\( select \\* from table \\) ([\\w]+) limit 2;select '$QUERY_DELIMITATOR'"
+    val requiredCommandString = s"use databaseName;show tables;set hive.cli.print.header=true;select '$QUERY_DELIMITATOR';select\\s+([\\w]+)\\.\\* from \\( select \\* from table \\) ([\\w]+) limit 2"
     
     assert(tryPrepareCommands.isSuccess, "Prepare commands failed")
     val returnedCommandString = tryPrepareCommands.get
@@ -35,7 +35,7 @@ class CommandsProcessorTest extends FunSuite {
    test("prepareCommands : ok-last command is not a select") {
 
     val tryPrepareCommands = Try(prepareCommands("use databaseName  ;show tables;  ;show tables", 2))
-    val requiredCommandString = s"set hive.cli.print.header=true;select '$QUERY_DELIMITATOR';use databaseName;select '$QUERY_DELIMITATOR';show tables;select '$QUERY_DELIMITATOR';show tables;select '$QUERY_DELIMITATOR'"
+    val requiredCommandString = s"use databaseName;show tables;set hive.cli.print.header=true;select '$QUERY_DELIMITATOR';show tables"
     
     assert(tryPrepareCommands.isSuccess, "Prepare commands failed")
     val returnedCommandString = tryPrepareCommands.get
@@ -45,7 +45,7 @@ class CommandsProcessorTest extends FunSuite {
   test("prepareCommands : ok-one command") {
 
     val tryPrepareCommands = Try(prepareCommands("show databases", 2))
-    val requiredCommandString = s"set hive.cli.print.header=true;select '$QUERY_DELIMITATOR';show databases;select '$QUERY_DELIMITATOR'"
+    val requiredCommandString = s"set hive.cli.print.header=true;select '$QUERY_DELIMITATOR';show databases"
     
     assert(tryPrepareCommands.isSuccess, "Prepare commands failed")
     val returnedCommandString = tryPrepareCommands.get
