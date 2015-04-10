@@ -1,6 +1,7 @@
 package server
 
 import java.net.InetAddress
+import com.xpatterns.jaws.data.utils.Utils._
 import scala.collection.JavaConverters._
 import com.typesafe.config.Config
 import implementation.SchemaSettingsFactory.{ SourceType, StorageType }
@@ -637,7 +638,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
             case result: String => Configuration.log4j.info(result)
           }
           case Failure(ex) => {
-            Configuration.log4j.warn(s"The table ${pTable.name} at path ${pTable.filePath} failed during registration with the following stack trace : \n ${HiveUtils.getCompleteStackTrace(ex)}\n The table will be deleted!")
+            Configuration.log4j.warn(s"The table ${pTable.name} at path ${pTable.filePath} failed during registration with the following stack trace : \n ${getCompleteStackTrace(ex)}\n The table will be deleted!")
             dals.parquetTableDal.deleteParquetTable(pTable.name)
           }
         }

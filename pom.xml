@@ -13,5 +13,6 @@
 	<modules>
 		<module>jaws-spark-sql-rest</module>
 		<module>jaws-spark-sql-data</module>
+		<module>jaws-hive-sql-rest</module>
 	</modules>
 </project>

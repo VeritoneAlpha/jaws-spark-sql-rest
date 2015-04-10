@@ -9,6 +9,7 @@ import scala.util.Success
 import scala.util.Failure
 import com.xpatterns.jaws.data.contracts.DAL
 import customs.CommandsProcessor._
+import customs.ResultsProcessor._
 import java.io.ByteArrayOutputStream
 import java.io.OutputStreamWriter
 import sys.process._
@@ -22,6 +23,7 @@ import java.io.InputStreamReader
 import java.io.BufferedReader
 import scala.io.Source
 import scala.io.BufferedSource
+import com.xpatterns.jaws.data.utils.Utils._
 
 /**
  * Created by emaorhian
@@ -47,7 +49,7 @@ class HiveRunnerActor(dals: DAL) extends Actor {
 
       tryPreRunScript match {
         case Success(v) => sender ! uuid
-        case Failure(e) => sender ! ErrorMessage(s"Run hive query failed with the following message: ${e.getMessage}")
+        case Failure(e) => sender ! ErrorMessage(s"Run hive query failed with the following message: ${getCompleteStackTrace(e)}")
       }
 
       val runResponse = future {
@@ -58,11 +60,13 @@ class HiveRunnerActor(dals: DAL) extends Actor {
 
       runResponse onComplete {
         case Success(s) => {
-          Configuration.log4j.info(s"[HiveRunnerActor]: Query $uuid has successfully finished")
-
+          val message = s"[HiveRunnerActor]: Query $uuid has successfully finished"
+          dals.resultsDal.setResults(uuid, s)
+          setStatus(uuid, message, QueryState.DONE)
         }
         case Failure(e) => {
-          Configuration.log4j.info(s"[HiveRunnerActor]: Query $uuid has failed with the following exception ${e.getMessage()}")
+          val message = s"[HiveRunnerActor]: Query $uuid has failed with the following exception ${getCompleteStackTrace(e)}"
+          setStatus(uuid, message, QueryState.FAILED)
         }
       }
 
@@ -91,19 +95,15 @@ class HiveRunnerActor(dals: DAL) extends Actor {
     }
   }
 
-  def getLastResults(inputStream: ByteArrayInputStream) = {
-    val reader = Source.fromInputStream(inputStream)
-    try {
-      reader.getLines.foreach(line => println(line))
-    } finally {
-      if (reader != null) reader close ()
-    }
-
-  }
   private def writeLaunchStatus(uuid: String, script: String) {
     dals.loggingDal.addLog(uuid, "hive", System.currentTimeMillis(), s"Launching task for $uuid")
     dals.loggingDal.setState(uuid, QueryState.IN_PROGRESS)
     dals.loggingDal.setScriptDetails(uuid, script)
   }
 
+  private def setStatus(uuid: String, message: String, status: QueryState.Value) {
+    Configuration.log4j.info(message)
+    dals.loggingDal.addLog(uuid, "hive", System.currentTimeMillis(), message)
+    dals.loggingDal.setState(uuid, status)
+  }
 }

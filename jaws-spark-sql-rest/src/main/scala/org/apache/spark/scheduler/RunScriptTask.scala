@@ -1,6 +1,7 @@
 package org.apache.spark.scheduler
 
 import com.xpatterns.jaws.data.contracts.DAL
+import com.xpatterns.jaws.data.utils.Utils._
 import server.MainActors
 import server.Configuration
 import server.LogsActor.PushLogs
@@ -76,7 +77,7 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
       writeResults(isCanceled, result)
     } catch {
       case e: Exception => {
-        var message = HiveUtils.getCompleteStackTrace(e)
+        var message = getCompleteStackTrace(e)
         Configuration.log4j.error(message)
         HiveUtils.logMessage(uuid, message, "hql", dals.loggingDal)
         dals.loggingDal.setState(uuid, QueryState.FAILED)
@@ -133,7 +134,7 @@ class RunParquetScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContex
         }    
       }
       case Failure(ex) => {
-        HiveUtils.logMessage(uuid, HiveUtils.getCompleteStackTrace(ex), "hql", dals.loggingDal)
+        HiveUtils.logMessage(uuid, getCompleteStackTrace(ex), "hql", dals.loggingDal)
         dals.loggingDal.setState(uuid, QueryState.FAILED)
       }
     }

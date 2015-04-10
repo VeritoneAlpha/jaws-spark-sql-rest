@@ -78,7 +78,7 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCon
 
         val filteredResults = resultsRDD.filter(tuple => tuple._1.asInstanceOf[Long] >= offset && tuple._1.asInstanceOf[Long] < offset + limit).collect()
 
-        Result.fromTuples(schema, filteredResults)
+        new Result(schema, filteredResults)
 
       }
   }
