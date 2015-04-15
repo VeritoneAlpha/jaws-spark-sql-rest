@@ -21,7 +21,7 @@ object AvroConverter {
     dataType match {
       case ByteType | ShortType | IntegerType => callMethodWithNoDefaults(typeBuilder, "intType")
       case BinaryType                         => callMethodWithNoDefaults(typeBuilder, "bytesType")
-      case StringType                         => callMethodWithNoDefaults(typeBuilder, "stringType")
+      case StringType | DecimalType           => callMethodWithNoDefaults(typeBuilder, "stringType")
       case LongType | TimestampType           => callMethodWithNoDefaults(typeBuilder, "longType")
       case FloatType                          => callMethodWithNoDefaults(typeBuilder, "floatType")
       case DoubleType                         => callMethodWithNoDefaults(typeBuilder, "doubleType")

@@ -25,7 +25,8 @@ class AvroConverterTest extends FunSuite {
   val arrOfArrString = new StructField("arrOfArrayString", DataType("ArrayType(ArrayType(StringType,false),false)"), true)
   val mapOfMap = new StructField("mapOfMap", DataType("MapType(StringType, MapType(StringType,StringType,true),true)"), false)
   val arrOfMapofArr = new StructField("arrOfMapOfArr", DataType("ArrayType(MapType(StringType, ArrayType(ArrayType(StringType,false),false),true),false)"), true)
-
+  val decimalField = new StructField("decimal", DataType("DecimalType"), true)
+  
   test("simple schema") {
     val result = AvroConverter.getAvroSchema(structType)
     assert(result.toString() == "{\"type\":\"record\",\"name\":\"RECORD\",\"fields\":[{\"name\":\"int\",\"type\":\"int\"}," +
@@ -116,5 +117,12 @@ class AvroConverterTest extends FunSuite {
     val lotsStruct = new StructType(lots)
     val tryGetLogs = Try(AvroConverter.getAvroSchema(lotsStruct))
     assert(true, tryGetLogs.isSuccess)
+  }
+  
+  
+  test("schema with decimal type") {
+    val result = AvroConverter.getAvroSchema(StructType(Seq(decimalField)))
+    assert(result.toString() == "{\"type\":\"record\",\"name\":\"RECORD\",\"fields\":[{\"name\":\"decimal\",\"type\":[\"string\",\"null\"]}]}")
+
   }
 }
