@@ -73,7 +73,7 @@ Results:
 
 The api returns an uuid representing the query that was submitted. The query is executed asynchronously and the expectation is that clients poll for logs and completion status.
 
-Exemple:
+Example:
  1404998257416357bb29d-6801-41ca-82e4-7a265816b50c
 
 ### Run parquet api:
@@ -94,7 +94,7 @@ Results:
 
 The api returns an uuid representing the query that was submitted. The query is executed asynchronously and the expectation is that clients poll for logs and completion status.
 
-Exemple:
+Example:
  1404998257416357bb29d-6801-41ca-82e4-7a265816b50c
 
 ### Register parquet table api:
@@ -855,11 +855,11 @@ Example:
 ### Delete query api:
 
 This is an API that deletes from the database all the information about a query:
-	- query state
-	- query details
-	- query logs
-	- query meta info
-	- query results
+    - query state
+    - query details
+    - query logs
+    - query meta info
+    - query results
 
     curl 'http://devbox.local:8181/jaws/query?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7' -X DELETE
     
@@ -873,3 +873,62 @@ If the query is in progress or it is not found, an explanatory error message wil
  Results:
 
 "Query 140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7 was deleted"
+
+
+# jaws-hive-sql-rest
+
+A restful (http) interface that can concurrently and asynchronously submit HiveQL queries on top of hive cli, the results (automatically limited in size), execution logs and query history are persisted and vizible through Jaws's apis rescribed above.
+
+## Building Jaws hive sql
+
+You need to have maven installed.
+To build, follow the steps below:
+
+    cd jaws-hive-sql-rest/
+    mvn clean install -DskipTests
+    cd target
+    tar -zxvf jaws-hive-sql-rest.tar.gz
+    
+## Configure Jaws hive sql
+
+To configure the jaws-hive-sql-rest you have to edit the following files inside the conf folder.
+
+    * application.conf: Contains all the application configurations. You will the details for each property inside the file
+    * log4j.properties : Used for configuring the logger
+    
+
+## Run Jaws hive sql
+
+After editing all the configuration files, run jaws-hive-sql-rest in the following manner:
+
+    1. go where you decompressed the tar.gz file:
+       cd jaws-hive-sql-rest/
+    2. run:
+       nohup bin/start-jaws-hive.sh &
+    
+
+## Apis
+
+### Verify that Jaws hive sql is up
+
+    curl 'devbox.local:7080/jaws/hive/index' -X GET
+    
+Results:
+You will receive the following confirmation message that Jaws hive sql is up and running:
+
+"Jaws hive sql rest is up and running!"
+
+### Run query
+
+    curl -d "show databases" 'http://devbox.local:7080/jaws/hive/run?limit=100' -X POST
+    
+
+Parameters:
+
+  * limit [ not required] : limits the query's results
+
+Results:
+
+The api returns an uuid representing the query that was submitted. The query is executed asynchronously and the expectation is that clients poll for logs and completion status.
+
+Example: 1404998257416357bb29d-6801-41ca-82e4-7a265816b50c
