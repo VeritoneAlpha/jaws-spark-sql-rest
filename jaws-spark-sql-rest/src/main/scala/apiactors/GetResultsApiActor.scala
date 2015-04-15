@@ -14,7 +14,7 @@ import akka.actor.actorRef2Scala
 import messages.GetResultsMessage
 import net.liftweb.json._
 import net.liftweb.json.DefaultFormats
-import traits.DAL
+import com.xpatterns.jaws.data.contracts.DAL
 import org.apache.spark.scheduler.HiveUtils
 import ExecutionContext.Implicits.global
 import scala.util.Try
@@ -85,7 +85,7 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCon
 
         val filteredResults = resultsRDD.filter(tuple => tuple._1.asInstanceOf[Long] >= offset && tuple._1.asInstanceOf[Long] < offset + limit).collect()
 
-        Result.fromTuples(schema, filteredResults)
+        new Result(schema, filteredResults)
 
       }
   }

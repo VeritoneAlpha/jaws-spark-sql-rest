@@ -1,7 +1,7 @@
 package apiactors
 
 import implementation.HiveContextWrapper
-import traits.DAL
+import com.xpatterns.jaws.data.contracts.DAL
 import akka.actor.Actor
 import messages.RegisterTableMessage
 import server.Configuration

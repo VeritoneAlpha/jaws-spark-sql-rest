@@ -141,22 +141,4 @@ class RunApiTest extends TestBase {
     assert(flatResults.containsSlice(GenSeq("3", "f")), "Different nb of women")
 
   }
-
-  def selectAllFromTable(url: String) = {
-    val body = s"use $database;\nselect * from $table"
-
-    val queryId = postRun(url, body)
-    val queryStatus = waitforCompletion(queryId, 100)
-    assert(queryStatus === "DONE", "Query is not DONE!")
-    val results = getResults(queryId, 0, 200)
-    val flatResults = results.results.flatMap(x => x)
-    assert(6 === results.results.length, "Different number of rows")
-    assert(3 === results.results(0).length, "Different number of columns")
-    assert(flatResults.containsSlice(GenSeq("Ana", "5", "f")), "Ana is missing")
-    assert(flatResults.containsSlice(GenSeq("George", "10", "m")), "George is missing")
-    assert(flatResults.containsSlice(GenSeq("Alina", "20", "f")), "Alina is missing")
-    assert(flatResults.containsSlice(GenSeq("Paul", "12", "m")), "Paul is missing")
-    assert(flatResults.containsSlice(GenSeq("Pavel", "16", "m")), "Pavel is missing")
-    assert(flatResults.containsSlice(GenSeq("Ioana", "30", "f")), "Ioana is missing")
-  }
 }

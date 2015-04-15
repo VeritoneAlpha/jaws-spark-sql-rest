@@ -1,11 +1,8 @@
-package implementation
+package com.xpatterns.jaws.data.impl
 
-import com.xpatterns.jaws.data.impl.JawsHdfsResults
-import com.xpatterns.jaws.data.impl.JawsHdfsLogging
-import traits.DAL
+import com.xpatterns.jaws.data.contracts.DAL
 import com.xpatterns.jaws.data.contracts.TJawsLogging
 import com.xpatterns.jaws.data.contracts.TJawsResults
-import com.xpatterns.jaws.data.impl.JawsHdfsParquetTables
 import com.xpatterns.jaws.data.contracts.TJawsParquetTables
 
 /**

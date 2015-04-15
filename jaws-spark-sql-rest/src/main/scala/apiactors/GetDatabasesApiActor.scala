@@ -7,7 +7,7 @@ import messages.GetQueriesMessage
 import com.google.common.base.Preconditions
 import server.LogsActor
 import akka.actor.ActorLogging
-import traits.DAL
+import com.xpatterns.jaws.data.contracts.DAL
 import messages.GetDatabasesMessage
 import java.util.UUID
 import server.Configuration

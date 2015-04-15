@@ -8,5 +8,5 @@ import org.scalatest.Suite
 import org.scalatest.Suites
 
 @RunWith(classOf[JUnitRunner])
-class TestSuite extends Suites(new JawsIsUpTest, new RunApiTest) {
+class TestSuite extends Suites(new JawsIsUpTest, new RunApiTest, new RunHiveApiTest) {
 }
