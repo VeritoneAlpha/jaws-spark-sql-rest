@@ -1,6 +1,7 @@
 package org.apache.spark.scheduler
 
 import com.xpatterns.jaws.data.contracts.DAL
+import org.apache.hadoop.conf.{ Configuration => HadoopConfiguration }
 import com.xpatterns.jaws.data.utils.Utils._
 import server.MainActors
 import server.Configuration
@@ -26,7 +27,9 @@ import scala.concurrent.Future
 /**
  * Created by emaorhian
  */
-class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrapper, uuid: String, var isCanceled: Boolean, isLimited: Boolean, maxNumberOfResults: Long, hdfsConf: org.apache.hadoop.conf.Configuration, rddDestination: String) extends Runnable {
+class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrapper,
+  uuid: String, @volatile var isCanceled: Boolean, isLimited: Boolean,
+  maxNumberOfResults: Long, hdfsConf: HadoopConfiguration, rddDestination: String) extends Runnable {
 
   override def run() {
     try {
@@ -113,14 +116,16 @@ class RunScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrappe
 
 }
 
-class RunParquetScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrapper, uuid: String, isCanceled: Boolean, isLimited: Boolean, maxNumberOfResults: Long, hdfsConf: org.apache.hadoop.conf.Configuration, rddDestination: String, tableName: String, tablePath: String)
+class RunParquetScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContextWrapper,
+  uuid: String, isCanceled: Boolean, isLimited: Boolean, maxNumberOfResults: Long,
+  hdfsConf: HadoopConfiguration, rddDestination: String, tableName: String, tablePath: String)
   extends RunScriptTask(dals, hqlScript, hiveContext, uuid, isCanceled, isLimited, maxNumberOfResults, hdfsConf, rddDestination) {
 
   override def run() {
     implicit val timeout = Timeout(Configuration.timeout.toInt)
     val future = ask(JawsController.balancerActor, RegisterTableMessage(tableName, tablePath))
-    				.map(innerFuture => innerFuture.asInstanceOf[Future[Any]])
-    				.flatMap(identity)
+      .map(innerFuture => innerFuture.asInstanceOf[Future[Any]])
+      .flatMap(identity)
 
     future onComplete {
       case Success(x) => x match {
@@ -131,7 +136,7 @@ class RunParquetScriptTask(dals: DAL, hqlScript: String, hiveContext: HiveContex
         case result: String => {
           Configuration.log4j.info(result)
           super.run
-        }    
+        }
       }
       case Failure(ex) => {
         HiveUtils.logMessage(uuid, getCompleteStackTrace(ex), "hql", dals.loggingDal)

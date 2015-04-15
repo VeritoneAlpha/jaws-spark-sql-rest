@@ -23,10 +23,11 @@ import apiactors.ActorOperations._
 import org.apache.spark.scheduler.RunParquetScriptTask
 import org.apache.spark.scheduler.HiveUtils
 import com.xpatterns.jaws.data.utils.QueryState
+import org.apache.hadoop.conf.{Configuration => HadoopConfiguration}
 /**
  * Created by emaorhian
  */
-class RunScriptApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveContext: HiveContextWrapper, dals: DAL) extends Actor {
+class RunScriptApiActor(hdfsConf: HadoopConfiguration, hiveContext: HiveContextWrapper, dals: DAL) extends Actor {
   var taskCache: Cache[String, RunScriptTask] = _
   var threadPool: ThreadPoolTaskExecutor = _
  
