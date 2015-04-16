@@ -4,7 +4,7 @@ import akka.actor.Actor
 import akka.actor.actorRef2Scala
 import com.google.common.base.Preconditions
 import com.xpatterns.jaws.data.contracts.DAL
-import messages.RunScriptMessage
+import messages._
 import java.util.UUID
 import server.Configuration
 import com.google.common.cache.CacheBuilder
@@ -12,10 +12,8 @@ import java.util.concurrent.TimeUnit
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
 import server.MainActors
 import com.google.common.cache.Cache
-import messages.CancelMessage
 import org.apache.spark.scheduler.RunScriptTask
 import implementation.HiveContextWrapper
-import messages.RunParquetMessage
 import org.apache.spark.sql.parquet.ParquetUtils._
 import apiactors.ActorsPaths._
 import scala.util.Try
@@ -47,17 +45,16 @@ class RunScriptApiActor(hdfsConf: HadoopConfiguration, hiveContext: HiveContextW
   }
 
   override def receive = {
-
     case message: RunScriptMessage => {
 
       val uuid = System.currentTimeMillis() + UUID.randomUUID().toString()
       val tryRun = Try {
-        Configuration.log4j.info("[RunScriptApiActor -run]: running the following script: " + message.hqlScript)
+        Configuration.log4j.info("[RunScriptApiActor -run]: running the following script: " + message.script)
         Configuration.log4j.info("[RunScriptApiActor -run]: The script will be executed with the limited flag set on " + message.limited + ". The maximum number of results is " + message.maxNumberOfResults)
 
-        val task = new RunScriptTask(dals, message.hqlScript, hiveContext, uuid, false, message.limited, message.maxNumberOfResults, hdfsConf, message.rddDestination)
+        val task = new RunScriptTask(dals, hiveContext, uuid, hdfsConf, message)
         taskCache.put(uuid, task)
-        writeLaunchStatus(uuid, message.hqlScript)
+        writeLaunchStatus(uuid, message.script)
         threadPool.execute(task)
       }
       returnResult(tryRun, uuid, "run query failed with the following message: ", sender)
@@ -70,7 +67,7 @@ class RunScriptApiActor(hdfsConf: HadoopConfiguration, hiveContext: HiveContextW
         Configuration.log4j.info(s"[RunScriptApiActor -runParquet]: running the following sql: ${message.script}")
         Configuration.log4j.info(s"[RunScriptApiActor -runParquet]: The script will be executed over the ${message.tablePath} file with the ${message.table} table name")
      
-        val task = new RunParquetScriptTask(dals, message.script, hiveContext, uuid, false, message.limited, message.maxNumberOfResults, hdfsConf, message.rddDestination, message.table, message.tablePath)
+        val task = new RunParquetScriptTask(dals, hiveContext, uuid, hdfsConf, message)
         taskCache.put(uuid, task)
         writeLaunchStatus(uuid, message.script)
         threadPool.execute(task)
