@@ -56,7 +56,7 @@ class DeleteQueryTest  extends FunSuite with BeforeAndAfter with ScalaFutures {
     val tAct = TestActorRef(new DeleteQueryApiActor(dals))
     val queryId = System.currentTimeMillis() + UUID.randomUUID().toString()
     val f = tAct ? DeleteQueryMessage(queryId)
-    whenReady(f)(s => assert(s === new ErrorMessage(s"DELETE query failed with the following message:  The query ${queryId} was not found. Please provide a valid query id")))
+    whenReady(f)(s => assert(s === new ErrorMessage(s"DELETE query failed with the following message: The query ${queryId} was not found. Please provide a valid query id")))
 
   }
 
@@ -68,7 +68,7 @@ class DeleteQueryTest  extends FunSuite with BeforeAndAfter with ScalaFutures {
     dals.loggingDal.setState(queryId, QueryState.IN_PROGRESS)
     
     val f = tAct ? DeleteQueryMessage(queryId)
-    whenReady(f)(s => assert(s === new ErrorMessage(s"DELETE query failed with the following message:  The query ${queryId} is IN_PROGRESS. Please wait for its completion or cancel it")))
+    whenReady(f)(s => assert(s === new ErrorMessage(s"DELETE query failed with the following message: The query ${queryId} is IN_PROGRESS. Please wait for its completion or cancel it")))
     
   }
   
