@@ -30,7 +30,7 @@ class GetDatabasesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends A
       var result:Result = null
       val tryGetDatabases = Try {
         val uuid = System.currentTimeMillis() + UUID.randomUUID().toString()
-        val databases = HiveUtils.runMetadataCmd(hiveContext, "show databases", dals.loggingDal, uuid)
+        val databases = HiveUtils.runMetadataCmd(hiveContext, "show databases")
 
         result = Result.trimResults(databases)
       }

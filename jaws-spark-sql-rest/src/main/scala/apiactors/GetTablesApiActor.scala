@@ -36,8 +36,8 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
     val useCommand = "use " + database
     val uuid = System.currentTimeMillis() + UUID.randomUUID().toString()
 
-    HiveUtils.runMetadataCmd(hiveContext, useCommand, dals.loggingDal, uuid)
-    val tables = Result.trimResults(HiveUtils.runMetadataCmd(hiveContext, "show tables", dals.loggingDal, uuid))
+    HiveUtils.runMetadataCmd(hiveContext, useCommand)
+    val tables = Result.trimResults(HiveUtils.runMetadataCmd(hiveContext, "show tables"))
 
     tables.results.foreach(result => {
       if (result.isEmpty == false) {
@@ -67,7 +67,7 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
 
     val useCommand = "use " + database
     val uuid = System.currentTimeMillis() + UUID.randomUUID().toString()
-    HiveUtils.runMetadataCmd(hiveContext, useCommand, dals.loggingDal, uuid)
+    HiveUtils.runMetadataCmd(hiveContext, useCommand)
 
     Configuration.log4j.info("[GetTablesApiActor]: describing table " + table + " from database " + database)
 
@@ -78,7 +78,7 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
       case _ => cmd = "describe " + table
     }
 
-    val description = Result.trimResults(HiveUtils.runMetadataCmd(hiveContext, cmd, dals.loggingDal, uuid))
+    val description = Result.trimResults(HiveUtils.runMetadataCmd(hiveContext, cmd))
     results.put(table, description)
 
     results
