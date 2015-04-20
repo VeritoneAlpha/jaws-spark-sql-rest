@@ -9,12 +9,11 @@ import org.apache.spark.scheduler.HiveUtils
 import org.apache.spark.sql.catalyst.types.StructType
 import org.apache.spark.sql.parquet.ParquetUtils._
 import server.Configuration
-
-import scala.util.Try
 import scala.concurrent._
 import ExecutionContext.Implicits.global
 import scala.util.{ Success, Failure }
 import messages.ErrorMessage
+
 /**
  * Created by lucianm on 06.02.2015.
  */

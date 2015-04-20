@@ -1,6 +1,10 @@
 package apiactors
 
 import messages._
+import scala.concurrent._
+import ExecutionContext.Implicits.global
+import scala.util.{ Success, Failure }
+import messages.ErrorMessage
 import spray.http.StatusCodes
 import scala.concurrent.Await
 import com.xpatterns.jaws.data.contracts.DAL
@@ -27,15 +31,14 @@ class GetParquetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) exten
   override def receive = {
 
     case message: GetParquetTablesMessage => {
-
-      var results: Map[String, Map[String, Result]] = null
-
-      val tryGetTables = Try {
+      val currentSender = sender
+    
+      val getTablesFuture = future {
         if (message.tables.isEmpty) {
           val tables = dals.parquetTableDal.listParquetTables
           message.describe match {
-            case true => results = Map("None" -> (tables map (pTable => pTable.name -> getFields(pTable.name)) toMap))
-            case false => results = Map("None" -> (tables map (pTable => pTable.name -> new Result) toMap))
+            case true => Map("None" -> (tables map (pTable => pTable.name -> getFields(pTable.name)) toMap))
+            case false => Map("None" -> (tables map (pTable => pTable.name -> new Result) toMap))
           }
 
         } else {
@@ -44,11 +47,14 @@ class GetParquetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) exten
               throw new Exception(s" Table $table does not exist")
             table -> getFields(table)
           }).toMap
-          results = Map("None" -> tablesMap)
+          Map("None" -> tablesMap)
         }
       }
 
-      returnResult(tryGetTables, results, "GET tables failed with the following message: ", sender)
+      getTablesFuture onComplete {
+        case Success(result) => currentSender ! result
+        case Failure(e) => currentSender ! ErrorMessage(s"GET tables failed with the following message: ${e.getMessage}")
+      }
     }
   }
 

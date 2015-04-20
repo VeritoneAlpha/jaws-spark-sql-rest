@@ -8,9 +8,9 @@ import implementation.SchemaSettingsFactory.{ StorageType, SourceType }
 case class CancelMessage(queryID: String) extends Serializable
 case class GetDatabasesMessage()
 case class GetQueryInfoMessage(queryID: String)
-case class GetQueriesMessage(startQueryID: String, limit: Integer)
-case class GetLogsMessage(queryID: String, startDate: Long, limit: Integer)
-case class GetResultsMessage(queryID: String, offset: Integer, limit: Integer)
+case class GetQueriesMessage(startQueryID: String, limit: Int)
+case class GetLogsMessage(queryID: String, startDate: Long, limit: Int)
+case class GetResultsMessage(queryID: String, offset: Int, limit: Int)
 case class GetTablesMessage(database: String, describe: Boolean, tables: List[String])
 case class GetExtendedTablesMessage(database: String, table: String)
 case class GetFormattedTablesMessage(database: String, table: String)

@@ -9,33 +9,43 @@ import scala.util.Try
 import apiactors.ActorOperations._
 import org.apache.spark.scheduler.HiveUtils
 import messages.UnregisterTableMessage
+import scala.concurrent._
+import ExecutionContext.Implicits.global
+import scala.util.{ Success, Failure }
+import messages.ErrorMessage
 
 class RegisterParquetTableApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Actor {
   override def receive = {
 
     case message: RegisterTableMessage => {
       Configuration.log4j.info(s"[RegisterParquetTableApiActor]: registering table ${message.name} at ${message.path}")
+      val currentSender = sender
 
-      val tryRegisterTable = Try {
+      val registerTableFuture = future {
         val (namenode, folderPath) = if (message.namenode.isEmpty()) HiveUtils.splitPath(message.path) else (message.namenode, message.path)
         HiveUtils.registerParquetTable(hiveContext, message.name, namenode, folderPath, dals)
       }
 
-      returnResult(tryRegisterTable, s"Table ${message.name} was registered", "RegisterTable failed with the following message: ", sender)
-
+      registerTableFuture onComplete {
+        case Success(_) => currentSender ! s"Table ${message.name} was registered"
+        case Failure(e) => currentSender ! ErrorMessage(s"RegisterTable failed with the following message: ${e.getMessage}")
+      }
     }
 
     case message: UnregisterTableMessage => {
       Configuration.log4j.info(s"[RegisterParquetTableApiActor]: Unregistering table ${message.name}")
+      val currentSender = sender
 
-      val tryUnregisterTable = Try {
+      val unregisterTableFuture = future {
         // unregister table
         hiveContext.getCatalog.unregisterTable(None, message.name)
         dals.parquetTableDal.deleteParquetTable(message.name)
       }
 
-      returnResult(tryUnregisterTable, s"Table ${message.name} was unregistered", "UnregisterTable failed with the following message: ", sender)
-
+      unregisterTableFuture onComplete {
+        case Success(result) => currentSender ! s"Table ${message.name} was unregistered"
+        case Failure(e) => currentSender ! ErrorMessage(s"UnregisterTable failed with the following message: ${e.getMessage}")
+      }
     }
   }
 }

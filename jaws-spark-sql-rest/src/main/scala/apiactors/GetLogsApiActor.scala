@@ -14,8 +14,10 @@ import java.util.Collection
 import server.Configuration
 import com.xpatterns.jaws.data.DTO.Logs
 import com.xpatterns.jaws.data.DTO.Log
-
-import scala.util.Try
+import scala.concurrent._
+import ExecutionContext.Implicits.global
+import scala.util.{ Success, Failure }
+import messages.ErrorMessage
 
 /**
  * Created by emaorhian
@@ -26,26 +28,18 @@ class GetLogsApiActor(dals: DAL) extends Actor {
 
     case message: GetLogsMessage => {
       Configuration.log4j.info("[GetLogsApiActor]: retrieving logs for: " + message.queryID)
-      var logs : Logs = null
-      val tryGetLogs = Try {
-        var startDate = message.startDate
-        var limit = message.limit
+      val currentSender = sender
 
-        Option(message.startDate) match {
-          case None => {
-            startDate = new DateTime(1977, 1, 1, 1, 1, 1, 1).getMillis()
-          }
-          case _ => Configuration.log4j.debug("[GetLogsApiActor]: Start date = " + startDate)
+      val getLogsFuture = future {
+        val limit = Option(message.limit) getOrElse(100)
+        val startDate = Option(message.startDate) getOrElse(new DateTime(1977, 1, 1, 1, 1, 1, 1).getMillis())
 
-        }
-
-        Option(limit) match {
-          case None => limit = 100
-          case _ => Configuration.log4j.debug("[GetLogsApiActor]: Limit = " + limit)
-        }
-      logs = dals.loggingDal.getLogs(message.queryID, startDate, limit)
+        dals.loggingDal.getLogs(message.queryID, startDate, limit)
       }
-      returnResult(tryGetLogs, logs, "GET logs failed with the following message: ", sender)
+      getLogsFuture onComplete {
+        case Success(result) => currentSender ! result
+        case Failure(e) => currentSender ! ErrorMessage(s"GET logs failed with the following message: ${e.getMessage}")
+      }
     }
   }
 }

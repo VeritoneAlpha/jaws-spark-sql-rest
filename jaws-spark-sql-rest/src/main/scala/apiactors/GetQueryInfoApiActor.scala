@@ -1,6 +1,9 @@
 package apiactors
 
-import apiactors.ActorOperations._
+import scala.concurrent._
+import ExecutionContext.Implicits.global
+import scala.util.{ Success, Failure }
+import messages.ErrorMessage
 import messages.GetQueryInfoMessage
 import com.xpatterns.jaws.data.contracts.DAL
 import server.Configuration
@@ -19,13 +22,19 @@ class GetQueryInfoApiActor(dals: DAL) extends Actor {
 
     case message: GetQueryInfoMessage => {
       Configuration.log4j.info("[GetQueryInfoApiActor]: retrieving the query information for " + message.queryID)
+      val currentSender = sender
 
-      var resultQuery: Query = null;
-      val tryGetQueryInfo = Try {
-        
-        resultQuery = new Query(dals.loggingDal.getState(message.queryID).toString, message.queryID, dals.loggingDal.getScriptDetails(message.queryID), dals.loggingDal.getMetaInfo(message.queryID))
+      val getQueryInfoFuture = future {
+        new Query(dals.loggingDal.getState(message.queryID).toString,
+          message.queryID, dals.loggingDal.getScriptDetails(message.queryID),
+          dals.loggingDal.getMetaInfo(message.queryID))
       }
-      returnResult(tryGetQueryInfo, resultQuery, "GET query info failed with the following message: ", sender)
+      
+      getQueryInfoFuture onComplete {
+        case Success(result) => currentSender ! result
+        case Failure(e) => currentSender ! ErrorMessage(s"GET query info failed with the following message: ${e.getMessage}")
+      }
+      
     }
   }
 }
