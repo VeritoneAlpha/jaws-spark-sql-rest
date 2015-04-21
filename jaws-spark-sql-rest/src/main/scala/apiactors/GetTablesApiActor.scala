@@ -7,7 +7,7 @@ import com.xpatterns.jaws.data.contracts.DAL
 import java.util.UUID
 import akka.util.Timeout
 import server.Configuration
-import scala.collection.mutable.Map
+import scala.collection.immutable.Map
 import akka.pattern.ask
 import org.apache.spark.scheduler.HiveUtils
 import implementation.HiveContextWrapper
@@ -15,6 +15,11 @@ import akka.actor.Actor
 import com.xpatterns.jaws.data.DTO.{ Tables, Result }
 import scala.util.{ Try, Success, Failure }
 import apiactors.ActorOperations._
+import scala.collection.immutable.HashMap
+import scala.concurrent._
+import ExecutionContext.Implicits.global
+import messages.ErrorMessage
+
 /**
  * Created by emaorhian
  */
@@ -30,116 +35,104 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
   implicit val timeout = Timeout(Configuration.timeout)
 
   def getTablesForDatabase(database: String, isExtended: DescriptionType, describe: Boolean): Map[String, Result] = {
-    var results = Map[String, Result]()
     Configuration.log4j.info("[GetTablesApiActor]: showing tables for database " + database)
 
-    val useCommand = "use " + database
-    val uuid = System.currentTimeMillis() + UUID.randomUUID().toString()
-
-    HiveUtils.runMetadataCmd(hiveContext, useCommand)
+    HiveUtils.runMetadataCmd(hiveContext, s"use $database")
     val tables = Result.trimResults(HiveUtils.runMetadataCmd(hiveContext, "show tables"))
 
-    tables.results.foreach(result => {
+    tables.results flatMap (result => {
       if (result.isEmpty == false) {
-        if (describe) {
-          results = results ++ describeTable(database, result(0), isExtended)
-        } else {
-          results.put(result(0), new Result)
-        }
+        if (describe) describeTable(database, result(0), isExtended) else Map(result(0) -> new Result)
+      } else {
+        Map[String, Result]()
       }
-    })
-
-    results
+    }) toMap
   }
 
   def describeTables(database: String, tables: List[String]): Map[String, Result] = {
-    var results = Map[String, Result]()
     Configuration.log4j.info(s"[describeTables]: describing the following tables from database= $database: $tables")
-    tables.foreach(table => {
-      results = results ++ describeTable(database, table, new Regular)
-    })
-
-    results
+    tables flatMap (table => describeTable(database, table, new Regular)) toMap
   }
 
   def describeTable(database: String, table: String, isExtended: DescriptionType): Map[String, Result] = {
-    var results = Map[String, Result]()
+    Configuration.log4j.info(s"[GetTablesApiActor]: describing table $table from database $database")
+    HiveUtils.runMetadataCmd(hiveContext, s"use $database")
 
-    val useCommand = "use " + database
-    val uuid = System.currentTimeMillis() + UUID.randomUUID().toString()
-    HiveUtils.runMetadataCmd(hiveContext, useCommand)
-
-    Configuration.log4j.info("[GetTablesApiActor]: describing table " + table + " from database " + database)
-
-    var cmd = ""
-    isExtended match {
-      case _: Extended => cmd = "describe extended " + table
-      case _: Formatted => cmd = "describe formatted " + table
-      case _ => cmd = "describe " + table
+    val cmd = isExtended match {
+      case _: Extended => s"describe extended $table"
+      case _: Formatted => s"describe formatted $table"
+      case _ => s"describe $table"
     }
 
     val description = Result.trimResults(HiveUtils.runMetadataCmd(hiveContext, cmd))
-    results.put(table, description)
-
-    results
+    Map(table -> description)
   }
 
   override def receive = {
 
     case message: GetTablesMessage => {
+      val currentSender = sender
 
-      val results = Map[String, Map[String, Result]]()
-
-      val tryGetTables = Try(
+      val getTablesFutures = future {
         // if no database is specified, the tables for all databases will be retrieved
-        if (Option(message.database).getOrElse("").isEmpty) {
-          val future = ask(databasesActor, GetDatabasesMessage())
-          val allDatabases = Await.result(future, timeout.duration)
+        Option(message.database).getOrElse("") match {
+          case "" => {
+            val future = ask(databasesActor, GetDatabasesMessage())
+            val allDatabases = Await.result(future, timeout.duration)
 
-          allDatabases match {
-            case e: ErrorMessage => throw new Exception(e.message)
-            case result: Result => result.results.foreach(fields => results.put(fields(0), getTablesForDatabase(fields(0), new Regular, message.describe)))
+            allDatabases match {
+              case e: ErrorMessage => throw new Exception(e.message)
+              case result: Result => result.results.flatMap(fields => Map(fields(0) -> getTablesForDatabase(fields(0), new Regular, message.describe))) toMap
+            }
+
           }
+          case _ => {
+            // if there is a list of tables specified, then
+            if (Option(message.tables).getOrElse(List()).isEmpty) {
+              Map(message.database -> getTablesForDatabase(message.database, new Regular, message.describe))
 
-        } else {
-          // if there is a list of tables specified, then
-          if (Option(message.tables).getOrElse(List()).isEmpty) {
-            results.put(message.database, getTablesForDatabase(message.database, new Regular, message.describe))
-
-          } else {
-            results.put(message.database, describeTables(message.database, message.tables))
+            } else {
+              Map(message.database -> describeTables(message.database, message.tables))
+            }
           }
-        })
+        }
+      }
 
-      returnResult(tryGetTables, Tables.fromMutableMap(results).tables, "GET tables failed with the following message: ", sender)
+      getTablesFutures onComplete {
+        case Success(result) => currentSender ! result
+        case Failure(e) => currentSender ! ErrorMessage(s"GET tables failed with the following message: ${e.getMessage}")
+      }
     }
 
     case message: GetExtendedTablesMessage => {
-      val results = Map[String, Map[String, Result]]()
+      val currentSender = sender
+      val getExtendedTablesFuture = future {
+        Option(message.table).getOrElse("") match {
+          case "" => Map(message.database -> getTablesForDatabase(message.database, new Extended, true))
+          case _ => Map(message.database -> describeTable(message.database, message.table, new Extended))
+        }
+      }
 
-      val tryGetExtendedTables = Try(
-        if (Option(message.table).getOrElse("").isEmpty) {
-          results.put(message.database, getTablesForDatabase(message.database, new Extended, true))
-
-        } else {
-          results.put(message.database, describeTable(message.database, message.table, new Extended))
-        })
-
-      returnResult(tryGetExtendedTables, Tables.fromMutableMap(results).tables, "GET extended tables failed with the following message: ", sender)
+      getExtendedTablesFuture onComplete {
+        case Success(result) => currentSender ! result
+        case Failure(e) => currentSender ! ErrorMessage(s"GET extended tables failed with the following message: ${e.getMessage}")
+      }
     }
 
     case message: GetFormattedTablesMessage => {
-      val results = Map[String, Map[String, Result]]()
+      val currentSender = sender
 
-      val tryGetFormattedTables = Try(
-        if (Option(message.table).getOrElse("").isEmpty) {
-          results.put(message.database, getTablesForDatabase(message.database, new Formatted, true))
+      val getFormattedTablesFuture = future {
+        Option(message.table).getOrElse("") match {
+          case "" => Map(message.database -> getTablesForDatabase(message.database, new Formatted, true))
+          case _ => Map(message.database -> describeTable(message.database, message.table, new Formatted))
+        }
+      }
 
-        } else {
-          results.put(message.database, describeTable(message.database, message.table, new Formatted))
-        })
-      returnResult(tryGetFormattedTables, Tables.fromMutableMap(results).tables, "GET formatted tables failed with the following message: ", sender)
-
+      getFormattedTablesFuture onComplete {
+        case Success(result) => currentSender ! result
+        case Failure(e) => currentSender ! ErrorMessage(s"GET formatted tables failed with the following message: ${e.getMessage}")
+      }
     }
 
   }
