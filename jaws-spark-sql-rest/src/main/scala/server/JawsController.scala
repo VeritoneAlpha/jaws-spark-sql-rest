@@ -45,6 +45,7 @@ import scala.concurrent.Future
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.concurrent.duration.Duration._
+import spray.routing.Route
 
 /**
  * Created by emaorhian
@@ -76,47 +77,45 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
   //initialize parquet tables
   initializeParquetTables
 
-  val pathPrefix = "jaws"
-
   implicit val spraySystem: ActorSystem = ActorSystem("spraySystem")
 
-  startServer(interface = Configuration.serverInterface.getOrElse(InetAddress.getLocalHost().getHostName()), port = Configuration.webServicesPort.getOrElse("8080").toInt) {
-    path(pathPrefix / "index") {
-      get {
+  def indexRoute: Route = path("index") {
+    get {
 
-        corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-          complete {
-            "Jaws is up and running!"
-          }
+      corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+        complete {
+          "Jaws is up and running!"
         }
+      }
 
-      } ~
-        options {
-          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
-            complete {
-              "OK"
-            }
-          }
-        }
     } ~
-      path(pathPrefix / "parquet" / "run") {
-        post {
-          parameters('tablePath.as[String], 'table.as[String], 'numberOfResults.as[Int] ? 100, 'limited.as[Boolean], 'destination.as[String] ? Configuration.rddDestinationLocation.getOrElse("hdfs"), 'overwrite.as[Boolean] ? false) { (tablePath, table, numberOfResults, limited, destination, overwrite) =>
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+      options {
+        corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
+          complete {
+            "OK"
+          }
+        }
+      }
+  }
 
-              validate(tablePath != null && !tablePath.trim.isEmpty, Configuration.FILE_EXCEPTION_MESSAGE) {
-                validate(table != null && !table.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
+  def parquetRoute: Route = pathPrefix("parquet") {
+    path("run") {
+      post {
+        parameters('tablePath.as[String], 'table.as[String], 'numberOfResults.as[Int] ? 100, 'limited.as[Boolean], 'destination.as[String] ? Configuration.rddDestinationLocation.getOrElse("hdfs"), 'overwrite.as[Boolean] ? false) { (tablePath, table, numberOfResults, limited, destination, overwrite) =>
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
 
-                  entity(as[String]) { query: String =>
-                    validate(query != null && !query.trim.isEmpty(), Configuration.SCRIPT_EXCEPTION_MESSAGE) {
-                      validate(overwrite == true || dals.parquetTableDal.tableExists(table) == false, Configuration.TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE) {
-                        respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
-                          Configuration.log4j.info(s"The tablePath is $tablePath and the table name is $table")
-                          val future = ask(runScriptActor, RunParquetMessage(query, tablePath, table, limited, numberOfResults, destination))
-                          future.map {
-                            case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                            case result: String => ctx.complete(StatusCodes.OK, result)
-                          }
+            validate(tablePath != null && !tablePath.trim.isEmpty, Configuration.FILE_EXCEPTION_MESSAGE) {
+              validate(table != null && !table.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
+
+                entity(as[String]) { query: String =>
+                  validate(query != null && !query.trim.isEmpty(), Configuration.SCRIPT_EXCEPTION_MESSAGE) {
+                    validate(overwrite == true || dals.parquetTableDal.tableExists(table) == false, Configuration.TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE) {
+                      respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
+                        Configuration.log4j.info(s"The tablePath is $tablePath and the table name is $table")
+                        val future = ask(runScriptActor, RunParquetMessage(query, tablePath, table, limited, numberOfResults, destination))
+                        future.map {
+                          case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                          case result: String => ctx.complete(StatusCodes.OK, result)
                         }
                       }
                     }
@@ -125,16 +124,17 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
               }
             }
           }
-        } ~
-          options {
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.POST))) {
-              complete {
-                "OK"
-              }
+        }
+      } ~
+        options {
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.POST))) {
+            complete {
+              "OK"
             }
           }
-      } ~
-      path(pathPrefix / "parquet" / "registerTable") {
+        }
+    } ~
+      path("registerTable") {
         post {
           parameters('name.as[String], 'path.as[String], 'overwrite.as[Boolean] ? false) { (name, path, overwrite) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
@@ -167,7 +167,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
             }
           }
       } ~
-      path(pathPrefix / "parquet" / "table") {
+      path("table") {
         delete {
           parameters('name.as[String]) { (name) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
@@ -196,7 +196,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
             }
           }
       } ~
-      path(pathPrefix / "parquet" / "tables") {
+      path("tables") {
         get {
           parameterMultiMap { params =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
@@ -233,152 +233,140 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
               }
             }
           }
-      } ~
-      path(pathPrefix / "run") {
-        post {
-          parameters('numberOfResults.as[Int] ? 100, 'limited.as[Boolean], 'destination.as[String] ? Configuration.rddDestinationLocation.getOrElse("hdfs")) { (numberOfResults, limited, destination) =>
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+      }
+  }
 
-              entity(as[String]) { query: String =>
-                validate(query != null && !query.trim.isEmpty(), Configuration.SCRIPT_EXCEPTION_MESSAGE) {
-                  respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
-                    Configuration.log4j.info(s"The query is limited=$limited and the destination is $destination")
-                    val future = ask(runScriptActor, RunScriptMessage(query, limited, numberOfResults, destination.toLowerCase()))
-                    future.map {
-                      case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                      case result: String => ctx.complete(StatusCodes.OK, result)
-                    }
-                  }
-                }
-              }
-            }
-          }
-        } ~
-          options {
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.POST))) {
-              complete {
-                "OK"
-              }
-            }
-          }
-      } ~
-      path(pathPrefix / "logs") {
-        get {
-          parameters('queryID, 'startTimestamp.as[Long].?, 'limit.as[Int]) { (queryID, startTimestamp, limit) =>
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              validate(queryID != null && !queryID.trim.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE) {
-                respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                  var timestamp: java.lang.Long = 0
-                  if (startTimestamp.isDefined) {
-                    timestamp = startTimestamp.get
-                  }
-                  val future = ask(getLogsActor, GetLogsMessage(queryID, timestamp, limit))
-                  future.map {
-                    case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                    case result: Logs => ctx.complete(StatusCodes.OK, result)
-                  }
-                }
-              }
-            }
-          }
-        } ~
-          options {
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
-              complete {
-                "OK"
-              }
-            }
-          }
-      } ~
-      path(pathPrefix / "results") {
-        get {
-          parameters('queryID, 'offset.as[Int], 'limit.as[Int]) { (queryID, offset, limit) =>
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              validate(queryID != null && !queryID.trim.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE) {
-                respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                  val future = ask(getResultsActor, GetResultsMessage(queryID, offset, limit))
-                  future.map {
-                    case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                    case result: Result => ctx.complete(StatusCodes.OK, result)
-                  }
-                }
-              }
-            }
-          }
-        } ~
-          options {
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
-              complete {
-                "OK"
-              }
-            }
-          }
-      } ~
-      path(pathPrefix / "queries") {
-        get {
-          parameters('startQueryID.?, 'limit.as[Int]) { (startQueryID, limit) =>
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+  def runManagementRoute : Route = path("run") {
+    post {
+      parameters('numberOfResults.as[Int] ? 100, 'limited.as[Boolean], 'destination.as[String] ? Configuration.rddDestinationLocation.getOrElse("hdfs")) { (numberOfResults, limited, destination) =>
+        corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
 
-              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                val future = ask(getQueriesActor, GetQueriesMessage(startQueryID.getOrElse(null), limit))
+          entity(as[String]) { query: String =>
+            validate(query != null && !query.trim.isEmpty(), Configuration.SCRIPT_EXCEPTION_MESSAGE) {
+              respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
+                Configuration.log4j.info(s"The query is limited=$limited and the destination is $destination")
+                val future = ask(runScriptActor, RunScriptMessage(query, limited, numberOfResults, destination.toLowerCase()))
                 future.map {
                   case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                  case result: Queries => ctx.complete(StatusCodes.OK, result)
+                  case result: String => ctx.complete(StatusCodes.OK, result)
                 }
               }
             }
           }
-        } ~
-          options {
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
-              complete {
-                "OK"
-              }
-            }
+        }
+      }
+    } ~
+      options {
+        corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.POST))) {
+          complete {
+            "OK"
           }
-      } ~
-      path(pathPrefix / "queryInfo") {
-        get {
-          parameters('queryID) { queryID =>
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              validate(queryID != null && !queryID.trim.isEmpty, Configuration.UUID_EXCEPTION_MESSAGE) {
-
-                respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                  val future = ask(getQueryInfoActor, GetQueryInfoMessage(queryID))
-                  future.map {
-                    case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                    case result: Query => ctx.complete(StatusCodes.OK, result)
-                  }
+        }
+      }
+  } ~
+    path("logs") {
+      get {
+        parameters('queryID, 'startTimestamp.as[Long].?, 'limit.as[Int]) { (queryID, startTimestamp, limit) =>
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+            validate(queryID != null && !queryID.trim.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE) {
+              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                var timestamp: java.lang.Long = 0
+                if (startTimestamp.isDefined) {
+                  timestamp = startTimestamp.get
+                }
+                val future = ask(getLogsActor, GetLogsMessage(queryID, timestamp, limit))
+                future.map {
+                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                  case result: Logs => ctx.complete(StatusCodes.OK, result)
                 }
               }
             }
           }
         }
       } ~
-      path(pathPrefix / "databases") {
-        get {
+        options {
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
+            complete {
+              "OK"
+            }
+          }
+        }
+    } ~
+    path("results") {
+      get {
+        parameters('queryID, 'offset.as[Int], 'limit.as[Int]) { (queryID, offset, limit) =>
           corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-
+            validate(queryID != null && !queryID.trim.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE) {
+              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                val future = ask(getResultsActor, GetResultsMessage(queryID, offset, limit))
+                future.map {
+                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                  case result: Result => ctx.complete(StatusCodes.OK, result)
+                }
+              }
+            }
+          }
+        }
+      } ~
+        options {
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
+            complete {
+              "OK"
+            }
+          }
+        }
+    } ~
+    path("queries") {
+      get {
+        parameters('startQueryID.?, 'limit.as[Int]) { (startQueryID, limit) =>
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
             respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-              val future = ask(getDatabasesActor, GetDatabasesMessage())
+              val future = ask(getQueriesActor, GetQueriesMessage(startQueryID.getOrElse(null), limit))
               future.map {
                 case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                case result: Result => ctx.complete(StatusCodes.OK, result)
+                case result: Queries => ctx.complete(StatusCodes.OK, result)
               }
             }
           }
-        } ~
-          options {
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
-              complete {
-                "OK"
-              }
-            }
-          }
+        }
       } ~
-      path(pathPrefix / "cancel") {
-        post {
-          parameters('queryID.as[String]) { queryID =>
+        options {
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
+            complete {
+              "OK"
+            }
+          }
+        }
+    } ~
+    path("queryInfo") {
+      get {
+        parameters('queryID) { queryID =>
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+            validate(queryID != null && !queryID.trim.isEmpty, Configuration.UUID_EXCEPTION_MESSAGE) {
+
+              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                val future = ask(getQueryInfoActor, GetQueryInfoMessage(queryID))
+                future.map {
+                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                  case result: Query => ctx.complete(StatusCodes.OK, result)
+                }
+              }
+            }
+          }
+        }
+      } ~
+        options {
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
+            complete {
+              "OK"
+            }
+          }
+        }
+    } ~
+    path("cancel") {
+      post {
+        parameters('queryID.as[String]) { queryID =>
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
             complete {
               balancerActor ! CancelMessage(queryID)
 
@@ -386,59 +374,84 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
               "Cancel message was sent"
             }
           }
-        } ~
-          options {
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.POST))) {
-              complete {
-                "OK"
-              }
+        }
+      } ~
+        options {
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.POST))) {
+            complete {
+              "OK"
             }
           }
-      } ~
-      path(pathPrefix / "tables") {
-        get {
-          parameterMultiMap { params =>
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-
-              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                var database = ""
-                var describe = true
-                var tables: List[String] = List()
-
-                params.foreach(touple => touple._1 match {
-                  case "database" => {
-                    if (touple._2 != null && !touple._2.isEmpty)
-                      database = touple._2(0)
-                  }
-                  case "describe" => {
-                    if (touple._2 != null && !touple._2.isEmpty)
-                      describe = Try(touple._2(0).toBoolean).getOrElse(true)
-                  }
-                  case "tables" => {
-                    tables = touple._2
-                  }
-                  case _ => Configuration.log4j.warn(s"Unknown parameter ${touple._1}!")
-                })
-                Configuration.log4j.info(s"Retrieving table information for database=$database, tables= $tables, with describe flag set on: $describe")
-                val future = ask(getTablesActor, new GetTablesMessage(database, describe, tables))
-
+        }
+    } ~
+    path("query") {
+      delete {
+        parameters('queryID.as[String]) { queryID =>
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+            validate(queryID != null && !queryID.trim.isEmpty, Configuration.UUID_EXCEPTION_MESSAGE) {
+              respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
+                val future = ask(deleteQueryActor, new DeleteQueryMessage(queryID))
                 future.map {
                   case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                  case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
+                  case message: String => ctx.complete(StatusCodes.OK, message)
                 }
               }
             }
           }
-        } ~
-          options {
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
-              complete {
-                "OK"
-              }
+        }
+      } ~
+        options {
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
+            complete {
+              "OK"
             }
           }
+        }
+    }
+
+  def tablesRoute: Route = pathPrefix("tables") {
+    get {
+      parameterMultiMap { params =>
+        corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+
+          respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+            var database = ""
+            var describe = true
+            var tables: List[String] = List()
+
+            params.foreach(touple => touple._1 match {
+              case "database" => {
+                if (touple._2 != null && !touple._2.isEmpty)
+                  database = touple._2(0)
+              }
+              case "describe" => {
+                if (touple._2 != null && !touple._2.isEmpty)
+                  describe = Try(touple._2(0).toBoolean).getOrElse(true)
+              }
+              case "tables" => {
+                tables = touple._2
+              }
+              case _ => Configuration.log4j.warn(s"Unknown parameter ${touple._1}!")
+            })
+            Configuration.log4j.info(s"Retrieving table information for database=$database, tables= $tables, with describe flag set on: $describe")
+            val future = ask(getTablesActor, new GetTablesMessage(database, describe, tables))
+
+            future.map {
+              case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+              case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
+            }
+          }
+        }
+      }
+    } ~
+      options {
+        corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
+          complete {
+            "OK"
+          }
+        }
       } ~
-      path(pathPrefix / "tables" / "extended") {
+      path("extended") {
         get {
           parameters('database.as[String], 'table.?) { (database, table) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
@@ -461,7 +474,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
             }
           }
       } ~
-      path(pathPrefix / "tables" / "formatted") {
+      path("formatted") {
         get {
           parameters('database.as[String], 'table.?) { (database, table) =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
@@ -483,71 +496,77 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
               }
             }
           }
-      } ~
-      path(pathPrefix / "schema") {
-        get {
-          parameters('path.as[String], 'sourceType.as[String], 'storageType.?) { (path, sourceType, storageType) =>
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              validate(!path.trim.isEmpty, Configuration.PATH_IS_EMPTY) {
-                var validSourceType: SourceType = null
-                var validStorageType: StorageType = null
-                val validateParams = Try {
-                  validSourceType = SchemaSettingsFactory.getSourceType(sourceType)
-                  validStorageType = SchemaSettingsFactory.getStorageType(storageType.getOrElse("hdfs"))
-                }
-                respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                  validateParams match {
-                    case Failure(e) =>
-                      Configuration.log4j.error(e.getMessage)
-                      ctx.complete(StatusCodes.InternalServerError, e.getMessage)
-                    case Success(_) =>
-                      val schemaRequest: GetDatasourceSchemaMessage = GetDatasourceSchemaMessage(path, validSourceType, validStorageType)
-                      val future = ask(getDatasourceSchemaActor, schemaRequest)
-                      future.map {
-                        case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                        case result: String =>
-                          Configuration.log4j.info("Getting the data source schema was successful!")
-                          ctx.complete(StatusCodes.OK, result)
-                      }
-                  }
-                }
-              }
-            }
-          }
-        } ~
-          options {
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
-              complete {
-                "OK"
-              }
-            }
-          }
-      } ~
-      path(pathPrefix / "query") {
-        delete {
-          parameters('queryID.as[String]) { queryID =>
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              validate(queryID != null && !queryID.trim.isEmpty, Configuration.UUID_EXCEPTION_MESSAGE) {
-                respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
-                  val future = ask(deleteQueryActor, new DeleteQueryMessage(queryID))
-                  future.map {
-                    case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                    case message: String => ctx.complete(StatusCodes.OK, message)
-                  }
-                }
-              }
-            }
-          }
-        } ~
-          options {
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
-              complete {
-                "OK"
-              }
-            }
-          }
       }
   }
+
+  def metadataRoute: Route = tablesRoute ~ path("databases") {
+
+    get {
+      corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+
+        respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+          val future = ask(getDatabasesActor, GetDatabasesMessage())
+          future.map {
+            case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+            case result: Result => ctx.complete(StatusCodes.OK, result)
+          }
+        }
+      }
+    } ~
+      options {
+        corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
+          complete {
+            "OK"
+          }
+        }
+      }
+  } ~
+    path("schema") {
+      get {
+        parameters('path.as[String], 'sourceType.as[String], 'storageType.?) { (path, sourceType, storageType) =>
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+            validate(!path.trim.isEmpty, Configuration.PATH_IS_EMPTY) {
+              var validSourceType: SourceType = null
+              var validStorageType: StorageType = null
+              val validateParams = Try {
+                validSourceType = SchemaSettingsFactory.getSourceType(sourceType)
+                validStorageType = SchemaSettingsFactory.getStorageType(storageType.getOrElse("hdfs"))
+              }
+              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                validateParams match {
+                  case Failure(e) =>
+                    Configuration.log4j.error(e.getMessage)
+                    ctx.complete(StatusCodes.InternalServerError, e.getMessage)
+                  case Success(_) =>
+                    val schemaRequest: GetDatasourceSchemaMessage = GetDatasourceSchemaMessage(path, validSourceType, validStorageType)
+                    val future = ask(getDatasourceSchemaActor, schemaRequest)
+                    future.map {
+                      case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                      case result: String =>
+                        Configuration.log4j.info("Getting the data source schema was successful!")
+                        ctx.complete(StatusCodes.OK, result)
+                    }
+                }
+              }
+            }
+          }
+        }
+      } ~
+        options {
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
+            complete {
+              "OK"
+            }
+          }
+        }
+    }
+
+  startServer(interface = Configuration.serverInterface.getOrElse(InetAddress.getLocalHost().getHostName()),
+    port = Configuration.webServicesPort.getOrElse("8080").toInt) {
+      pathPrefix("jaws") {
+        indexRoute ~ parquetRoute ~ metadataRoute ~ runManagementRoute
+      }
+    }
 
   private val reactiveServer = new ReactiveServer(Configuration.webSocketsPort.getOrElse("8081").toInt, MainActors.logsActor)
   reactiveServer.start()
