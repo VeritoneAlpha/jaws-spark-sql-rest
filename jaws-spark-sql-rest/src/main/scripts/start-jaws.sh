@@ -1,4 +1,10 @@
-dir=`dirname $0`
+get_abs_script_path() {
+pushd . >/dev/null
+cd $(dirname $0)
+dir=$(pwd)
+popd  >/dev/null
+}
+
 parentdir="$(dirname "$dir")"
 logsFolder=$parentdir/logs
 if [ ! -d "$logsFolder" ]; then
