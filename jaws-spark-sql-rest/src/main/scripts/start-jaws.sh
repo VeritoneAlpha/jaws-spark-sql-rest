@@ -5,6 +5,7 @@ dir=$(pwd)
 popd  >/dev/null
 }
 
+get_abs_script_path
 parentdir="$(dirname "$dir")"
 logsFolder=$parentdir/logs
 if [ ! -d "$logsFolder" ]; then
