@@ -60,7 +60,7 @@ After editing all the configuration files Jaws can be run in the following manne
 Below are some queries with example purpose:
 
 ### Run api:
-    curl -d "select * from table" 'http://devbox.local:8181/jaws/run?limited=true&numberOfResults=99' -X POST
+    curl -d "select * from table" 'http://devbox.local:9080/jaws/run?limited=true&numberOfResults=99' -X POST
 
 Parameters:
 
@@ -77,7 +77,7 @@ Example:
  1404998257416357bb29d-6801-41ca-82e4-7a265816b50c
 
 ### Run parquet api:
-    curl -d "select * from testTable" 'http://devbox.local:8181/jaws/parquet/run?tablePath=tachyon://devbox.local:19998/user/jaws/parquetFolder&table=testTable&limited=true&numberOfResults=99&overwrite=false' -X POST
+    curl -d "select * from testTable" 'http://devbox.local:9080/jaws/parquet/run?tablePath=tachyon://devbox.local:19998/user/jaws/parquetFolder&table=testTable&limited=true&numberOfResults=99&overwrite=false' -X POST
 
 Parameters:
 
@@ -98,7 +98,7 @@ Example:
  1404998257416357bb29d-6801-41ca-82e4-7a265816b50c
 
 ### Register parquet table api:
-    curl 'http://devbox.local:8181/jaws/parquet/registerTable?path=tachyon://devbox.local:19998/user/jaws/parquetFolder&name=testTable&overwrite=false' -X POST
+    curl 'http://devbox.local:9080/jaws/parquet/registerTable?path=tachyon://devbox.local:19998/user/jaws/parquetFolder&name=testTable&overwrite=false' -X POST
 
 Parameters:
 
@@ -115,7 +115,7 @@ Exemple:
  Table testTable was registered
  
 ### Unregister parquet table api:
-    curl 'http://devbox.local:8181/jaws/parquet/table?name=testTable' -X DELETE
+    curl 'http://devbox.local:9080/jaws/parquet/table?name=testTable' -X DELETE
 
 Parameters:
 
@@ -131,9 +131,9 @@ Exemple:
 
 ### Get parquet tables api:
 
-    curl 'http://devbox.local:8181/jaws/parquet/tables' -X GET
-    curl 'http://devbox.local:8181/jaws/parquet/tables?describe=false' -X GET
-    curl 'http://devbox.local:8181/jaws/parquet/tables?tables=table1&tables=table2' -X GET
+    curl 'http://devbox.local:9080/jaws/parquet/tables' -X GET
+    curl 'http://devbox.local:9080/jaws/parquet/tables?describe=false' -X GET
+    curl 'http://devbox.local:9080/jaws/parquet/tables?tables=table1&tables=table2' -X GET
 
 Parameters:
 
@@ -148,59 +148,28 @@ If a table list is provided, then those will be the tables that will be describe
 
 Example:
 
-{
-
-    "test": {
-        "user_predictions": {
-            "schema": [
-                {
-                    "name": "result",
-                    "dataType": "StringType"
-                }
-            ],
-            "results": [
-                [
-                    "userid",
-                    "int"                 
+    {
+        "None": {
+            "numbers": {
+                "schema": [
+                    {
+                        "name": "result",
+                        "dataType": "StringType"
+                    }
                 ],
-                [
-                    "moviename",
-                    "string"
+                "results": [
+                    [
+                        "nb",
+                        "IntegerType"
+                    ]
                 ]
-            ]
-        },
-        "testsimple": {
-            "schema": [
-               {
-                    "name": "result",
-                    "dataType": "StringType"
-                }
-            ],
-            "results": [
-                [
-                    "ip",
-                    "string"
-                ],
-                [
-                    "time",
-                    "string"
-                ],
-                [
-                    "state",
-                    "string"
-                ],
-                [
-                    "reason",
-                    "string"
-                ]
-            ]
-        },
+            }
+        }
     }
-}
 
 
 ### Logs api:
-    curl 'http://devbox.local:8181/jaws/logs?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&startTimestamp=0&limit=10' -X GET
+    curl 'http://devbox.local:9080/jaws/logs?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&startTimestamp=0&limit=10' -X GET
 
 Parameters:
 
@@ -214,30 +183,30 @@ The api returns a JSON with a list of log entries and the status of the submitte
 
 Exemple:
 
-{
-
-    "logs": [
-        {
-            "log": "There are 2 commands that need to be executed",
-            "queryID": "hql",
-            "timestamp": 1404998257430
-        },
-        {
-            "log": "Command progress : There were executed 1 commands out of 2",
-            "queryID": "hql",
-            "timestamp": 1404998257501
-        },
-        {
-            "log": "The job 16 has started. Executing command --1404998257416357bb29d-6801-41ca-82e4-7a265816b50c\nselect UPkmbVaZXr.* from ( select * from user_predictions limit 3) UPkmbVaZXr limit 100",
-            "queryID": "16",
-            "timestamp": 1404998258154
-        }
-    ],
-    "status": "DONE"
-}
+    {
+    
+        "logs": [
+            {
+                "log": "There are 2 commands that need to be executed",
+                "queryID": "hql",
+                "timestamp": 1404998257430
+            },
+            {
+                "log": "Command progress : There were executed 1 commands out of 2",
+                "queryID": "hql",
+                "timestamp": 1404998257501
+            },
+            {
+                "log": "The job 16 has started. Executing command --1404998257416357bb29d-6801-41ca-82e4-7a265816b50c\nselect UPkmbVaZXr.* from ( select * from user_predictions limit 3) UPkmbVaZXr limit 100",
+                "queryID": "16",
+                "timestamp": 1404998258154
+            }
+        ],
+        "status": "DONE"
+    }
 
 ### Results api:
-    curl 'http://devbox.local:8181/jaws/results?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&offset=0&limit=10' -X GET
+    curl 'http://devbox.local:9080/jaws/results?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&offset=0&limit=10' -X GET
 
 Parameters:
 
@@ -250,31 +219,53 @@ Results:
 The api returns a JSON containing the results schema and a list of result entries. The results are retrieved in pages, with the size specified by the limit parameter, starting with offset.
 
 Example:
-{
 
-    "schema": [
-        "userid",
-        "moviename"
-    ],
-    "results": [
-        [
-            "269",
-            "Blade Runner (1982)"
+    {
+        "schema": [
+            {
+                "name": "name",
+                "dataType": "StringType"
+            },
+            {
+                "name": "age",
+                "dataType": "IntegerType"
+            },
+            {
+                "name": "sex",
+                "dataType": "StringType"
+            }
         ],
-        [
-            "234",
-            "Lone Star (1996)"
-        ],
-        [
-            "92",
-            "Grand Day Out, A (1992)"
+        "results": [
+            [
+                "Ana",
+                "5",
+                "f"
+            ],
+            [
+                "George",
+                "10",
+                "m"
+            ],
+            [
+                "Alina",
+                "20",
+                "f"
+            ],
+            [
+                "Paul",
+                "12",
+                "m"
+            ],
+            [
+                "Pavel",
+                "16",
+                "m"
+            ]
         ]
-    ]
-}
-
+    }
 
 ### Queries api:
-    curl 'http://devbox.local:8181/jaws/queries?startQueryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&limit=50' -X GET
+    curl 'http://devbox.local:9080/jaws/queries?startQueryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&limit=50' -X GET
 
 Parameters:
 
@@ -286,29 +277,36 @@ Results:
 The api returns a JSON containing a list of queries and associated meta information, in chronological order (most recent at the top)
 
 Example:
-{
-
-    "queries": [
-        {
-            "state": "DONE",
-            "queryID": "1404998257416357bb29d-6801-41ca-82e4-7a265816b50c",
-            "query": "USE test;\n\nselect * from user_predictions limit 3"
-        },
-        {
-            "state": "DONE",
-            "queryID": "14049979591823fde2ad2-3dcd-4cc9-92ec-4a65745f0d12",
-            "query": "drop table if exists ii_tachyon;\ncreate table ii_tachyon as select * from varsta;\nselect * from ii_tachyon;"
-        },
-        {
-            "state": "FAILED",
-            "queryID": "1404977509762f832602b-2ad8-423f-ab45-97ebcc354167",
-            "query": "USE test;\n\nrefresh;\n\nselect userid from ema_tachyon;"
-        }
-    ]
-}
+    
+    {
+        "queries": [
+            {
+                "state": "DONE",
+                "queryID": "142962545249766b92481-f437-4ee2-9284-cf192fcc2769",
+                "query": "drop database if exists sample cascade;\ncreate database sample;\nuse sample;\n\nDROP TABLE IF EXISTS memrecno_raw;\n\ncreate external table memrecno_raw(line STRING) stored as textfile location 'hdfs://devbox.local:8020/user/ubuntu/tcomponent/restApiTest/';\n\nselect count(*) from memrecno_raw;",
+                "runMetaInfo": {
+                    "nrOfResults": 1,
+                    "maxNrOfResults": 100,
+                    "resultsDestination": 0,
+                    "isLimited": true
+                }
+            },
+            {
+                "state": "DONE",
+                "queryID": "1429534537434ecf62272-1273-4b3a-8b27-efd68ab0fe04",
+                "query": "USE ematest;\n\nselect count (*) from test",
+                "runMetaInfo": {
+                    "nrOfResults": 1,
+                    "maxNrOfResults": 100,
+                    "resultsDestination": 0,
+                    "isLimited": true
+                }
+            }
+        ]
+    }
 
 ### queryInfo api:
-    curl 'http://devbox.local:8181/jaws/queryInfo?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7' -X GET
+    curl 'http://devbox.local:9080/jaws/queryInfo?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7' -X GET
 
 Parameters:
 
@@ -320,14 +318,20 @@ The api returns the status and the query string (could be one statement or an en
 
 Example:
 
-        {
-            "state": "DONE",
-            "queryID": "1404998257416357bb29d-6801-41ca-82e4-7a265816b50c",
-            "query": "USE test;\n\nselect * from user_predictions limit 3"
+    {
+        "state": "DONE",
+        "queryID": "1429630175322f23cf070-42c1-4cde-80a3-5e2f74b98a0c",
+        "query": "USE ematest;\n\nselect count (*) from test",
+        "runMetaInfo": {
+            "nrOfResults": 1,
+            "maxNrOfResults": 100,
+            "resultsDestination": 0,
+            "isLimited": true
         }
+    }
 
 ### Databases api:
-    curl 'http://devbox.local:8181/jaws/databases' -X GET
+    curl 'http://devbox.local:9080/jaws/databases' -X GET
 
 Results:
 
@@ -336,7 +340,10 @@ The api returns a JSON containing a list of existing databases.
 {
 
     "schema": [
-        "database_name"
+        {
+            "name": "result",
+            "dataType": "stringType"
+        }
     ],
     "results": [
         [
@@ -354,7 +361,7 @@ The api returns a JSON containing a list of existing databases.
 Example:
 
 ### Cancel api:
-    curl 'http://devbox.local:8181/jaws/cancel?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7' -X POST
+    curl 'http://devbox.local:9080/jaws/cancel?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7' -X POST
 
 Parameters:
 
@@ -365,10 +372,10 @@ This api cancels a running query. Unless Jaws runs in fine-grained mode under Me
 
 ### Tables api:
 
-    curl 'http://devbox.local:8181/jaws/tables' -X GET
-    curl 'http://devbox.local:8181/jaws/tables?database=default' -X GET
-    curl 'http://devbox.local:8181/jaws/tables?database=default&describe=false' -X GET
-    curl 'http://devbox.local:8181/jaws/tables?database=default&tables=table1&tables=table2' -X GET
+    curl 'http://devbox.local:9080/jaws/tables' -X GET
+    curl 'http://devbox.local:9080/jaws/tables?database=default' -X GET
+    curl 'http://devbox.local:9080/jaws/tables?database=default&describe=false' -X GET
+    curl 'http://devbox.local:9080/jaws/tables?database=default&tables=table1&tables=table2' -X GET
 
 Parameters:
 
@@ -440,8 +447,8 @@ Example:
 
 ### Tables extended api:
 
-    curl 'http://devbox.local:8181/jaws/tables/extended?database=default&table=test' -X GET
-    curl 'http://devbox.local:8181/jaws/tables/extended?database=default' -X GET
+    curl 'http://devbox.local:9080/jaws/tables/extended?database=default&table=test' -X GET
+    curl 'http://devbox.local:9080/jaws/tables/extended?database=default' -X GET
 
 Parameters:
 
@@ -493,8 +500,8 @@ Example:
 
 ### Tables formatted api:
 
-    curl 'http://devbox.local:8181/jaws/tables/formatted?database=default&table=test' -X GET
-    curl 'http://devbox.local:8181/jaws/tables/formatted?database=default' -X GET
+    curl 'http://devbox.local:9080/jaws/tables/formatted?database=default&table=test' -X GET
+    curl 'http://devbox.local:9080/jaws/tables/formatted?database=default' -X GET
 
 Parameters:
 
@@ -690,9 +697,9 @@ Example:
 
 ### Schema api:
 
-    curl 'http://devbox.local:8181/jaws/schema?path=databaseName.tableName&sourceType=hive' -X GET
-    curl 'http://devbox.local:8181/jaws/schema?path=/user/test/location&sourceType=parquet&storageType=tachyon' -X GET
-    curl 'http://devbox.local:8181/jaws/schema?path=/user/test/location&sourceType=parquet' -X GET
+    curl 'http://devbox.local:9080/jaws/schema?path=databaseName.tableName&sourceType=hive' -X GET
+    curl 'http://devbox.local:9080/jaws/schema?path=/user/test/location&sourceType=parquet&storageType=tachyon' -X GET
+    curl 'http://devbox.local:9080/jaws/schema?path=/user/test/location&sourceType=parquet' -X GET
 
 Parameters:
 
@@ -861,7 +868,7 @@ This is an API that deletes from the database all the information about a query:
     - query meta info
     - query results
 
-    curl 'http://devbox.local:8181/jaws/query?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7' -X DELETE
+    curl 'http://devbox.local:9080/jaws/query?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7' -X DELETE
     
 
 Parameters:
