@@ -236,7 +236,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
       }
   }
 
-  def runManagementRoute : Route = path("run") {
+  def runManagementRoute: Route = path("run") {
     post {
       parameters('numberOfResults.as[Int] ? 100, 'limited.as[Boolean], 'destination.as[String] ? Configuration.rddDestinationLocation.getOrElse("hdfs")) { (numberOfResults, limited, destination) =>
         corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
@@ -410,35 +410,37 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
     }
 
   def tablesRoute: Route = pathPrefix("tables") {
-    get {
-      parameterMultiMap { params =>
-        corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+    pathEnd {
+      get {
+        parameterMultiMap { params =>
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
 
-          respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-            var database = ""
-            var describe = true
-            var tables: List[String] = List()
+            respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+              var database = ""
+              var describe = true
+              var tables: List[String] = List()
 
-            params.foreach(touple => touple._1 match {
-              case "database" => {
-                if (touple._2 != null && !touple._2.isEmpty)
-                  database = touple._2(0)
-              }
-              case "describe" => {
-                if (touple._2 != null && !touple._2.isEmpty)
-                  describe = Try(touple._2(0).toBoolean).getOrElse(true)
-              }
-              case "tables" => {
-                tables = touple._2
-              }
-              case _ => Configuration.log4j.warn(s"Unknown parameter ${touple._1}!")
-            })
-            Configuration.log4j.info(s"Retrieving table information for database=$database, tables= $tables, with describe flag set on: $describe")
-            val future = ask(getTablesActor, new GetTablesMessage(database, describe, tables))
+              params.foreach(touple => touple._1 match {
+                case "database" => {
+                  if (touple._2 != null && !touple._2.isEmpty)
+                    database = touple._2(0)
+                }
+                case "describe" => {
+                  if (touple._2 != null && !touple._2.isEmpty)
+                    describe = Try(touple._2(0).toBoolean).getOrElse(true)
+                }
+                case "tables" => {
+                  tables = touple._2
+                }
+                case _ => Configuration.log4j.warn(s"Unknown parameter ${touple._1}!")
+              })
+              Configuration.log4j.info(s"Retrieving table information for database=$database, tables= $tables, with describe flag set on: $describe")
+              val future = ask(getTablesActor, new GetTablesMessage(database, describe, tables))
 
-            future.map {
-              case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-              case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
+              future.map {
+                case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
+              }
             }
           }
         }
