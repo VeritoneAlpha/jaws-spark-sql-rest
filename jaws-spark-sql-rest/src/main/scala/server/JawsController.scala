@@ -134,22 +134,24 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
           }
         }
     } ~
-      path("registerTable") {
-        post {
-          parameters('name.as[String], 'path.as[String], 'overwrite.as[Boolean] ? false) { (name, path, overwrite) =>
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              {
-                validate(path != null && !path.trim.isEmpty, Configuration.FILE_EXCEPTION_MESSAGE) {
-                  validate(name != null && !name.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
-                    validate(overwrite == true || dals.parquetTableDal.tableExists(name) == false, Configuration.TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE) {
-                      respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
-                        Configuration.log4j.info(s"Registering table $name having the path $path")
-                        val future = ask(balancerActor, RegisterTableMessage(name, path))
-                          .map(innerFuture => innerFuture.asInstanceOf[Future[Any]])
-                          .flatMap(identity)
-                        future.map {
-                          case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                          case result: String => ctx.complete(StatusCodes.OK, result)
+      pathPrefix("tables") {
+        pathEnd {
+          post {
+            parameters('name.as[String], 'path.as[String], 'overwrite.as[Boolean] ? false) { (name, path, overwrite) =>
+              corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+                {
+                  validate(path != null && !path.trim.isEmpty, Configuration.FILE_EXCEPTION_MESSAGE) {
+                    validate(name != null && !name.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
+                      validate(overwrite == true || dals.parquetTableDal.tableExists(name) == false, Configuration.TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE) {
+                        respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
+                          Configuration.log4j.info(s"Registering table $name having the path $path")
+                          val future = ask(balancerActor, RegisterTableMessage(name, path))
+                            .map(innerFuture => innerFuture.asInstanceOf[Future[Any]])
+                            .flatMap(identity)
+                          future.map {
+                            case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                            case result: String => ctx.complete(StatusCodes.OK, result)
+                          }
                         }
                       }
                     }
@@ -157,47 +159,8 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
                 }
               }
             }
-          }
-        } ~
-          options {
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.POST))) {
-              complete {
-                "OK"
-              }
-            }
-          }
-      } ~
-      path("table") {
-        delete {
-          parameters('name.as[String]) { (name) =>
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              {
-                validate(name != null && !name.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
-                  respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
-                    Configuration.log4j.info(s"Unregistering table $name ")
-                    val future = ask(balancerActor, UnregisterTableMessage(name))
-                      .map(innerFuture => innerFuture.asInstanceOf[Future[Any]])
-                      .flatMap(identity)
-                    future.map {
-                      case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                      case result: String => ctx.complete(StatusCodes.OK, result)
-                    }
-                  }
-                }
-              }
-            }
-          }
-        } ~
-          options {
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.POST))) {
-              complete {
-                "OK"
-              }
-            }
-          }
-      } ~
-      path("tables") {
-        get {
+          } ~
+          get {
           parameterMultiMap { params =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
 
@@ -225,9 +188,30 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
               }
             }
           }
+        }
         } ~
+          delete {
+            path(Segment){ name =>
+              corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+                {
+                  validate(name != null && !name.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
+                    respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
+                      Configuration.log4j.info(s"Unregistering table $name ")
+                      val future = ask(balancerActor, UnregisterTableMessage(name))
+                        .map(innerFuture => innerFuture.asInstanceOf[Future[Any]])
+                        .flatMap(identity)
+                      future.map {
+                        case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                        case result: String => ctx.complete(StatusCodes.OK, result)
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          } ~
           options {
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.POST, HttpMethods.DELETE))) {
               complete {
                 "OK"
               }
