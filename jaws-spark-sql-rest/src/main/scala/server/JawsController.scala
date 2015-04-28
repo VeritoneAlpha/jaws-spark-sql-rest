@@ -46,6 +46,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.concurrent.duration.Duration._
 import spray.routing.Route
+import com.xpatterns.jaws.data.DTO.Databases
 
 /**
  * Created by emaorhian
@@ -494,7 +495,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
           val future = ask(getDatabasesActor, GetDatabasesMessage())
           future.map {
             case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-            case result: Result => ctx.complete(StatusCodes.OK, result)
+            case result: Databases => ctx.complete(StatusCodes.OK, result)
           }
         }
       }

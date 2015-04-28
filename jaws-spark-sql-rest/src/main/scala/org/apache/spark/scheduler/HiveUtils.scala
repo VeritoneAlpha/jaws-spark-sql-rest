@@ -112,7 +112,7 @@ object HiveUtils {
       case ("drop", _) | ("show", _) | ("describe", _) => {
         Configuration.log4j.info("[HiveUtils]: the command is a metadata query : " + tokens(0))
 
-        val result = runMetadataCmd(hiveContext, cmd_trimmed)
+        val result = new Result(Array(new Column("result", "stringType")), runMetadataCmd(hiveContext, cmd_trimmed))
         loggingDal.setMetaInfo(uuid, new QueryMetaInfo(result.results.size, maxNumberOfResults, 0, isLimited))
         result
       }
@@ -155,13 +155,13 @@ object HiveUtils {
     }
   }
 
-  def runMetadataCmd(hiveContext: HiveContextWrapper, cmd: String): Result = {
+  def runMetadataCmd(hiveContext: HiveContextWrapper, cmd: String) = {
     val result = hiveContext.runMetadataSql(cmd).map(element => {
       if (element != null) {
         element.split("\t")
       } else Array(element)
     }).toArray
-    return new Result(Array(new Column("result", "stringType")), result)
+    result map (row => row map (_ trim()))
   }
 
   def runRdd(

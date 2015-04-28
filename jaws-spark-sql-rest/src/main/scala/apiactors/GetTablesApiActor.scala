@@ -19,6 +19,7 @@ import scala.collection.immutable.HashMap
 import scala.concurrent._
 import ExecutionContext.Implicits.global
 import messages.ErrorMessage
+import com.xpatterns.jaws.data.DTO.Column
 
 /**
  * Created by emaorhian
@@ -38,7 +39,7 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
     Configuration.log4j.info("[GetTablesApiActor]: showing tables for database " + database)
 
     HiveUtils.runMetadataCmd(hiveContext, s"use $database")
-    val tables = Result.trimResults(HiveUtils.runMetadataCmd(hiveContext, "show tables"))
+    val tables = Result.trimResults(new Result(Array(new Column("result", "stringType")), HiveUtils.runMetadataCmd(hiveContext, "show tables")))
 
     tables.results flatMap (result => {
       if (result.isEmpty == false) {
@@ -64,7 +65,7 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
       case _ => s"describe $table"
     }
 
-    val description = Result.trimResults(HiveUtils.runMetadataCmd(hiveContext, cmd))
+    val description = Result.trimResults(new Result(Array(new Column("result", "stringType")), HiveUtils.runMetadataCmd(hiveContext, cmd)))
     Map(table -> description)
   }
 
