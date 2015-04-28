@@ -61,23 +61,24 @@ class RunApiTest extends TestBase {
   }
 
   test(" select * limited") {
-
     val url = s"${jawsUrl}run?limited=true"
-    selectAllFromTable(url)
+    val queryID= selectAllFromTable(url, table)
+    validataAllResultsFromNormalTable(queryID)
 
   }
 
   test(" select * unlimited hdfs") {
 
     val url = s"${jawsUrl}run?limited=false&destination=hdfs"
-    selectAllFromTable(url)
-
+    val queryID= selectAllFromTable(url, table)
+    validataAllResultsFromNormalTable(queryID)
   }
 
   test(" select * unlimited tachyon") {
     if (runTachyon) {
       val url = s"${jawsUrl}run?limited=false&destination=tachyon"
-      selectAllFromTable(url)
+      val queryID = selectAllFromTable(url, table)
+      validataAllResultsFromNormalTable(queryID)
     } else println("Tachyon tests are ignored")
   }
 

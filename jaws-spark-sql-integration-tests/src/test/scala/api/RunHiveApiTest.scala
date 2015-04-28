@@ -42,14 +42,14 @@ class RunHiveApiTest extends TestBase {
   test(" select * limited") {
 
     val url = s"${jawsHiveUrl}run?"
-    selectAllFromTable(url)
-
+    val queryID = selectAllFromTable(url, table)
+    validataAllResultsFromNormalTable(queryID)
   }
 
   test(" select * unlimited") {
 
     val url = s"${jawsHiveUrl}run"
-    selectAllFromTable(url)
-
+    val queryID = selectAllFromTable(url, table)
+    validataAllResultsFromNormalTable(queryID)
   }
 }
