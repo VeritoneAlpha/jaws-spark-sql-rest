@@ -189,7 +189,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
           }
         } ~
           options {
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.POST))) {
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.DELETE))) {
               complete {
                 "OK"
               }
@@ -401,7 +401,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
         }
       } ~
         options {
-          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.DELETE))) {
             complete {
               "OK"
             }
