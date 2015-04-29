@@ -14,7 +14,7 @@ import server.MainActors
 import com.google.common.cache.Cache
 import org.apache.spark.scheduler.RunScriptTask
 import implementation.HiveContextWrapper
-import org.apache.spark.sql.parquet.ParquetUtils._
+import org.apache.spark.sql.parquet.ParquetSparkUtility._
 import apiactors.ActorsPaths._
 import scala.util.Try
 import apiactors.ActorOperations._
