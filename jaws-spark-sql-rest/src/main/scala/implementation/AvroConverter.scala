@@ -2,9 +2,11 @@ package implementation
 
 import org.apache.avro.SchemaBuilder.{ BaseFieldTypeBuilder, BaseTypeBuilder, FieldAssembler, RecordDefault }
 import org.apache.avro.{ Schema, SchemaBuilder }
-import org.apache.spark.sql.catalyst.types._
 import org.apache.avro.SchemaBuilder.ArrayDefault
 import org.apache.avro.SchemaBuilder.FieldDefault
+import org.apache.spark.sql.types.DataType
+import org.apache.spark.sql.types._
+import org.apache.spark.sql.types.DecimalType
 
 object AvroConverter {
 
@@ -21,7 +23,7 @@ object AvroConverter {
     dataType match {
       case ByteType | ShortType | IntegerType => callMethodWithNoDefaults(typeBuilder, "intType")
       case BinaryType                         => callMethodWithNoDefaults(typeBuilder, "bytesType")
-      case StringType | DecimalType           => callMethodWithNoDefaults(typeBuilder, "stringType")
+      case StringType | DecimalType ()         => callMethodWithNoDefaults(typeBuilder, "stringType")
       case LongType | TimestampType           => callMethodWithNoDefaults(typeBuilder, "longType")
       case FloatType                          => callMethodWithNoDefaults(typeBuilder, "floatType")
       case DoubleType                         => callMethodWithNoDefaults(typeBuilder, "doubleType")

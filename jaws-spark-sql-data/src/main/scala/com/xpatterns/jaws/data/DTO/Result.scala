@@ -4,7 +4,8 @@ import spray.json.DefaultJsonProtocol._
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.Row
 import org.apache.spark.sql.catalyst.expressions.AttributeSet
-import org.apache.spark.sql.catalyst.types.StructType
+import org.apache.spark.sql.types.StructType
+
 
 /**
  * Created by emaorhian
@@ -74,13 +75,16 @@ object Result {
 
   def getResults(results: Array[Row]): Array[Array[String]] = {
     results map (row => {
-      row.map(value => {
+      row.toSeq map (value => {
         Option(value) match {
           case None => "Null"
           case _ => value.toString()
         }
       }) toArray
-    })
+    
+    }
+    
+    )
 
   }
 }  

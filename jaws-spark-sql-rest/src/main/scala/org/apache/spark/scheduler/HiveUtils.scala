@@ -15,7 +15,6 @@ import spray.json._
 import spray.json.DefaultJsonProtocol._
 import com.xpatterns.jaws.data.DTO.Column
 import implementation.HiveContextWrapper
-import org.apache.spark.sql.catalyst.types.StructType
 import server.MainActors
 import server.LogsActor.PushLogs
 import com.xpatterns.jaws.data.contracts.DAL
@@ -23,6 +22,7 @@ import com.xpatterns.jaws.data.DTO.ParquetTable
 import java.util.regex.Pattern
 import java.util.regex.Matcher
 import org.apache.hadoop.conf.{ Configuration => HadoopConfiguration }
+import org.apache.spark.sql.types.StructType
 
 /**
  * Created by emaorhian
@@ -180,7 +180,7 @@ object HiveUtils {
     // change the shark Row into String[] -> for serialization purpose 
     val transformedSelectRdd = selectRdd.map(row => {
 
-      var result = row.map(value => {
+      var result = row.toSeq.map(value => {
         Option(value) match {
           case None => "Null"
           case _ => value.toString()

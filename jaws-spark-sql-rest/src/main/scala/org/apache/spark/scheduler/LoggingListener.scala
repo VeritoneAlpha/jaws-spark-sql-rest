@@ -126,8 +126,8 @@ class LoggingListener(dals: DAL) extends SparkListener {
                 HiveUtils.logInfoMessage(uuid, s"The task $taskId belonging to stage $stageId for job $jobId has finished in ${taskEnd.taskInfo.duration} ms on ${taskEnd.taskInfo.host} ( progress ${stageIdToSuccessullTasks.get(stageId).get}/${stageIdToNrTasks.get(stageId).get})", jobId.toString, dals.loggingDal)
               case Resubmitted =>
                 taskStatus += s" STATUS=RESUBMITTED TID=${taskEnd.taskInfo.taskId} STAGE_ID=${taskEnd.stageId}"
-              case FetchFailed(bmAddress, shuffleId, mapId, reduceId) =>
-                taskStatus += s" STATUS=FETCHFAILED TID=${taskEnd.taskInfo.taskId} STAGE_ID=${taskEnd.stageId} SHUFFLE_ID=$shuffleId MAP_ID=$mapId REDUCE_ID=$reduceId"
+              case FetchFailed(bmAddress, shuffleId, mapId, reduceId, message) =>
+                taskStatus += s" STATUS=FETCHFAILED TID=${taskEnd.taskInfo.taskId} STAGE_ID=${taskEnd.stageId} SHUFFLE_ID=$shuffleId MAP_ID=$mapId REDUCE_ID=$reduceId MESSAGE=$message"
                 HiveUtils.logInfoMessage(uuid, s"The task $taskId belonging to stage $stageId for job $jobId has failed! Duration was ${taskEnd.taskInfo.duration} ms on ${taskEnd.taskInfo.host}", jobId.toString, dals.loggingDal)
               case _ =>
             }

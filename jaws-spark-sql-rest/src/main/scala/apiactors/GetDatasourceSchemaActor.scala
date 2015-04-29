@@ -6,13 +6,13 @@ import implementation.SchemaSettingsFactory.{ Hdfs, Hive, Parquet, Tachyon }
 import implementation.{ AvroConverter, HiveContextWrapper }
 import messages.GetDatasourceSchemaMessage
 import org.apache.spark.scheduler.HiveUtils
-import org.apache.spark.sql.catalyst.types.StructType
 import org.apache.spark.sql.parquet.ParquetSparkUtility._
 import server.Configuration
 import scala.concurrent._
 import ExecutionContext.Implicits.global
 import scala.util.{ Success, Failure }
 import messages.ErrorMessage
+import org.apache.spark.sql.types.StructType
 
 /**
  * Created by lucianm on 06.02.2015.

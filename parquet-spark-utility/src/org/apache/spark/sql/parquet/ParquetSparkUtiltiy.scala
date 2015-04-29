@@ -13,20 +13,16 @@ import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.Writable
 import org.apache.hadoop.mapreduce.InputSplit
 import org.apache.hadoop.mapreduce.Job
-import org.apache.hadoop.mapreduce.SparkHadoopMapReduceUtil
 import org.apache.hadoop.util.StringUtils
 import org.apache.spark.SerializableWritable
 import org.apache.spark.SparkContext
 import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SQLContext
-import org.apache.spark.sql.SchemaRDD
-import org.apache.spark.sql.SchemaRDDLike
 import org.apache.spark.sql.catalyst.ScalaReflection
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.GenericMutableRow
 import org.apache.spark.sql.catalyst.expressions.Row
-import org.apache.spark.sql.catalyst.types.StructType
 import parquet.column.ParquetProperties.WriterVersion
 import parquet.hadoop.ParquetInputFormat
 import parquet.hadoop.ParquetWriter
@@ -35,6 +31,9 @@ import parquet.hadoop.metadata.ParquetMetadata
 import parquet.hadoop.util.ContextUtil
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
+import org.apache.spark.mapreduce.SparkHadoopMapReduceUtil
+import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.DataFrame
 
 object ParquetSparkUtility extends SparkHadoopMapReduceUtil with Serializable {
 
@@ -70,8 +69,8 @@ object ParquetSparkUtility extends SparkHadoopMapReduceUtil with Serializable {
         partitionList
       })
 
-      val schemaRDD = sqlC.applySchema(rdd, getSchemaFromAttributes(ParquetTypesConverter.convertFromString(metadata)))
-      schemaRDD
+      val df = sqlC.createDataFrame(rdd, getSchemaFromAttributes(ParquetTypesConverter.convertFromString(metadata)))
+      df
     }
   }
 
@@ -83,6 +82,7 @@ object ParquetSparkUtility extends SparkHadoopMapReduceUtil with Serializable {
       val finalWritePath = nameNode + "/" + path
 
       val attributes = getAttributesList[T]
+      val schema = getSchemaFromAttributes(attributes)
 
       writeMetadata(rdd.context, nameNode, attributes, finalWritePath)
       val errorRDD = rdd.mapPartitionsWithIndex((index, iterator) => {
@@ -93,7 +93,7 @@ object ParquetSparkUtility extends SparkHadoopMapReduceUtil with Serializable {
         while (iterator.hasNext) {
           val objectToWrite = iterator.next()
           try {
-            parquetWriter.write(transformObjectToRow(objectToWrite))
+            parquetWriter.write(transformObjectToRow(objectToWrite, schema))
           } catch {
             case e: Exception => errorList += objectToWrite
           }
@@ -107,18 +107,18 @@ object ParquetSparkUtility extends SparkHadoopMapReduceUtil with Serializable {
     }
   }
 
-  implicit class xPatternsSchemaRDD(schemaRDD: SchemaRDD) {
+  implicit class xPatternsDataFrame(df: DataFrame) {
 
     def saveAsXPatternsParquet(nameNodeUrl: String, folderPath: String, codec: CompressionCodecName = defaultCodec, parquetBlockSize: Int = defaultParquetBlockSize) = {
       var nameNode = sanitizePath(nameNodeUrl)
       var path = sanitizePath(folderPath)
       val finalWritePath = nameNode + "/" + path
 
-      val attributes = schemaRDD.schema.toAttributes
+      val attributes = df.schema.toAttributes
       println(attributes)
 
-      writeMetadata(schemaRDD.sqlContext.sparkContext, nameNode, attributes, finalWritePath)
-      val errorRDD = schemaRDD.mapPartitionsWithIndex((index, iterator) => {
+      writeMetadata(df.sqlContext.sparkContext, nameNode, attributes, finalWritePath)
+      val errorRDD = df.rdd.mapPartitionsWithIndex((index, iterator) => {
         val errorList = scala.collection.mutable.MutableList[Row]()
         val parquetWriter = getParquetWriter(finalWritePath + "/part-" + index + ".parquet", attributes, parquetBlockSize = parquetBlockSize, codec = codec)
 
@@ -139,16 +139,17 @@ object ParquetSparkUtility extends SparkHadoopMapReduceUtil with Serializable {
     }
   }
 
-  def transformObjectToRow[A <: Product](data: A): Row = {
+  def transformObjectToRow[A <: Product](data: A, schema: StructType): Row = {
+    val schemaFields = schema.fields.toArray
     val mutableRow = new GenericMutableRow(data.productArity)
     var i = 0
     while (i < mutableRow.length) {
-      mutableRow(i) = ScalaReflection.convertToCatalyst(data.productElement(i))
+      mutableRow(i) = ScalaReflection.convertToCatalyst(data.productElement(i), schemaFields(i).dataType)
       i += 1
     }
     mutableRow
   }
-
+  
   def getAttributesList[T <: Product: TypeTag]: Seq[Attribute] = {
     val att = ScalaReflection.attributesFor[T]
     println("Atributes from schema: " + att.map { x => x + ";" })
