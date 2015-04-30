@@ -11,8 +11,10 @@
 	<url>http://maven.apache.org</url>
 
 	<modules>
+	    <module>parquet-spark-utility</module>
 		<module>jaws-spark-sql-rest</module>
 		<module>jaws-spark-sql-data</module>
+		<module>hdfs-tachyon-file-browser</module>
 		<module>jaws-hive-sql-rest</module>
 	</modules>
 </project>

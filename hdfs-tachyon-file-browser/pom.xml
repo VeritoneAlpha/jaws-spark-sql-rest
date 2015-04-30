@@ -1,13 +1,12 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-
 	<groupId>com.xpatterns</groupId>
-	<artifactId>jaws-spark-sql-rest</artifactId>
+	<artifactId>hdfs-tachyon-file-browser</artifactId>
 	<version>1.1.0</version>
 	<packaging>jar</packaging>
 
-	<name>jaws-spark-sql-rest</name>
+	<name>hdfs-tachyon-file-browser</name>
 	<url>http://maven.apache.org</url>
 
 	<repositories>
@@ -34,33 +33,30 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<scala.version.alias>2.10</scala.version.alias>
-		<spray.json.version>1.2.3</spray.json.version>
 		<scala.version>2.10.3</scala.version>
 		<akka.version>2.0.5</akka.version>
-		<spray.json.version>1.2.3</spray.json.version>
+		
 		<spray.io.version>1.2.1</spray.io.version>
 	</properties>
 
 	<dependencies>
-
-		<dependency>
-			<groupId>parquet-spark-utility</groupId>
-			<artifactId>parquet-spark-utility</artifactId>
-			<version>1.0.0</version>
-		</dependency>
-
 		<dependency>
 			<groupId>io.spray</groupId>
 			<artifactId>spray-client</artifactId>
 			<version>${spray.io.version}</version>
 		</dependency>
 
+	<dependency>
+	<groupId>io.spray</groupId>
+	<artifactId>spray-json_2.10</artifactId>
+	<version>1.3.1</version>
+</dependency>
 		<dependency>
 			<groupId>io.spray</groupId>
 			<artifactId>spray-testkit</artifactId>
 			<version>1.2.1</version>
 		</dependency>
-
+		
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
@@ -116,11 +112,6 @@
 			</exclusions>
 		</dependency>
 		<dependency>
-			<groupId>org.java-websocket</groupId>
-			<artifactId>Java-WebSocket</artifactId>
-			<version>1.3.0</version>
-		</dependency>
-		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-annotations</artifactId>
 			<version>2.3.2</version>
@@ -138,34 +129,7 @@
 			<version>1.2.17</version>
 		</dependency>
 
-		<dependency>
-			<groupId>org.springframework.data</groupId>
-			<artifactId>spring-data-hadoop</artifactId>
-			<version>1.0.0.RELEASE</version>
-			<exclusions>
-				<exclusion>
-					<artifactId>hadoop-core</artifactId>
-					<groupId>org.apache.hadoop</groupId>
-				</exclusion>
-			</exclusions>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.spark</groupId>
-			<artifactId>spark-hive_2.10</artifactId>
-			<version>1.1.0</version>
-			<exclusions>
-				<exclusion>
-					<groupId>org.apache.hadoop</groupId>
-					<artifactId>hadoop-client</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency>
 
-		<dependency>
-			<groupId>com.xpatterns</groupId>
-			<artifactId>jaws-spark-sql-data</artifactId>
-			<version>1.1.0</version>
-		</dependency>
 		<dependency>
 			<groupId>org.apache.hadoop</groupId>
 			<artifactId>hadoop-client</artifactId>
@@ -200,9 +164,6 @@
 		<resources>
 			<resource>
 				<directory>src/main/resources</directory>
-				<excludes>
-					<exclude>*</exclude>
-				</excludes>
 				<filtering>false</filtering>
 			</resource>
 		</resources>
@@ -289,8 +250,8 @@
 
 					<programs>
 						<program>
-							<mainClass>server.JawsController</mainClass>
-							<name>main-jaws.sh</name>
+							<mainClass>server.FileBrowserController</mainClass>
+							<name>start-file-browser.sh</name>
 						</program>
 					</programs>
 
@@ -321,14 +282,8 @@
 						</goals>
 						<configuration>
 							<tasks>
-								<chmod file="${basedir}/target/temp_build/bin/main-jaws.sh"
+								<chmod file="${basedir}/target/temp_build/bin/start-file-browser.sh"
 									perm="ugo+rx" />
-								<chmod file="${basedir}/target/temp_build/conf/jaws-env.sh"
-									perm="ugo+rx" />
-
-								<chmod file="${basedir}/src/main/scripts/start-jaws.sh"
-									perm="ugo+rx" />
-
 							</tasks>
 						</configuration>
 					</execution>
@@ -387,5 +342,4 @@
 
 
 	</build>
-
 </project>

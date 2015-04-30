@@ -1,7 +1,7 @@
 package org.apache.spark.scheduler
 
 import java.io.InputStream
-import org.apache.spark.sql.parquet.ParquetUtils._
+import org.apache.spark.sql.parquet.ParquetSparkUtility._
 import org.apache.commons.lang.RandomStringUtils
 import org.apache.commons.lang.StringUtils
 import com.xpatterns.jaws.data.utils.Utils
