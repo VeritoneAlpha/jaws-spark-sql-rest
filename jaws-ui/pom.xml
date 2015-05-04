@@ -1,0 +1,49 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.xpatterns</groupId>
+	<artifactId>jaws-ui</artifactId>
+	<version>1.1.0</version>
+	
+
+	<name>jaws-ui</name>
+	<url>http://maven.apache.org</url>
+
+	<build>
+  <plugins>
+    <plugin>
+      <groupId>org.codehaus.mojo</groupId>
+      <artifactId>exec-maven-plugin</artifactId>
+      <executions>
+        <execution>
+          <id>exec-npm-install</id>
+          <phase>generate-sources</phase>
+          <configuration>
+            <executable>npm</executable>
+            <arguments>
+              <argument>install</argument>
+            </arguments>
+          </configuration>
+          <goals>
+            <goal>exec</goal>
+          </goals>
+        </execution>
+        <execution>
+          <id>exec-grunt</id>
+          <phase>process-resources</phase>
+          <configuration>
+            <executable>grunt</executable>
+            <arguments>
+              <argument>build</argument>
+            </arguments>
+          </configuration>
+          <goals>
+            <goal>exec</goal>
+          </goals>
+        </execution>
+      </executions>
+    </plugin>
+  </plugins>
+</build>
+
+</project>

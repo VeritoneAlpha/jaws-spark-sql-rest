@@ -1,0 +1,72 @@
+<div flex="" layout="column" ng-controller="QueryCtrl">
+	<div>
+		<ui-codemirror ui-codemirror-opts="editorOptions" ng-model="data.editorQuery" ng-class="{'sm': $mdMedia('sm')}"></ui-codemirror>
+	</div>
+	<div layout="row" class="query-toolbar" layout-align="end center">
+		<div layout="row"  layout-align="center center">
+			<md-radio-group layout="row" layout-sm="column" ng-model="resultsStorage" ng-show="!limitedQuery" class="radiobox">
+				  <md-radio-button value="HDFS" class="md-primary">HDFS</md-radio-button>
+				  <md-radio-button value="Tachyon" class="md-primary">Tachyon</md-radio-button>
+			</md-radio-group>		
+			<md-checkbox class="md-primary" ng-model="limitedQuery"  aria-label="Limited Query">Limited Query</md-checkbox>
+		</div>
+		<div layout-align="center">
+			<md-button class="md-raised" ng-click="executeQuery()">Run Query</md-button>
+		</div>
+	</div>
+	<div flex="" layout="column">
+		<md-tabs  class="md-primary" md-selected="data.selectedIndex" flex="">
+			<md-tab id="tab1" aria-controls="tab1-content" label="Query History">
+					<div flex="" layout="column" class="scrollable-container"  lr-infinite-scroll="getNextQueryHistoryPage" 
+						scroll-threshold="200" scroll-busy="queryHistoryBusy">
+						<div class="queries-list-item" layout="row" ng-repeat="query in data.queries track by $index">
+							<md-button class="query-history-item" flex=""
+								ng-class="{'md-warn':query.state==='FAILED', 'md-primary':query.state==='IN_PROGRESS'}"
+								
+								ng-click="displayQuery(query)">{{query.query}}
+							</md-button>
+							<md-button class="icon-button" ng-show="query.state==='IN_PROGRESS'" ng-click="cancelQuery(query)" aria-label="Cancel Query">
+								<md-icon md-svg-src="img/icons/ic_cancel_24px.svg"></md-icon>
+								<md-tooltip>Cancel Query</md-tooltip>
+							</md-button>
+							<md-button class="icon-button" ng-click="deleteQuery(query)" aria-label="Delete Query">
+								<md-icon md-svg-src="img/icons/ic_delete_24px.svg"></md-icon>
+								<md-tooltip>Delete Query</md-tooltip>
+							</md-button>
+						</div>
+					</div>
+					<md-progress-linear  class="loading-bottom" ng-show="queryHistoryBusy" 
+						md-mode="indeterminate"></md-progress-linear>
+			</md-tab>
+			<md-tab id="tab2" aria-controls="tab2-content" ng-disabled="!querySelected()" label="Logs">
+				<div role="tabpanel" id="tab2-content" aria-labelledby="tab2" class="scrollable-container">
+					<textarea readonly="true" show-tail="" class="logs-container">{{logsText}}</textarea>
+					<md-progress-linear  class="loading-bottom" ng-show="queryLogsBusy" md-mode="indeterminate"></md-progress-linear>
+
+				</div>
+			
+			</md-tab>
+			<md-tab id="tab3" aria-controls="tab3-content" ng-disabled="!resultsAvailable" label="Result Set">
+				<div layout-fill layout="column" >
+				<table  fixed-header cellspacing="0" class="table table-striped table-bordered" >
+				<thead>
+				  <tr>
+					 <th ng-repeat="col in data.queryResponse.schema " >
+						{{ col.name }}
+					</th>
+				  </tr>
+				</thead>
+				<tbody lr-infinite-scroll="getNextResultsPage" 
+						scroll-threshold="50" scroll-busy="resultsBusy">
+				  <tr ng-repeat="row in data.queryResponse.results track by $index" >
+					<td ng-repeat="col in row track by $index">{{ col }}</td>
+				  </tr>
+				</tbody>
+				</table>
+				</div>
+				<md-progress-linear  class="loading-bottom" ng-show="resultsBusy" md-mode="indeterminate"></md-progress-linear>
+			</md-tab>
+		</md-tabs>
+
+    </div>
+</div>
