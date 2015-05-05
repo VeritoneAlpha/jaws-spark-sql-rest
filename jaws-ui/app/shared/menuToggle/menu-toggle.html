@@ -1,0 +1,30 @@
+<div layout="row">
+	<md-button class="md-button-toggle" ng-click="toggle()"
+		ng-class="{'active' : isSelected()}"
+		aria-controls="menu-{{section.name | nospace}}" flex="" 
+		layout="row" ng-href="{{getSectionURL()}}" aria-expanded="{{isOpen()}}">
+		<div flex="" layout="row">
+			<div><md-icon ng-if="section.class" class="s16" md-svg-src="img/icons/{{section.class}}.svg"></md-icon></div>
+			<span flex="">{{section.name}}</span>
+			<span aria-hidden="true" class="md-toggle-icon" ng-class="{'toggled' : isOpen()}"></span>
+		</div>
+		<span class="visually-hidden">
+			Toggle {{isOpen()? 'expanded' : 'collapsed'}}
+		</span>
+	</md-button>
+	<md-button class="menu-icon-button" ng-show="section.removable" ng-click="removeSection(section)" aria-label="Delete">
+			<md-icon class="s16" md-svg-src="img/icons/ic_delete_24px.svg"></md-icon>
+			<md-tooltip>Delete {{section.name}}</md-tooltip>
+	</md-button>
+</div>
+
+<md-progress-linear ng-show="section.loading" md-mode="indeterminate"></md-progress-linear>
+<ul ng-show="isOpen()" id="menu-{{section.name | nospace}}" class="menu-toggle-list">
+	
+	<li ng-repeat="page in section.pages" >
+		<recursive>
+			<menu-toggle section="page" ng-if="page.type === 'toggle'"></menu-toggle>
+		</recursive>
+		<menu-link section="page" ng-if="page.type === 'link'"></menu-link>
+	</li>
+</ul>

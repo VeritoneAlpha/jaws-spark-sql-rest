@@ -1,0 +1,19 @@
+<md-dialog aria-label="Prompt">
+	<md-content class="sticky-container">
+		<div class="dialog-content">
+
+			<md-input-container>
+				<label>{{prompt}}</label>
+				<input ng-model="value"></input>
+			</md-input-container>
+		</div>
+	</md-content>
+	<div class="md-actions" layout="row">
+		<md-button ng-click="cancel()">
+			Cancel
+		</md-button>
+		<md-button ng-click="answer()" class="md-primary">
+			OK
+		</md-button>
+	</div>
+</md-dialog>

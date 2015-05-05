@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en" ng-app="JawsUI">
+	
+	<head>	
+		<meta charset="UTF-8"> 
+		<meta name="viewport" content="initial-scale=1, maximum-scale=1" />
+	
+		<!-- process:css css/bootstrap.min.css -->
+		<link rel="stylesheet" type="text/css" href="../bower_components/bootstrap/dist/css/bootstrap.min.css">
+		<!-- /process -->		
+		<!-- build:css css/codemirror.css -->
+		<link rel="stylesheet" type="text/css" href="../bower_components/codemirror/lib/codemirror.css">
+		<link rel="stylesheet" href="../bower_components/codemirror/addon/hint/show-hint.css" />
+		<!-- endbuild -->		
+		<!-- process:css css/angular-material.min.css -->
+		<link rel="stylesheet" href="../bower_components/angular-material/angular-material.min.css">
+		<!-- /process -->	
+		<!-- build:css css/JawsUI.css -->
+		<link rel="stylesheet" href="css/JawsUI.css">
+		<link type="text/css" href="../bower_components/angular-growl-v2/build/angular-growl.min.css" rel="stylesheet">
+		<!-- endbuild -->		
+		
+		<!-- process:js lib/jquery.min.js -->
+		<script type="text/javascript" src="../bower_components/jquery/dist/jquery.min.js"></script>
+		<!-- /process -->		
+		<!-- process:js lib/angular-material-full.min.js -->
+		<script type="text/javascript" src="../bower_components/angular/angular.js"></script>
+		<script type="text/javascript" src="../bower_components/angular-route/angular-route.min.js"></script>
+		<script type="text/javascript" src="../bower_components/angular-animate/angular-animate.min.js"></script>
+		<script type="text/javascript" src="../bower_components/angular-aria/angular-aria.min.js"></script>
+		<script type="text/javascript" src="../bower_components/angular-material/angular-material.min.js"></script>
+		<!-- /process -->		
+		<!-- build:js lib/codemirror.js -->
+		<script type="text/javascript" src="../bower_components/codemirror/lib/codemirror.js"></script>
+		<script type="text/javascript" src="../bower_components/codemirror/mode/sql/sql.js"></script>
+		<script type="text/javascript" src="../bower_components/codemirror/addon/hint/show-hint.js"></script>
+		<script type="text/javascript" src="../bower_components/codemirror/addon/hint/sql-hint.js"></script>	
+		<!-- endbuild -->				
+		<!-- build:js JawsUI.js -->
+		<script src="JawsUI.js"></script>
+		<script src="JawsUIFilters.js"></script>
+		<script src="JawsUIConstants.js"></script>
+		<script src="components/fileBrowse/fileBrowseController.js"></script>
+		<script src="components/query/queryController.js"></script>
+		<script src="components/menu/menuService.js"></script>
+		<script src="components/promptDialog/promptDialogController.js"></script>
+		<script src="components/jawsAPI/jawsService.js"></script>
+		<script src="components/jawsAPI/fileBrowseService.js"></script>
+		<script src="shared/menuLink/menuLinkDirective.js"></script>
+		<script src="shared/menuToggle/menuToggleDirective.js"></script>
+		<script src="shared/showTailDirective.js"></script>
+		<script src="shared/lrInfiniteScrollDirective.js"></script>
+		<script src="shared/anguFixedHeaderTableDirective.js"></script>
+		<script src="../bower_components/angular-growl-v2/build/angular-growl.min.js"></script>
+		<script src="../bower_components/angular-ui-codemirror/ui-codemirror.min.js"></script>
+		<!-- endbuild -->				
+		<script src="config.js"></script>		
+		
+		<title>JawsUI</title>
+	</head>
+	<body layout="column" ng-cloak="" class="ng-cloak" ng-controller="AppCtrl">
+		<div growl=""></div>
+		<div layout="row" flex="">	
+			<md-sidenav layout="column" class="md-sidenav-left md-whiteframe-z2" md-component-id="left" md-is-locked-open="$mdMedia('gt-md')">
+				<md-toolbar>
+				<h1 class="md-toolbar-tools">JawsUI</h1>
+				</md-toolbar>	
+				<div class="menu-container">
+					<ul class="menu">
+						<li ng-repeat="section in menu.sections" class="parent-list-item" ng-class="{'parentActive' : isSectionSelected(section)}">
+
+						  <menu-link section="section" ng-if="section.type === 'link'"></menu-link>
+
+						  <menu-toggle section="section" ng-if="section.type === 'toggle'"></menu-toggle>
+						</li>
+					</ul>
+				</div>
+			</md-sidenav>
+			
+			<div layout="column" flex="" role="main" id="content">
+				<md-toolbar>
+					<div class="md-toolbar-tools" layout="row">
+						<md-button ng-click="toggleSidenav('left')" hide-gt-md="" class="md-icon-button">
+							<md-icon md-svg-src="img/icons/ic_menu_24px.svg"></md-icon>
+							<span class="visually-hidden">Menu</span>
+						</md-button>
+						<div layout="row" flex="" class="fill-height  toolbar-tools">
+							<div class="md-toolbar-item md-breadcrumb">
+								<span>{{ currentPageTitle }}</span>
+							</div>
+						</div>
+					</div>
+				</md-toolbar>		
+				<div flex class="appview-outer"><md-content layout="column" ng-view="" flex="" class="appview md-padding"></md-content></div>
+			</div>
+		</div>
+	</body>
+</html>

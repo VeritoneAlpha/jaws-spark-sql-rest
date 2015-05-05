@@ -6,7 +6,12 @@
 	<formats>
 		<format>tar.gz</format>
 	</formats>
+	
 	<fileSets>
+		<fileSet>
+			<directory>${basedir}/../jaws-ui/dist</directory>
+			<outputDirectory>resources/webapp</outputDirectory>
+		</fileSet>
 		<fileSet>
 			<directory>${project.build.directory}/temp_build</directory>
 			<outputDirectory>/</outputDirectory>
@@ -27,6 +32,7 @@
 		<file>
 			<source>${basedir}/src/main/scripts/start-jaws.sh</source>
 			<outputDirectory>/bin/</outputDirectory>
+			
 		</file>
 	</files>
 </assembly>

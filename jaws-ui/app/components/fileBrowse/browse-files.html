@@ -1,0 +1,24 @@
+<div flex="" ng-controller="FileBrowser" layout="column">
+	<div layout="row" class="button-bar">
+		<div flex="">{{currentDir}}</div>
+		<div><md-button class="md-raised" ng-click="mapDir(currentDir)">Map Current Dir</md-button></div>
+	</div>
+	<div><md-progress-linear ng-show="loading" md-mode="indeterminate"></md-progress-linear></div>
+	<div flex="" class="scrollable-container-outer">
+		<div class="scrollable-container">
+			<md-list layout="column" md-padding>
+				<md-item ng-repeat="file in files">
+					<div layout="row">
+						<div>
+							<md-icon class="md-primary" ng-if="file.isFolder" md-svg-src="img/icons/ic_folder_24px.svg"></md-icon>
+						</div>
+						<md-button ng-click="selectFile(file)">
+							{{file.name }}
+						</md-button>
+					</div>
+				</md-item>
+			</md-list>
+		</div>
+		
+	</div>
+</div>

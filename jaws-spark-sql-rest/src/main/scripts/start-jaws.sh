@@ -14,12 +14,13 @@ if [ ! -d "$logsFolder" ]; then
 fi
 
 echo "Exporting system variables..."
-. $parentdir/conf/jaws-env.sh $logsFolder
+. $parentdir/conf/jaws-env.sh $logsFolder $parentdir
 
 echo $TACHYON_WAREHOUSE_PATH
 echo $TACHYON_MASTER
 echo $MESOS_NATIVE_LIBRARY
 echo $JAVA_OPTS
+echo $CLASSPATH_PREFIX
 
 echo "Deploying jaws..."
 $dir/main-jaws.sh

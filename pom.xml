@@ -11,6 +11,7 @@
 	<url>http://maven.apache.org</url>
 
 	<modules>
+		<module>jaws-ui</module>
 		<module>jaws-spark-sql-rest</module>
 		<module>jaws-spark-sql-data</module>
 		<module>jaws-hive-sql-rest</module>

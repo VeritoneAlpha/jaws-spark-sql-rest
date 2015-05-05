@@ -1,0 +1,27 @@
+{
+	"name": "JawsUI",
+	"version": "0.1.0",
+	"authors": [
+		"Liviu Iancuta <liviu.iancuta@gmail.com>"
+	],	
+	"dependencies": {
+		"angular":                  "1.3.15",
+		"angular-route":            "1.3.15",
+		"angular-sanitize":         "1.3.15",
+		"angular-mocks":            "1.3.15",		
+		"angular-material":         "0.9.0",
+		"codemirror":               "4.8.0",
+		"angular-ui-codemirror":    "0.2.3",
+		"bootstrap":                "3.3.4",
+		"jquery":                   "2.1.3",
+		"angular-growl-v2":         "0.7.3"
+	},
+	"ignore": [
+		"node_modules",
+		"bower_components",
+		"test",
+		"dist",
+		".tmp"
+	],	
+	"analytics": false
+}
