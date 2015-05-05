@@ -47,6 +47,7 @@ import scala.concurrent.duration._
 import scala.concurrent.duration.Duration._
 import spray.routing.Route
 import com.xpatterns.jaws.data.DTO.Databases
+import scala.collection.mutable.ListBuffer
 
 /**
  * Created by emaorhian
@@ -64,7 +65,6 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
   val getTablesActor = createActor(Props(new GetTablesApiActor(hiveContext, dals)), GET_TABLES_ACTOR_NAME, localSupervisor)
   val getLogsActor = createActor(Props(new GetLogsApiActor(dals)), GET_LOGS_ACTOR_NAME, localSupervisor)
   val getResultsActor = createActor(Props(new GetResultsApiActor(hdfsConf, hiveContext, dals)), GET_RESULTS_ACTOR_NAME, localSupervisor)
-  val getQueryInfoActor = createActor(Props(new GetQueryInfoApiActor(dals)), GET_QUERY_INFO_ACTOR_NAME, localSupervisor)
   val getDatabasesActor = createActor(Props(new GetDatabasesApiActor(hiveContext, dals)), GET_DATABASES_ACTOR_NAME, localSupervisor)
   val getDatasourceSchemaActor = createActor(Props(new GetDatasourceSchemaActor(hiveContext)), GET_DATASOURCE_SCHEMA_ACTOR_NAME, localSupervisor)
   val deleteQueryActor = createActor(Props(new DeleteQueryApiActor(dals)), DELETE_QUERY_ACTOR_NAME, localSupervisor)
@@ -161,38 +161,38 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
               }
             }
           } ~
-          get {
-          parameterMultiMap { params =>
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+            get {
+              parameterMultiMap { params =>
+                corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
 
-              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                var tables: List[String] = List()
-                var describe = false
+                  respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                    var tables: List[String] = List()
+                    var describe = false
 
-                params.foreach(touple => touple._1 match {
-                  case "tables" => {
-                    tables = touple._2
+                    params.foreach(touple => touple._1 match {
+                      case "tables" => {
+                        tables = touple._2
+                      }
+                      case "describe" => {
+                        if (touple._2 != null && !touple._2.isEmpty)
+                          describe = Try(touple._2(0).toBoolean).getOrElse(false)
+                      }
+                      case _ => Configuration.log4j.warn(s"Unknown parameter ${touple._1}!")
+                    })
+                    Configuration.log4j.info(s"Retrieving table information for parquet tables= $tables")
+                    val future = ask(getParquetTablesActor, new GetParquetTablesMessage(tables, describe))
+
+                    future.map {
+                      case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                      case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
+                    }
                   }
-                  case "describe" => {
-                    if (touple._2 != null && !touple._2.isEmpty)
-                      describe = Try(touple._2(0).toBoolean).getOrElse(false)
-                  }
-                  case _ => Configuration.log4j.warn(s"Unknown parameter ${touple._1}!")
-                })
-                Configuration.log4j.info(s"Retrieving table information for parquet tables= $tables")
-                val future = ask(getParquetTablesActor, new GetParquetTablesMessage(tables, describe))
-
-                future.map {
-                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                  case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
                 }
               }
             }
-          }
-        }
         } ~
           delete {
-            path(Segment){ name =>
+            path(Segment) { name =>
               corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
                 {
                   validate(name != null && !name.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
@@ -301,52 +301,60 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
           }
         }
     } ~
-    path("queries") {
-      get {
-        parameters('startQueryID.?, 'limit.as[Int]) { (startQueryID, limit) =>
-          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-            respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-              val future = ask(getQueriesActor, GetQueriesMessage(startQueryID.getOrElse(null), limit))
-              future.map {
-                case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                case result: Queries => ctx.complete(StatusCodes.OK, result)
-              }
-            }
-          }
-        }
-      } ~
-        options {
-          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
-            complete {
-              "OK"
-            }
-          }
-        }
-    } ~
-    path("queryInfo") {
-      get {
-        parameters('queryID) { queryID =>
-          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-            validate(queryID != null && !queryID.trim.isEmpty, Configuration.UUID_EXCEPTION_MESSAGE) {
+    pathPrefix("queries") {
+      pathEnd {
+        get {
+          parameterSeq { params =>
 
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                val future = ask(getQueryInfoActor, GetQueryInfoMessage(queryID))
+
+                var limit: Int = 100
+                var startQueryID: String = null
+                val queries = ListBuffer[String]()
+
+                params.foreach(touple => touple match {
+                  case ("limit", value) => limit = Try(value.toInt).getOrElse(100)
+                  case ("startQueryID", value) => startQueryID = Option(value).getOrElse(null)
+                  case ("queryID", value) if (!value.isEmpty()) => queries += value
+                  case (key, value) => Configuration.log4j.warn(s"Unknown parameter $key!")
+                })
+
+                val future = if (queries isEmpty) ask(getQueriesActor, GetPaginatedQueriesMessage(startQueryID, limit))
+                else ask(getQueriesActor, GetQueriesMessage(queries))
+
                 future.map {
                   case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                  case result: Query => ctx.complete(StatusCodes.OK, result)
+                  case result: Queries => ctx.complete(StatusCodes.OK, result)
                 }
               }
             }
           }
         }
       } ~
+        delete {
+          path(Segment) { queryID =>
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+              validate(queryID != null && !queryID.trim.isEmpty, Configuration.UUID_EXCEPTION_MESSAGE) {
+                respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
+                  val future = ask(deleteQueryActor, new DeleteQueryMessage(queryID))
+                  future.map {
+                    case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                    case message: String => ctx.complete(StatusCodes.OK, message)
+                  }
+                }
+              }
+            }
+          }
+        } ~
         options {
-          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET, HttpMethods.DELETE))) {
             complete {
               "OK"
             }
           }
         }
+
     } ~
     path("cancel") {
       post {
@@ -368,30 +376,6 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
             }
           }
         }
-    } ~
-    path("query") {
-      delete {
-        parameters('queryID.as[String]) { queryID =>
-          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-            validate(queryID != null && !queryID.trim.isEmpty, Configuration.UUID_EXCEPTION_MESSAGE) {
-              respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
-                val future = ask(deleteQueryActor, new DeleteQueryMessage(queryID))
-                future.map {
-                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                  case message: String => ctx.complete(StatusCodes.OK, message)
-                }
-              }
-            }
-          }
-        }
-      } ~
-        options {
-          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.DELETE))) {
-            complete {
-              "OK"
-            }
-          }
-        }
     }
 
   def tablesRoute: Route = pathPrefix("tables") {
@@ -403,19 +387,19 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
             respondWithMediaType(MediaTypes.`application/json`) { ctx =>
               var database = ""
               var describe = true
-              var tables: List[String] = List()
+              var tables = List[String]()
 
-              params.foreach(touple => touple._1 match {
-                case "database" => {
-                  if (touple._2 != null && !touple._2.isEmpty)
-                    database = touple._2(0)
+              params.foreach(touple => touple match {
+                case ("database", value) => {
+                  if (value != null && !value.isEmpty)
+                    database = value(0)
                 }
-                case "describe" => {
-                  if (touple._2 != null && !touple._2.isEmpty)
-                    describe = Try(touple._2(0).toBoolean).getOrElse(true)
+                case ("describe", value) => {
+                  if (value != null && !value.isEmpty)
+                    describe = Try(value(0).toBoolean).getOrElse(true)
                 }
-                case "tables" => {
-                  tables = touple._2
+                case ("tables", value) => {
+                  tables = value
                 }
                 case _ => Configuration.log4j.warn(s"Unknown parameter ${touple._1}!")
               })

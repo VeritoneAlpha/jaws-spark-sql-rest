@@ -24,10 +24,8 @@ import com.xpatterns.jaws.data.DTO.Query
 import scala.concurrent.duration._
 import akka.testkit.TestActorRef
 import akka.actor.Status.Success
-import apiactors.GetQueryInfoApiActor
 import com.xpatterns.jaws.data.contracts.TJawsLogging
 import com.xpatterns.jaws.data.utils.QueryState
-import messages.GetQueryInfoMessage
 import java.util.UUID
 import apiactors.DeleteQueryApiActor
 import messages.DeleteQueryMessage

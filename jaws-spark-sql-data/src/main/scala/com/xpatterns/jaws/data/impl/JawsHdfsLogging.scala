@@ -125,7 +125,7 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
     return filesToBeRead
   }
 
-  override def getQueriesStates(queryId: String, limit: Int): Queries = {
+  override def getQueries(queryId: String, limit: Int): Queries = {
     val queryIdValue = Option(queryId).getOrElse("")
     logger.info("Reading states for queries starting with the query: " + queryIdValue)
     var stateList = Array[Query]()

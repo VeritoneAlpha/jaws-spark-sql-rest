@@ -3,7 +3,6 @@ package apiactors
 import akka.actor.Actor
 import akka.actor.actorRef2Scala
 import apiactors.ActorOperations._
-import messages.GetQueriesMessage
 import com.google.common.base.Preconditions
 import server.LogsActor
 import akka.actor.ActorLogging

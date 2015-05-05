@@ -5,8 +5,8 @@ import com.xpatterns.jaws.data.DTO.QueryMetaInfo
 import com.xpatterns.jaws.data.DTO.Logs
 import com.xpatterns.jaws.data.DTO.Queries
 import com.xpatterns.jaws.data.utils.QueryState
-
-
+import com.xpatterns.jaws.data.utils.Utils
+import com.xpatterns.jaws.data.DTO.Query
 
 /**
  * Created by emaorhian
@@ -22,7 +22,14 @@ trait TJawsLogging {
   def getLogs(queryId: String, time: Long, limit: Int): Logs
   def getMetaInfo(queryId: String): QueryMetaInfo
 
-  def getQueriesStates(queryId: String, limit: Int): Queries
-  
+  def getQueries(queryId: String, limit: Int): Queries
+  def getQueries(queryIds: Seq[String]): Queries = {
+    Utils.TryWithRetry {
+      val queryArray = queryIds map (queryID => new Query(getState(queryID).toString, queryID, getScriptDetails(queryID), getMetaInfo(queryID))) toArray
+      val queries = new Queries(queryArray)
+      queries
+    }
+  }
+
   def deleteQuery(queryId: String)
 }
