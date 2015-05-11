@@ -22,7 +22,7 @@ import com.xpatterns.jaws.data.DTO.Table
 import com.xpatterns.jaws.data.DTO.Databases
 import com.xpatterns.jaws.data.DTO.TableColumn
 import com.xpatterns.jaws.data.DTO.Tables
-
+import com.xpatterns.jaws.data.utils.Utils._
 /**
  * Created by emaorhian
  */
@@ -66,9 +66,10 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
     println (s"!!!!!The number of columns is ${describedTable.size}")
     describedTable foreach (arr => {
       println("R1: ")
-      arr.foreach(println)
+      arr.foreach(x => print(s"$x|"))
     })
-    
+    var x = new Table("",Array.empty,Array.empty)
+    try{
     val columns = describedTable map (arr => TableColumn(arr(0), arr(1), arr(2)))
     
     println (s"!!!!!Table cols columns is $columns")
@@ -76,8 +77,15 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
       println(s"n : ${col.name} d : ${col.dataType}, c: ${col.comment} ")
     })
     
-    val x = Table(table, columns, Array.empty)
+    x = Table(table, columns, Array.empty)
      println (s"!!!!!Table $x")
+    
+    }
+    catch {
+       
+     case e: Exception => println(getCompleteStackTrace(e))
+      
+    }
     x
   }
 
