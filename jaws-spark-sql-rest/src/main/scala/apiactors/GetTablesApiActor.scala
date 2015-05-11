@@ -70,7 +70,9 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
     })
     var x = new Table("",Array.empty,Array.empty)
     try{
-    val columns = describedTable map (arr => TableColumn(arr(0), arr(1), arr(2)))
+    val columns = describedTable map (arr => {
+      println(s"*********line ${arr(0)},   ${arr(1)},  ${arr(2)} |")
+      TableColumn(arr(0), arr(1), arr(2))})
     
     println (s"!!!!!Table cols columns is $columns")
     columns foreach (col => {
