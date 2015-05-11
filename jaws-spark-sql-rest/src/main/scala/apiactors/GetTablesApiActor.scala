@@ -47,7 +47,6 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
       case _    => Table(arr(0), Array.empty, Array.empty)
     })
 
-    print(s"!!!!!!!!!! the nr of tables in $database is ${tables.length}")
     Tables(database, tables)
   }
 
@@ -62,27 +61,16 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
     }
 
     val describedTable = HiveUtils.runMetadataCmd(hiveContext, cmd)
-
-    println(s"!!!!!The number of columns is ${describedTable.size}")
-    describedTable foreach (arr => {
-      println("R1: ")
-      arr.foreach(x => print(s"$x|"))
-    })
-
-    val columns = describedTable map (arr =>
+    val (columnsResult, extraInfoResult) = describedTable.span { arr => !arr.sameElements(Array("","",""))}
+    
+    val columns = columnsResult map (arr =>
       arr.length match {
         case 3      => TableColumn(arr(0), arr(1), arr(2))
         case 2      => TableColumn(arr(0), arr(1), "")
         case 1      => TableColumn(arr(0), "", "")
         case x: Int => throw new Exception(s"Invalid number of fields for a describe command : $x")
       })
-
-    println(s"!!!!!Table cols columns is $columns")
-    columns foreach (col => {
-      println(s"n : ${col.name} d : ${col.dataType}, c: ${col.comment} ")
-    })
-
-    Table(table, columns, Array.empty)
+    Table(table, columns, extraInfoResult.tail)
   }
 
   override def receive = {
