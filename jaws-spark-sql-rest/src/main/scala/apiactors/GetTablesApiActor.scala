@@ -44,7 +44,7 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
     val tablesResult = HiveUtils.runMetadataCmd(hiveContext, "show tables")
     val tables = tablesResult map (arr => describe match {
       case true => describeTable(database, arr(0), isExtended)
-      case _ => Table(arr(0), Array.empty, Array.empty)
+      case _    => Table(arr(0), Array.empty, Array.empty)
     })
 
     print(s"!!!!!!!!!! the nr of tables in $database is ${tables.length}")
@@ -56,39 +56,33 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
     HiveUtils.runMetadataCmd(hiveContext, s"use $database")
 
     val cmd = isExtended match {
-      case _: Extended => s"describe extended $table"
+      case _: Extended  => s"describe extended $table"
       case _: Formatted => s"describe formatted $table"
-      case _ => s"describe $table"
+      case _            => s"describe $table"
     }
 
     val describedTable = HiveUtils.runMetadataCmd(hiveContext, cmd)
-    
-    println (s"!!!!!The number of columns is ${describedTable.size}")
+
+    println(s"!!!!!The number of columns is ${describedTable.size}")
     describedTable foreach (arr => {
       println("R1: ")
       arr.foreach(x => print(s"$x|"))
     })
-    var x = new Table("",Array.empty,Array.empty)
-    try{
-    val columns = describedTable map (arr => {
-      println(s"*********line ${arr(0)},   ${arr(1)},  ${arr(2)} |")
-      TableColumn(arr(0), arr(1), arr(2))})
-    
-    println (s"!!!!!Table cols columns is $columns")
+
+    val columns = describedTable map (arr =>
+      arr.length match {
+        case 3      => TableColumn(arr(0), arr(1), arr(2))
+        case 2      => TableColumn(arr(0), arr(1), "")
+        case 1      => TableColumn(arr(0), "", "")
+        case x: Int => throw new Exception(s"Invalid number of fields for a describe command : $x")
+      })
+
+    println(s"!!!!!Table cols columns is $columns")
     columns foreach (col => {
       println(s"n : ${col.name} d : ${col.dataType}, c: ${col.comment} ")
     })
-    
-    x = Table(table, columns, Array.empty)
-     println (s"!!!!!Table $x")
-    
-    }
-    catch {
-       
-     case e: Exception => println(getCompleteStackTrace(e))
-      
-    }
-    x
+
+    Table(table, columns, Array.empty)
   }
 
   override def receive = {
@@ -104,7 +98,7 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
             val allDatabases = Await.result(future, timeout.duration)
 
             allDatabases match {
-              case e: ErrorMessage => throw new Exception(e.message)
+              case e: ErrorMessage   => throw new Exception(e.message)
               case result: Databases => result.databases.map(db => getTablesForDatabase(db, new Regular, message.describe))
             }
 
@@ -123,22 +117,22 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
 
       getTablesFutures onComplete {
         case Success(result) => currentSender ! result
-        case Failure(e) => currentSender ! ErrorMessage(s"GET tables failed with the following message: ${e.getMessage}")
+        case Failure(e)      => currentSender ! ErrorMessage(s"GET tables failed with the following message: ${e.getMessage}")
       }
     }
 
     case message: GetExtendedTablesMessage => {
       val currentSender = sender
       val getExtendedTablesFuture = future {
-         Option(message.tables).getOrElse(Array.empty).isEmpty match {
+        Option(message.tables).getOrElse(Array.empty).isEmpty match {
           case true => Array(getTablesForDatabase(message.database, new Extended, true))
-          case _ => Array(Tables(message.database, message.tables map (table => describeTable(message.database, table, new Extended)))) 
+          case _    => Array(Tables(message.database, message.tables map (table => describeTable(message.database, table, new Extended))))
         }
       }
 
       getExtendedTablesFuture onComplete {
         case Success(result) => currentSender ! result
-        case Failure(e) => currentSender ! ErrorMessage(s"GET extended tables failed with the following message: ${e.getMessage}")
+        case Failure(e)      => currentSender ! ErrorMessage(s"GET extended tables failed with the following message: ${e.getMessage}")
       }
     }
 
@@ -146,15 +140,15 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
       val currentSender = sender
 
       val getFormattedTablesFuture = future {
-         Option(message.tables).getOrElse(Array.empty).isEmpty match {
+        Option(message.tables).getOrElse(Array.empty).isEmpty match {
           case true => Array(getTablesForDatabase(message.database, new Formatted, true))
-          case _ => Array(Tables(message.database, message.tables map (table => describeTable(message.database, table, new Formatted)))) 
+          case _    => Array(Tables(message.database, message.tables map (table => describeTable(message.database, table, new Formatted))))
         }
       }
 
       getFormattedTablesFuture onComplete {
         case Success(result) => currentSender ! result
-        case Failure(e) => currentSender ! ErrorMessage(s"GET formatted tables failed with the following message: ${e.getMessage}")
+        case Failure(e)      => currentSender ! ErrorMessage(s"GET formatted tables failed with the following message: ${e.getMessage}")
       }
     }
 
