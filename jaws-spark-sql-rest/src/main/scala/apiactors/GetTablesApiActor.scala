@@ -70,7 +70,15 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
     })
     
     val columns = describedTable map (arr => TableColumn(arr(0), arr(1), arr(2)))
-    Table(table, columns, Array.empty)
+    
+    println (s"!!!!!Table cols columns is $columns")
+    columns foreach (col => {
+      println(s"n : ${col.name} d : ${col.dataType}, c: ${col.comment} ")
+    })
+    
+    val x = Table(table, columns, Array.empty)
+     println (s"!!!!!Table $x")
+    x
   }
 
   override def receive = {
