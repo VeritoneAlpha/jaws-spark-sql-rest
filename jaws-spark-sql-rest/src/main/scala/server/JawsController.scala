@@ -199,7 +199,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
                     var describe = false
 
                     params.foreach(touple => touple._1 match {
-                      case "tables" => {
+                      case "table" => {
                         tables = touple._2
                       }
                       case "describe" => {
@@ -676,7 +676,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
     params.foreach(touple => touple match {
       case ("database", value)                     => database = Option(value).getOrElse("")
       case ("describe", value)                     => describe = Try(value.toBoolean).getOrElse(false)
-      case ("tables", value) if (!value.isEmpty()) => tables += value
+      case ("table", value) if (!value.isEmpty()) => tables += value
       case (key, value)                            => Configuration.log4j.warn(s"Unknown parameter $key!")
     })
 
