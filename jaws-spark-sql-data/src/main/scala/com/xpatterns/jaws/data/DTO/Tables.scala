@@ -6,8 +6,8 @@ import spray.json.DefaultJsonProtocol._
 /**
  * Created by emaorhian
  */
-case class Tables(tables: Map[String, Map[String, Result]])
+case class Tables(database: String, tables: Array[Table])
 
 object Tables {
-  implicit val tablesJson = jsonFormat1(apply)
+  implicit val tablesJson = jsonFormat2(apply)
 }

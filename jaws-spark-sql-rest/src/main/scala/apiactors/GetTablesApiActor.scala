@@ -12,14 +12,16 @@ import akka.pattern.ask
 import org.apache.spark.scheduler.HiveUtils
 import implementation.HiveContextWrapper
 import akka.actor.Actor
-import com.xpatterns.jaws.data.DTO.{ Tables, Result }
 import scala.util.{ Try, Success, Failure }
 import apiactors.ActorOperations._
 import scala.collection.immutable.HashMap
 import scala.concurrent._
 import ExecutionContext.Implicits.global
 import messages.ErrorMessage
-import com.xpatterns.jaws.data.DTO.Column
+import com.xpatterns.jaws.data.DTO.Table
+import com.xpatterns.jaws.data.DTO.Databases
+import com.xpatterns.jaws.data.DTO.TableColumn
+import com.xpatterns.jaws.data.DTO.Tables
 
 /**
  * Created by emaorhian
@@ -35,27 +37,20 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
   val databasesActor = context.actorSelection(ActorsPaths.GET_DATABASES_ACTOR_PATH)
   implicit val timeout = Timeout(Configuration.timeout)
 
-  def getTablesForDatabase(database: String, isExtended: DescriptionType, describe: Boolean): Map[String, Result] = {
-    Configuration.log4j.info("[GetTablesApiActor]: showing tables for database " + database)
+  def getTablesForDatabase(database: String, isExtended: DescriptionType, describe: Boolean): Tables = {
+    Configuration.log4j.info(s"[GetTablesApiActor]: showing tables for database $database, describe = $describe")
 
     HiveUtils.runMetadataCmd(hiveContext, s"use $database")
-    val tables = Result.trimResults(new Result(Array(new Column("result", "stringType")), HiveUtils.runMetadataCmd(hiveContext, "show tables")))
+    val tablesResult = HiveUtils.runMetadataCmd(hiveContext, "show tables")
+    val tables = tablesResult map (arr => describe match {
+      case true => describeTable(database, arr(0), isExtended)
+      case _ => Table(arr(0), Array.empty, Array.empty)
+    })
 
-    tables.results flatMap (result => {
-      if (result.isEmpty == false) {
-        if (describe) describeTable(database, result(0), isExtended) else Map(result(0) -> new Result)
-      } else {
-        Map[String, Result]()
-      }
-    }) toMap
+    Tables(database, tables)
   }
 
-  def describeTables(database: String, tables: List[String]): Map[String, Result] = {
-    Configuration.log4j.info(s"[describeTables]: describing the following tables from database= $database: $tables")
-    tables flatMap (table => describeTable(database, table, new Regular)) toMap
-  }
-
-  def describeTable(database: String, table: String, isExtended: DescriptionType): Map[String, Result] = {
+  def describeTable(database: String, table: String, isExtended: DescriptionType): Table = {
     Configuration.log4j.info(s"[GetTablesApiActor]: describing table $table from database $database")
     HiveUtils.runMetadataCmd(hiveContext, s"use $database")
 
@@ -65,8 +60,9 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
       case _ => s"describe $table"
     }
 
-    val description = Result.trimResults(new Result(Array(new Column("result", "stringType")), HiveUtils.runMetadataCmd(hiveContext, cmd)))
-    Map(table -> description)
+    val describedTable = HiveUtils.runMetadataCmd(hiveContext, cmd)
+    val columns = describedTable map (arr => TableColumn(arr(0), arr(1), arr(2)))
+    Table(table, columns, Array.empty)
   }
 
   override def receive = {
@@ -83,17 +79,17 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
 
             allDatabases match {
               case e: ErrorMessage => throw new Exception(e.message)
-              case result: Result => result.results.flatMap(fields => Map(fields(0) -> getTablesForDatabase(fields(0), new Regular, message.describe))) toMap
+              case result: Databases => result.databases.map(db => getTablesForDatabase(db, new Regular, message.describe))
             }
 
           }
           case _ => {
             // if there is a list of tables specified, then
-            if (Option(message.tables).getOrElse(List()).isEmpty) {
-              Map(message.database -> getTablesForDatabase(message.database, new Regular, message.describe))
+            if (Option(message.tables).getOrElse(Array.empty).isEmpty) {
+              Array(getTablesForDatabase(message.database, new Regular, message.describe))
 
             } else {
-              Map(message.database -> describeTables(message.database, message.tables))
+              Array(Tables(message.database, message.tables map (table => describeTable(message.database, table, new Regular))))
             }
           }
         }
