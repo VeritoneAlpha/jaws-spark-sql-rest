@@ -47,6 +47,7 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
       case _ => Table(arr(0), Array.empty, Array.empty)
     })
 
+    print(s"!!!!!!!!!! the nr of tables in $database is ${tables.length}")
     Tables(database, tables)
   }
 
@@ -61,6 +62,13 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
     }
 
     val describedTable = HiveUtils.runMetadataCmd(hiveContext, cmd)
+    
+    println (s"!!!!!The number of columns is ${describedTable.size}")
+    describedTable foreach (arr => {
+      println("R1: ")
+      arr.foreach(println)
+    })
+    
     val columns = describedTable map (arr => TableColumn(arr(0), arr(1), arr(2)))
     Table(table, columns, Array.empty)
   }
@@ -104,9 +112,9 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
     case message: GetExtendedTablesMessage => {
       val currentSender = sender
       val getExtendedTablesFuture = future {
-        Option(message.table).getOrElse("") match {
-          case "" => Map(message.database -> getTablesForDatabase(message.database, new Extended, true))
-          case _ => Map(message.database -> describeTable(message.database, message.table, new Extended))
+         Option(message.tables).getOrElse(Array.empty).isEmpty match {
+          case true => Array(getTablesForDatabase(message.database, new Extended, true))
+          case _ => Array(Tables(message.database, message.tables map (table => describeTable(message.database, table, new Extended)))) 
         }
       }
 
@@ -120,9 +128,9 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
       val currentSender = sender
 
       val getFormattedTablesFuture = future {
-        Option(message.table).getOrElse("") match {
-          case "" => Map(message.database -> getTablesForDatabase(message.database, new Formatted, true))
-          case _ => Map(message.database -> describeTable(message.database, message.table, new Formatted))
+         Option(message.tables).getOrElse(Array.empty).isEmpty match {
+          case true => Array(getTablesForDatabase(message.database, new Formatted, true))
+          case _ => Array(Tables(message.database, message.tables map (table => describeTable(message.database, table, new Formatted)))) 
         }
       }
 

@@ -145,7 +145,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
                         val future = ask(runScriptActor, RunParquetMessage(query, tablePath, table, limited, numberOfResults, destination))
                         future.map {
                           case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                          case result: String => ctx.complete(StatusCodes.OK, result)
+                          case result: String  => ctx.complete(StatusCodes.OK, result)
                         }
                       }
                     }
@@ -180,7 +180,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
                             .flatMap(identity)
                           future.map {
                             case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                            case result: String => ctx.complete(StatusCodes.OK, result)
+                            case result: String  => ctx.complete(StatusCodes.OK, result)
                           }
                         }
                       }
@@ -212,7 +212,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
                     val future = ask(getParquetTablesActor, new GetParquetTablesMessage(tables, describe))
 
                     future.map {
-                      case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                      case e: ErrorMessage                          => ctx.complete(StatusCodes.InternalServerError, e.message)
                       case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
                     }
                   }
@@ -232,7 +232,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
                         .flatMap(identity)
                       future.map {
                         case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                        case result: String => ctx.complete(StatusCodes.OK, result)
+                        case result: String  => ctx.complete(StatusCodes.OK, result)
                       }
                     }
                   }
@@ -262,7 +262,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
                 val future = ask(runScriptActor, RunScriptMessage(query, limited, numberOfResults, destination.toLowerCase()))
                 future.map {
                   case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                  case result: String => ctx.complete(StatusCodes.OK, result)
+                  case result: String  => ctx.complete(StatusCodes.OK, result)
                 }
               }
             }
@@ -291,7 +291,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
                 val future = ask(getLogsActor, GetLogsMessage(queryID, timestamp, limit))
                 future.map {
                   case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                  case result: Logs => ctx.complete(StatusCodes.OK, result)
+                  case result: Logs    => ctx.complete(StatusCodes.OK, result)
                 }
               }
             }
@@ -315,7 +315,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
                 val future = ask(getResultsActor, GetResultsMessage(queryID, offset, limit))
                 future.map {
                   case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                  case result: Result => ctx.complete(StatusCodes.OK, result)
+                  case result: Result  => ctx.complete(StatusCodes.OK, result)
                 }
               }
             }
@@ -343,10 +343,10 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
                 val queries = ListBuffer[String]()
 
                 params.foreach(touple => touple match {
-                  case ("limit", value) => limit = Try(value.toInt).getOrElse(100)
-                  case ("startQueryID", value) => startQueryID = Option(value).getOrElse(null)
+                  case ("limit", value)                         => limit = Try(value.toInt).getOrElse(100)
+                  case ("startQueryID", value)                  => startQueryID = Option(value).getOrElse(null)
                   case ("queryID", value) if (!value.isEmpty()) => queries += value
-                  case (key, value) => Configuration.log4j.warn(s"Unknown parameter $key!")
+                  case (key, value)                             => Configuration.log4j.warn(s"Unknown parameter $key!")
                 })
 
                 val future = if (queries isEmpty) ask(getQueriesActor, GetPaginatedQueriesMessage(startQueryID, limit))
@@ -414,20 +414,14 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
           corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
 
             respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-              var database = ""
-              var describe = true
-              var tables = ArrayBuffer[String]()
-              params.foreach(touple => touple match {
-                case ("database", value) => database = Option(value).getOrElse("")           
-                case ("describe", value) => describe = Try(value.toBoolean).getOrElse(true)               
-                case ("tables", value)  if (!value.isEmpty()) => tables += value                 
-                case (key, value) => Configuration.log4j.warn(s"Unknown parameter $key!")
-              })
+
+              val (database, describe, tables) = getTablesParameters(params)
+
               Configuration.log4j.info(s"Retrieving table information for database=$database, tables= $tables, with describe flag set on: $describe")
-              val future = ask(getTablesActor, new GetTablesMessage(database, describe, tables.toArray))
+              val future = ask(getTablesActor, new GetTablesMessage(database, describe, tables))
 
               future.map {
-                case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                case e: ErrorMessage       => ctx.complete(StatusCodes.InternalServerError, e.message)
                 case result: Array[Tables] => ctx.complete(StatusCodes.OK, result)
               }
             }
@@ -444,14 +438,21 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
       } ~
       path("extended") {
         get {
-          parameters('database.as[String], 'table.?) { (database, table) =>
+          parameterSeq { params =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+              val (database, describe, tables) = getTablesParameters(params)
+              validate(database != null && !database.trim.isEmpty, Configuration.DATABASE_EXCEPTION_MESSAGE) {
+                respondWithMediaType(MediaTypes.`application/json`) {
+                  ctx =>
 
-              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                val future = ask(getTablesActor, new GetExtendedTablesMessage(database, table.getOrElse("")))
-                future.map {
-                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                  case result: Array[Tables] => ctx.complete(StatusCodes.OK, result)
+                    Configuration.log4j.info(s"Retrieving extended table information for database=$database, tables= $tables")
+                    val future = ask(getTablesActor, new GetExtendedTablesMessage(database, tables))
+
+                    future.map {
+                      case e: ErrorMessage       => ctx.complete(StatusCodes.InternalServerError, e.message)
+                      case result: Array[Tables] => ctx.complete(StatusCodes.OK, result)
+                      case _ => ctx.complete(StatusCodes.Accepted, "Other")
+                    }
                 }
               }
             }
@@ -467,17 +468,23 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
       } ~
       path("formatted") {
         get {
-          parameters('database.as[String], 'table.?) { (database, table) =>
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+          parameterSeq {
+            params =>
+              corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+                val (database, describe, tables) = getTablesParameters(params)
+                validate(database != null && !database.trim.isEmpty, Configuration.DATABASE_EXCEPTION_MESSAGE) {
+                  respondWithMediaType(MediaTypes.`application/json`) {
+                    ctx =>
+                      Configuration.log4j.info(s"Retrieving formatted table information for database=$database, tables= $tables")
+                      val future = ask(getTablesActor, new GetFormattedTablesMessage(database, tables.toArray))
 
-              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                val future = ask(getTablesActor, new GetFormattedTablesMessage(database, table.getOrElse("")))
-                future.map {
-                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                  case result: Array[Tables] => ctx.complete(StatusCodes.OK, result)
+                      future.map {
+                        case e: ErrorMessage       => ctx.complete(StatusCodes.InternalServerError, e.message)
+                        case result: Array[Tables] => ctx.complete(StatusCodes.OK, result)
+                      }
+                  }
                 }
               }
-            }
           }
         } ~
           options {
@@ -498,7 +505,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
         respondWithMediaType(MediaTypes.`application/json`) { ctx =>
           val future = ask(getDatabasesActor, GetDatabasesMessage())
           future.map {
-            case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+            case e: ErrorMessage   => ctx.complete(StatusCodes.InternalServerError, e.message)
             case result: Databases => ctx.complete(StatusCodes.OK, result)
           }
         }
@@ -570,7 +577,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
 
     Configuration.loggingType.getOrElse("cassandra") match {
       case "cassandra" => dals = new CassandraDal(Configuration.cassandraHost.get, Configuration.cassandraClusterName.get, Configuration.cassandraKeyspace.get)
-      case _ => dals = new HdfsDal(hdfsConf)
+      case _           => dals = new HdfsDal(hdfsConf)
     }
 
     hiveContext = createHiveContext(dals)
@@ -662,6 +669,19 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
     })
   }
 
+  private def getTablesParameters(params: Seq[(String, String)]): Tuple3[String, Boolean, Array[String]] = {
+    var database = ""
+    var describe = false
+    var tables = ArrayBuffer[String]()
+    params.foreach(touple => touple match {
+      case ("database", value)                     => database = Option(value).getOrElse("")
+      case ("describe", value)                     => describe = Try(value.toBoolean).getOrElse(false)
+      case ("tables", value) if (!value.isEmpty()) => tables += value
+      case (key, value)                            => Configuration.log4j.warn(s"Unknown parameter $key!")
+    })
+
+    (database, describe, tables.toArray)
+  }
 }
 
 object Configuration {
@@ -717,6 +737,7 @@ object Configuration {
   val LIMITED_EXCEPTION_MESSAGE = "The limited flag is null!"
   val RESULTS_NUMBER_EXCEPTION_MESSAGE = "The results number is null!"
   val FILE_EXCEPTION_MESSAGE = "The file is null or empty!"
+  val DATABASE_EXCEPTION_MESSAGE = "The database is null or empty!"
   val TABLE_EXCEPTION_MESSAGE = "The table name is null or empty!"
   val PATH_IS_EMPTY = "Request parameter \'path\' must not be empty!"
   val TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE = "The table already exists!"
