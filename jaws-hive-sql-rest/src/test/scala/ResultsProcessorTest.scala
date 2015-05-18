@@ -8,8 +8,13 @@ import java.io.ByteArrayOutputStream
 import java.io.OutputStreamWriter
 import customs.CommandsProcessor._
 import java.io.ByteArrayInputStream
-import com.xpatterns.jaws.data.DTO.Result
 import com.xpatterns.jaws.data.DTO.Column
+import org.apache.spark.sql.catalyst.expressions.Row
+import com.xpatterns.jaws.data.utils.ResultsConverter
+import org.apache.spark.sql.catalyst.types.StructType
+import org.apache.spark.sql.catalyst.types.StructField
+import org.apache.spark.sql.catalyst.types.StringType
+import scala.collection.mutable.WrappedArray
 
 @RunWith(classOf[JUnitRunner])
 class ResultsProcessorTest extends FunSuite {
@@ -54,14 +59,16 @@ class ResultsProcessorTest extends FunSuite {
     osWriter.flush()
 
     val results = getLastResults(new ByteArrayInputStream(stdOutOS.toByteArray()))
-    val requiredResults = new Result(Array(Column("name", ""), Column("age", ""), Column("sex", "")), Array(Array("name", "age", "sex"), Array("name1", "age1", "sex1"), Array("name2", "age2", "sex2")))
-    
-    
+    val requiredSchema = new StructType(Array(StructField("name", StringType, true), StructField("age", StringType, true), StructField("sex", StringType, true)))
+    val requiredResults = new ResultsConverter(requiredSchema,
+      Array(Row.fromSeq(Array("name", "age", "sex")), Row.fromSeq(Array("name1", "age1", "sex1")), Row.fromSeq(Array("name2", "age2", "sex2"))))
+
     osWriter.close()
-    assert(results.equals(requiredResults))
+    assert(results.schema === requiredResults.schema, "Not the same schema")
+    assert(results.result === requiredResults.result, "Not the same results")
   }
-  
-   test("get Last Results - no results") {
+
+  test("get Last Results - no results") {
 
     val stdOutOS = new ByteArrayOutputStream
     val osWriter = new OutputStreamWriter(stdOutOS)
@@ -74,11 +81,11 @@ class ResultsProcessorTest extends FunSuite {
     osWriter.flush()
 
     val results = getLastResults(new ByteArrayInputStream(stdOutOS.toByteArray()))
-    val requiredResults = new Result(Array(Column("name", ""), Column("age", ""), Column("sex", "")), Array[Array[String]]())
-    
-    
+    val requiredResults = new ResultsConverter(StructType(Array(StructField("name", StringType, true), StructField("age", StringType, true), StructField("sex", StringType, true))), Array.empty)
+
     osWriter.close()
-    assert(results.equals(requiredResults))
+   assert(results.schema === requiredResults.schema, "Not the same schema")
+    assert(results.result === requiredResults.result, "Not the same results")
   }
 
 }

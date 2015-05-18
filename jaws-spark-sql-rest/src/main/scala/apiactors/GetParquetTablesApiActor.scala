@@ -15,13 +15,15 @@ import akka.pattern.ask
 import org.apache.spark.scheduler.HiveUtils
 import implementation.HiveContextWrapper
 import akka.actor.Actor
-import com.xpatterns.jaws.data.DTO.{ Tables, Result }
+import com.xpatterns.jaws.data.DTO.Tables
 import scala.util.{ Try, Success, Failure }
 import apiactors.ActorOperations._
 import org.apache.spark.sql.catalyst.types.StructType
 import org.apache.spark.sql.catalyst.types.StructField
 import org.apache.spark.sql.catalyst.types.DataType
 import com.xpatterns.jaws.data.DTO.Column
+import com.xpatterns.jaws.data.DTO.Table
+import com.xpatterns.jaws.data.utils.CustomConverter
 /**
  * Created by emaorhian
  */
@@ -32,38 +34,37 @@ class GetParquetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) exten
 
     case message: GetParquetTablesMessage => {
       val currentSender = sender
-    
+
       val getTablesFuture = future {
         if (message.tables.isEmpty) {
           val tables = dals.parquetTableDal.listParquetTables
           message.describe match {
-            case true => Map("None" -> (tables map (pTable => pTable.name -> getFields(pTable.name)) toMap))
-            case false => Map("None" -> (tables map (pTable => pTable.name -> new Result) toMap))
+            case true  => Array(Tables("None", tables map (pTable => getFields(pTable.name))))
+            case false => Array(Tables("None", tables map (pTable => Table(pTable.name, Array.empty, Array.empty))))
           }
 
         } else {
           var tablesMap = message.tables.map(table => {
             if (dals.parquetTableDal.tableExists(table) == false)
               throw new Exception(s" Table $table does not exist")
-            table -> getFields(table)
-          }).toMap
-          Map("None" -> tablesMap)
+             getFields(table)
+          })
+         Array(Tables("None", tablesMap))
         }
       }
 
       getTablesFuture onComplete {
         case Success(result) => currentSender ! result
-        case Failure(e) => currentSender ! ErrorMessage(s"GET tables failed with the following message: ${e.getMessage}")
+        case Failure(e)      => currentSender ! ErrorMessage(s"GET tables failed with the following message: ${e.getMessage}")
       }
     }
   }
 
-  def getFields(tableName: String): Result = {
+  def getFields(tableName: String): Table = {
     val tableSchemaRDD = hiveContext.table(tableName)
-    val schema = Array(Column("result", "StringType"))
-    val result = tableSchemaRDD.schema
+    val schema = CustomConverter.getCustomSchema(tableSchemaRDD.schema)
 
-    new Result(schema, result)
+    Table(tableName, schema, Array.empty)
   }
 
 }

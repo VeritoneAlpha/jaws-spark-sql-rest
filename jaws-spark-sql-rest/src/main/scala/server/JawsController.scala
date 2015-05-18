@@ -23,7 +23,7 @@ import com.xpatterns.jaws.data.impl.HdfsDal
 import messages._
 import com.xpatterns.jaws.data.DTO.Queries
 import spray.http.{ StatusCodes, HttpHeaders, HttpMethods, MediaTypes }
-import spray.httpx.SprayJsonSupport.sprayJsonMarshaller
+import spray.httpx.SprayJsonSupport._
 import spray.httpx.marshalling.ToResponseMarshallable.isMarshallable
 import spray.json.DefaultJsonProtocol._
 import spray.routing.Directive.pimpApply
@@ -32,7 +32,6 @@ import spray.routing.directives.ParamDefMagnet.apply
 import com.xpatterns.jaws.data.contracts.DAL
 import messages.GetResultsMessage
 import com.xpatterns.jaws.data.DTO.Logs
-import com.xpatterns.jaws.data.DTO.Result
 import com.xpatterns.jaws.data.DTO.Query
 import scala.util.{ Failure, Success, Try }
 import server.MainActors._
@@ -50,6 +49,14 @@ import com.xpatterns.jaws.data.DTO.Databases
 import scala.collection.mutable.ListBuffer
 import com.xpatterns.jaws.data.DTO.Tables
 import scala.collection.mutable.ArrayBuffer
+import com.xpatterns.jaws.data.DTO.AvroResult
+import com.xpatterns.jaws.data.DTO.CustomResult
+import spray.json.RootJsonWriter
+import spray.json.JsonPrinter
+import spray.json.PrettyPrinter
+import spray.httpx.marshalling.Marshaller
+import spray.http.ContentTypes
+import com.xpatterns.jaws.data.DTO.AvroBinaryResult
 
 /**
  * Created by emaorhian
@@ -191,29 +198,24 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
             }
           } ~
             get {
-              parameterMultiMap { params =>
+              parameterSeq { params =>
                 corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
 
                   respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                    var tables: List[String] = List()
+                    var tables = ArrayBuffer[String]()
                     var describe = false
 
-                    params.foreach(touple => touple._1 match {
-                      case "table" => {
-                        tables = touple._2
-                      }
-                      case "describe" => {
-                        if (touple._2 != null && !touple._2.isEmpty)
-                          describe = Try(touple._2(0).toBoolean).getOrElse(false)
-                      }
-                      case _ => Configuration.log4j.warn(s"Unknown parameter ${touple._1}!")
+                    params.foreach(touple => touple match {
+                      case ("describe", value)                    => describe = Try(value.toBoolean).getOrElse(false)
+                      case ("table", value) if (!value.isEmpty()) => tables += value
+                      case (key, value)                           => Configuration.log4j.warn(s"Unknown parameter $key!")
                     })
                     Configuration.log4j.info(s"Retrieving table information for parquet tables= $tables")
-                    val future = ask(getParquetTablesActor, new GetParquetTablesMessage(tables, describe))
+                    val future = ask(getParquetTablesActor, new GetParquetTablesMessage(tables.toArray, describe))
 
                     future.map {
-                      case e: ErrorMessage                          => ctx.complete(StatusCodes.InternalServerError, e.message)
-                      case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
+                      case e: ErrorMessage       => ctx.complete(StatusCodes.InternalServerError, e.message)
+                      case result: Array[Tables] => ctx.complete(StatusCodes.OK, result)
                     }
                   }
                 }
@@ -308,14 +310,31 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
     } ~
     path("results") {
       get {
-        parameters('queryID, 'offset.as[Int], 'limit.as[Int]) { (queryID, offset, limit) =>
+        parameters('queryID, 'offset.as[Int], 'limit.as[Int], 'format ? "default") { (queryID, offset, limit, format) =>
           corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
             validate(queryID != null && !queryID.trim.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE) {
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                val future = ask(getResultsActor, GetResultsMessage(queryID, offset, limit))
+
+                implicit def avroBinaryResultMarshaller[T] =
+                  Marshaller.delegate[T, String](ContentTypes.`application/json`) { value ⇒
+                    val gson = new Gson()
+                    gson.toJson(value)
+
+                  }
+//                implicit def avroResultMarshaller[AvroResult] =
+//                  Marshaller.delegate[AvroResult, String](ContentTypes.`application/json`) { value ⇒
+//                    val gson = new Gson()
+//                    gson.toJson(value)
+//
+//                  }
+                                
+
+                val future = ask(getResultsActor, GetResultsMessage(queryID, offset, limit, format.toLowerCase()))
                 future.map {
-                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                  case result: Result  => ctx.complete(StatusCodes.OK, result)
+                  case e: ErrorMessage          => ctx.complete(StatusCodes.InternalServerError, e.message)
+                  case result: AvroResult       => ctx.complete(StatusCodes.OK, result)
+                  case result: AvroBinaryResult => ctx.complete(StatusCodes.OK, result)
+                  case result: CustomResult     => ctx.complete(StatusCodes.OK, result)
                 }
               }
             }
@@ -451,7 +470,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
                     future.map {
                       case e: ErrorMessage       => ctx.complete(StatusCodes.InternalServerError, e.message)
                       case result: Array[Tables] => ctx.complete(StatusCodes.OK, result)
-                      case _ => ctx.complete(StatusCodes.Accepted, "Other")
+                      case _                     => ctx.complete(StatusCodes.Accepted, "Other")
                     }
                 }
               }
@@ -674,10 +693,10 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
     var describe = false
     var tables = ArrayBuffer[String]()
     params.foreach(touple => touple match {
-      case ("database", value)                     => database = Option(value).getOrElse("")
-      case ("describe", value)                     => describe = Try(value.toBoolean).getOrElse(false)
+      case ("database", value)                    => database = Option(value).getOrElse("")
+      case ("describe", value)                    => describe = Try(value.toBoolean).getOrElse(false)
       case ("table", value) if (!value.isEmpty()) => tables += value
-      case (key, value)                            => Configuration.log4j.warn(s"Unknown parameter $key!")
+      case (key, value)                           => Configuration.log4j.warn(s"Unknown parameter $key!")
     })
 
     (database, describe, tables.toArray)

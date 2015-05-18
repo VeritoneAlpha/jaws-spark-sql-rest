@@ -10,7 +10,6 @@ import com.xpatterns.jaws.data.contracts.DAL
 import messages.GetDatabasesMessage
 import java.util.UUID
 import server.Configuration
-import com.xpatterns.jaws.data.DTO.Result
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.scheduler.HiveUtils
 import implementation.HiveContextWrapper

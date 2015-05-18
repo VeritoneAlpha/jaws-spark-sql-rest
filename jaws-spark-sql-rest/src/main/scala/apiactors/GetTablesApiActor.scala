@@ -20,9 +20,9 @@ import ExecutionContext.Implicits.global
 import messages.ErrorMessage
 import com.xpatterns.jaws.data.DTO.Table
 import com.xpatterns.jaws.data.DTO.Databases
-import com.xpatterns.jaws.data.DTO.TableColumn
 import com.xpatterns.jaws.data.DTO.Tables
 import com.xpatterns.jaws.data.utils.Utils._
+import com.xpatterns.jaws.data.DTO.Column
 /**
  * Created by emaorhian
  */
@@ -64,7 +64,7 @@ class GetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Acto
     val described = if (isExtended.isInstanceOf[Formatted]) describedTable.drop(2) else describedTable
     
     val (columnsResult, extraInfoResult) = described.span { arr => !arr.sameElements(Array("", "", "")) }
-    val columns = columnsResult map (arr => TableColumn(arr(0), arr(1), arr(2)))
+    val columns = columnsResult map (arr => Column(arr(0), arr(1), arr(2), Array.empty))
     val extraInfo = if (extraInfoResult.isEmpty) extraInfoResult else extraInfoResult.tail
     Table(table, columns, extraInfo)
   }

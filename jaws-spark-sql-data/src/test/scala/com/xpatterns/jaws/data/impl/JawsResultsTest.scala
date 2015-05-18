@@ -1,7 +1,6 @@
 package com.xpatterns.jaws.data.impl
 
 import org.scalatest.FunSuite
-import com.xpatterns.jaws.data.DTO.Result
 import com.xpatterns.jaws.data.DTO.Column
 import org.apache.commons.lang.RandomStringUtils
 import com.xpatterns.jaws.data.utils.Randomizer
@@ -15,6 +14,8 @@ import me.prettyprint.hector.api.factory.HFactory
 import me.prettyprint.cassandra.model.AllOneConsistencyLevelPolicy
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
+import com.xpatterns.jaws.data.DTO.AvroResult
+import com.xpatterns.jaws.data.DTO.CustomResult
 
 @RunWith(classOf[JUnitRunner])
 class JawsResultsTest extends FunSuite with BeforeAndAfter {
@@ -45,28 +46,34 @@ class JawsResultsTest extends FunSuite with BeforeAndAfter {
 
   test("testWriteReadResults") {
     val uuid = Randomizer.getRandomString(10)
-    val resultDTO = Randomizer.getResult
-    resultsDal.setResults(uuid, resultDTO)
+    val resultsConverter = Randomizer.getResultsConverter
+    resultsDal.setResults(uuid, resultsConverter)
 
-    val results = resultsDal.getResults(uuid)
+    val avroResults = resultsDal.getAvroResults(uuid)
+    val customResults = resultsDal.getCustomResults(uuid)
 
-    assert(resultDTO === results)
+    assert(resultsConverter.toAvroResults() === avroResults)
+    assert(resultsConverter.toCustomResults() === customResults)
 
   }
 
   test("testDeleteResults") {
     val uuid = Randomizer.getRandomString(10)
-    val resultDTO = Randomizer.getResult
-    resultsDal.setResults(uuid, resultDTO)
+    val resultsConverter = Randomizer.getResultsConverter
+    resultsDal.setResults(uuid, resultsConverter)
 
-    val results = resultsDal.getResults(uuid)
+    val avroResults = resultsDal.getAvroResults(uuid)
+    val customResults = resultsDal.getCustomResults(uuid)
 
     resultsDal.deleteResults(uuid)
 
-    val resultsDeleted = resultsDal.getResults(uuid)
+    val avroResultsDeleted = resultsDal.getAvroResults(uuid)
+    val customResultsDeleted = resultsDal.getCustomResults(uuid)
 
-    assert(resultDTO === results)
-    assert(new Result() === resultsDeleted)
+    assert(resultsConverter.toAvroResults() === avroResults)
+    assert(resultsConverter.toCustomResults() === customResults)
+    assert(new AvroResult() === avroResultsDeleted)
+     assert(new CustomResult() === customResultsDeleted)
 
   }
 }

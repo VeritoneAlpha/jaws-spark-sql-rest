@@ -12,7 +12,7 @@ AND default_validation_class = 'BytesType';
 
 
 create column family results
-with comparator = 'UTF8Type'
+with comparator = 'CompositeType(UTF8Type,UTF8Type,Int32Type)'
 AND key_validation_class = 'Int32Type'
 AND default_validation_class = 'BytesType';
 

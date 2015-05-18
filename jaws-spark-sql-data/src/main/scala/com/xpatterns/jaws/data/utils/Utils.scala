@@ -28,7 +28,7 @@ object Utils {
   val SCHEMA_FOLDER = "schemaFolder"
   val PARQUET_TABLES_FOLDER = "parquetTablesFolder"
   val REPLICATION_FACTOR = "replicationFactor"
-  
+
   private val log = Logger.getLogger("Utils")
 
   def createFolderIfDoesntExist(configuration: Configuration, folder: String, forcedMode: Boolean) {
@@ -72,8 +72,12 @@ object Utils {
   }
 
   def rewriteFile(message: String, configuration: Configuration, filename: String) {
+    rewriteFile(message.getBytes(), configuration, filename)
+  }
+
+  def rewriteFile(message: Array[Byte], configuration: Configuration, filename: String) {
     var fs: FileSystem = null
-    val in: InputStream = new BufferedInputStream(new ByteArrayInputStream(message.getBytes()))
+    val in: InputStream = new BufferedInputStream(new ByteArrayInputStream(message))
     val temporaryFileName = filename + "_temp"
 
     try {
@@ -124,6 +128,20 @@ object Utils {
       if (br != null) {
         br.close()
       }
+      if (fs != null) {
+        fs.close()
+      }
+    }
+
+  }
+
+  def readBytes(configuration: Configuration, filename: String): Array[Byte] = {
+    var fs: FileSystem = null
+    try {
+      val filePath = new Path(filename)
+      fs = FileSystem.newInstance(configuration)
+      org.apache.commons.io.IOUtils.toByteArray(fs.open(filePath))
+    } finally {
       if (fs != null) {
         fs.close()
       }
@@ -249,7 +267,7 @@ object Utils {
     }
     result
   }
-  
+
   def getCompleteStackTrace(e: Throwable): String = {
     var message = s"${e.getMessage()} : ${e.getStackTraceString}\n"
     var cause = e.getCause

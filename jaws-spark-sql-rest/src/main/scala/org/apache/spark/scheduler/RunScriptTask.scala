@@ -6,7 +6,6 @@ import com.xpatterns.jaws.data.utils.Utils._
 import server.MainActors
 import server.Configuration
 import server.LogsActor.PushLogs
-import com.xpatterns.jaws.data.DTO.Result
 import org.apache.commons.lang.time.DurationFormatUtils
 import com.xpatterns.jaws.data.utils.QueryState
 import implementation.HiveContextWrapper
@@ -26,6 +25,7 @@ import server.JawsController
 import scala.concurrent.Future
 import messages.RunScriptMessage
 import messages.RunParquetMessage
+import com.xpatterns.jaws.data.utils.ResultsConverter
 /**
  * Created by emaorhian
  */
@@ -44,7 +44,7 @@ class RunScriptTask(dals: DAL, hiveContext: HiveContextWrapper,
       // job group id used to identify these jobs when trying to cancel them.
       hiveContext.sparkContext.setJobGroup(uuid, "")
 
-      val result: Result = executeCommands(commands)
+      val result: ResultsConverter = executeCommands(commands)
 
       val executionTime = System.currentTimeMillis() - startTime
       val formattedDuration = DurationFormatUtils.formatDurationHMS(executionTime)
@@ -65,8 +65,8 @@ class RunScriptTask(dals: DAL, hiveContext: HiveContextWrapper,
     }
   }
 
-  def executeCommands(commands: List[String]): Result = {
-    var result: Result = null
+  def executeCommands(commands: List[String]): ResultsConverter = {
+    var result: ResultsConverter = null
     val nrOfCommands = commands.size
 
     for (commandIndex <- 1 to nrOfCommands) {
@@ -89,7 +89,7 @@ class RunScriptTask(dals: DAL, hiveContext: HiveContextWrapper,
     result
   }
 
-  def writeResults(result: Result) {
+  def writeResults(result: ResultsConverter) {
     isCanceled match {
       case false => {
         Option(result) match {
