@@ -54,13 +54,24 @@ After editing all the configuration files Jaws can be run in the following manne
     2. run Jaws:
        nohup bin/start-jaws.sh &
 
+### Verify that Jaws spark sql is up
 
-## Queries examples
+    curl 'devbox.local:9080/jaws/index' -X GET
+    
+Results:
+You will receive the following confirmation message that Jaws hive sql is up and running:
 
-Below are some queries with example purpose:
+"Jaws is up and running!"
 
-### Run api:
-    curl -d "select * from table" 'http://devbox.local:9080/jaws/run?limited=true&numberOfResults=99' -X POST
+## Apis usage examples
+
+Below is described Jaws functionality throgh api calls examples and sample results.
+
+### Run queries apis
+Below is described how a user could run queries, retrieve logs, results, ask for queries information, even delete or cancel a query
+
+#### Run query
+    curl -d "select * from table" 'http://devbox.local:9080/jaws/run?limited=true&numberOfResults=99'-X POST
 
 Parameters:
 
@@ -68,108 +79,21 @@ Parameters:
   However, for large datasets that exceed the default number of results (100, configurable), results will not be persisted in memory and the configured database anymore, they will only be stored as an RDD on HDFS, and used for paginated retrieval (offset and limit parameters in the results api).
   If the limited parameter is set on false, then the query will return all the results and this time they will be stored in an RDD on HDFS, this is an indicator that a large dataset is about to be queried.
   * numberOfResults [not required]: The parameter is considered only if the "limited" parameter is set on true
+  * destination [not required]: Default value hdfs, possible values hdfs/tachyon. This field is used for unlimited results queries, to specify where the result RDD will be persisted.
 
 Results:
 
 The api returns an uuid representing the query that was submitted. The query is executed asynchronously and the expectation is that clients poll for logs and completion status.
 
 Example:
+
  1404998257416357bb29d-6801-41ca-82e4-7a265816b50c
 
-### Run parquet api:
-    curl -d "select * from testTable" 'http://devbox.local:9080/jaws/parquet/run?tablePath=tachyon://devbox.local:19998/user/jaws/parquetFolder&table=testTable&limited=true&numberOfResults=99&overwrite=false' -X POST
+#### Logs api:
 
-Parameters:
+This api is used for retrieving paginated logs for a specific query
 
-  * tablePath [required] : the path to the parquet folder which you want to query
-  * table : the table name you want to give to your parquet forlder
-  * limited [required]:  if set on true, the query will be limited to a fixed number of results. The number of results will be the one specified in the "numberOfResults" parameter, and they will be collected (in memory) and persisted in the configured backend database (cassandra or hdfs, no latency difference upon retrieval of small datasets). Otherwise, if not specified, the results number will be retrieved from the configuration file (nr.of.results field, default is 100).
-  However, for large datasets that exceed the default number of results (100, configurable), results will not be persisted in memory and the configured database anymore, they will only be stored as an RDD on HDFS, and used for paginated retrieval (offset and limit parameters in the results api).
-  If the limited parameter is set on false, then the query will return all the results and this time they will be stored in an RDD on HDFS, this is an indicator that a large dataset is about to be queried.
-  * numberOfResults [not required]: The parameter is considered only if the "limited" parameter is set on true
-  * overwrite [not required, default false] : if set on false and the table already exists, an error message will be returned to the client saying that the table already exists. If set on true, the table will be overwritten
-
-
-Results:
-
-The api returns an uuid representing the query that was submitted. The query is executed asynchronously and the expectation is that clients poll for logs and completion status.
-
-Example:
- 1404998257416357bb29d-6801-41ca-82e4-7a265816b50c
-
-### Register parquet table api:
-    curl 'http://devbox.local:9080/jaws/parquet/registerTable?path=tachyon://devbox.local:19998/user/jaws/parquetFolder&name=testTable&overwrite=false' -X POST
-
-Parameters:
-
-  * path [required] : the path to the parquet folder you want to register as table
-  * name [reqired] : the table name you want to give to your parquet folder
-  * overwrite [not required, default false] : if set on false and the table already exists, an error message will be returned to the client saying that the table already exists. If set on true, the table will be overwritten
-
-
-Results:
-
-The api returns message confirming the table registration or an error message in case of failure
-
-Exemple:
- Table testTable was registered
- 
-### Unregister parquet table api:
-    curl 'http://devbox.local:9080/jaws/parquet/table?name=testTable' -X DELETE
-
-Parameters:
-
-  * name [reqired] : the table name you want to give to unregister
-  
-
-Results:
-
-The api returns message confirming that table was unregistered successfully, or an error message in case of failure
-
-Exemple:
- Table testTable was unregistered
-
-### Get parquet tables api:
-
-    curl 'http://devbox.local:9080/jaws/parquet/tables' -X GET
-    curl 'http://devbox.local:9080/jaws/parquet/tables?describe=false' -X GET
-    curl 'http://devbox.local:9080/jaws/parquet/tables?tables=table1&tables=table2' -X GET
-
-Parameters:
-
-  * describe [not required] : the default value is false. Flag that specifies if describe table should be performed
-  * tables [not required] : lists the tables that will be described.
-
-Results:
-
-If no parameter is set, the api returns a JSON containing all the registered parquet tables without their schema.
-If the describe parameter is set on true, the api will return all the registered parquet tables with their schema.
-If a table list is provided, then those will be the tables that will be described.
-
-Example:
-
-    {
-        "None": {
-            "numbers": {
-                "schema": [
-                    {
-                        "name": "result",
-                        "dataType": "StringType"
-                    }
-                ],
-                "results": [
-                    [
-                        "nb",
-                        "IntegerType"
-                    ]
-                ]
-            }
-        }
-    }
-
-
-### Logs api:
-    curl 'http://devbox.local:9080/jaws/logs?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&startTimestamp=0&limit=10' -X GET
+    curl 'http://devbox.local:9080/jaws/logs?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&startTimestamp=0&limit=3' -X GET
 
 Parameters:
 
@@ -184,518 +108,645 @@ The api returns a JSON with a list of log entries and the status of the submitte
 Exemple:
 
     {
-    
-        "logs": [
-            {
-                "log": "There are 2 commands that need to be executed",
-                "queryID": "hql",
-                "timestamp": 1404998257430
-            },
-            {
-                "log": "Command progress : There were executed 1 commands out of 2",
-                "queryID": "hql",
-                "timestamp": 1404998257501
-            },
-            {
-                "log": "The job 16 has started. Executing command --1404998257416357bb29d-6801-41ca-82e4-7a265816b50c\nselect UPkmbVaZXr.* from ( select * from user_predictions limit 3) UPkmbVaZXr limit 100",
-                "queryID": "16",
-                "timestamp": 1404998258154
-            }
-        ],
-        "status": "DONE"
+      "logs": [{
+        "log": "Launching task for 1432023553359888c5575-68d8-414a-826d-4d0ae903694b",
+        "queryID": "hql",
+        "timestamp": 1432023553360
+      }, {
+        "log": "There are 1 commands that need to be executed",
+        "queryID": "hql",
+        "timestamp": 1432023553367
+      }, {
+        "log": "The job 4 has started. Executing command.",
+        "queryID": "4",
+        "timestamp": 1432023553493
+      }],
+      "status": "DONE"
     }
+    
+#### Results api:
 
-### Results api:
-    curl 'http://devbox.local:9080/jaws/results?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&offset=0&limit=10' -X GET
+This api is used to return results for a certain query. The api offers 3 results formats: 
+- avro json format
+- avro binary format (bytes base64 encoded)
+- default format
+ 
+Note : Jaws supports results retrieval for nested types. 
+
+
+    curl 'http://devbox.local:9080/jaws/results?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&offset=0&limit=10&format=default' -X GET
 
 Parameters:
 
   * queryID [required] : uuid returned by the run api. This uuid represents the submitted query
   * offset [required] : starting result entry that needs to be returned
   * limit [required] : number of results to be returned (page size)
+  * format [not required] : the format in which the results should be returned. Possible values :  "avrobinary"/"avrojson"/"default"
 
 Results:
-
-The api returns a JSON containing the results schema and a list of result entries. The results are retrieved in pages, with the size specified by the limit parameter, starting with offset.
-
-Example:
-
+*  Custom result format
+ 
     {
         "schema": [
             {
-                "name": "name",
-                "dataType": "StringType"
-            },
-            {
-                "name": "age",
-                "dataType": "IntegerType"
-            },
-            {
-                "name": "sex",
-                "dataType": "StringType"
+                "name": "id",
+                "dataType": "StringType",
+                "comment": "",
+                "members": []
             }
         ],
-        "results": [
+        "result": [
             [
-                "Ana",
-                "5",
-                "f"
-            ],
-            [
-                "George",
-                "10",
-                "m"
-            ],
-            [
-                "Alina",
-                "20",
-                "f"
-            ],
-            [
-                "Paul",
-                "12",
-                "m"
-            ],
-            [
-                "Pavel",
-                "16",
-                "m"
+                "353a3ba1fd1b478a8b41544c5442b53a2a29c8ce425c537dd86ec9d34960f0c2"
             ]
         ]
     }
 
-### Queries api:
-    curl 'http://devbox.local:9080/jaws/queries?startQueryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&limit=50' -X GET
+*  Avro binary format
+    
+        {
+        "schema": {
+            "fields": [
+                {
+                    "name": "id",
+                    "schema": {
+                        "types": [
+                            {
+                                "type": "STRING",
+                                "hashCode": -2147483648,
+                                "props": {},
+                                "reserved": [
+                                    "values",
+                                    "symbols",
+                                    "items",
+                                    "name",
+                                    "doc",
+                                    "type",
+                                    "aliases",
+                                    "size",
+                                    "namespace",
+                                    "fields"
+                                ]
+                            },
+                            {
+                                "type": "NULL",
+                                "hashCode": -2147483648,
+                                "props": {},
+                                "reserved": [
+                                    "values",
+                                    "symbols",
+                                    "items",
+                                    "name",
+                                    "doc",
+                                    "type",
+                                    "aliases",
+                                    "size",
+                                    "namespace",
+                                    "fields"
+                                ]
+                            }
+                        ],
+                        "indexByName": {
+                            "string": 0,
+                            "null": 1
+                        },
+                        "type": "UNION",
+                        "hashCode": -2147483648,
+                        "props": {},
+                        "reserved": [
+                            "values",
+                            "symbols",
+                            "items",
+                            "name",
+                            "doc",
+                            "type",
+                            "aliases",
+                            "size",
+                            "namespace",
+                            "fields"
+                        ]
+                    },
+                    "order": "ASCENDING",
+                    "props": {},
+                    "reserved": [
+                        "default",
+                        "order",
+                        "name",
+                        "doc",
+                        "type",
+                        "aliases"
+                    ]
+                }
+            ],
+            "fieldMap": {
+                "id": {
+                    "name": "id",
+                    "schema": {
+                        "types": [
+                            {
+                                "type": "STRING",
+                                "hashCode": -2147483648,
+                                "props": {},
+                                "reserved": [
+                                    "values",
+                                    "symbols",
+                                    "items",
+                                    "name",
+                                    "doc",
+                                    "type",
+                                    "aliases",
+                                    "size",
+                                    "namespace",
+                                    "fields"
+                                ]
+                            },
+                            {
+                                "type": "NULL",
+                                "hashCode": -2147483648,
+                                "props": {},
+                                "reserved": [
+                                    "values",
+                                    "symbols",
+                                    "items",
+                                    "name",
+                                    "doc",
+                                    "type",
+                                    "aliases",
+                                    "size",
+                                    "namespace",
+                                    "fields"
+                                ]
+                            }
+                        ],
+                        "indexByName": {
+                            "string": 0,
+                            "null": 1
+                        },
+                        "type": "UNION",
+                        "hashCode": -2147483648,
+                        "props": {},
+                        "reserved": [
+                            "values",
+                            "symbols",
+                            "items",
+                            "name",
+                            "doc",
+                            "type",
+                            "aliases",
+                            "size",
+                            "namespace",
+                            "fields"
+                        ]
+                    },
+                    "order": "ASCENDING",
+                    "props": {},
+                    "reserved": [
+                        "default",
+                        "order",
+                        "name",
+                        "doc",
+                        "type",
+                        "aliases"
+                    ]
+                }
+            },
+            "isError": false,
+            "name": {
+                "name": "RECORD",
+                "full": "RECORD"
+            },
+            "type": "RECORD",
+            "hashCode": 1530317918,
+            "props": {},
+            "reserved": [
+                "values",
+                "symbols",
+                "items",
+                "name",
+                "doc",
+                "type",
+                "aliases",
+                "size",
+                "namespace",
+                "fields"
+            ]
+        },
+        "result": "T2JqAQIWYXZyby5zY2hlbWGmAXsidHlwZSI6InJlY29yZCIsIm5hbWUiOiJSRUNPUkQiLCJmaWVsZHMiOlt7Im5hbWUiOiJpZCIsInR5cGUiOlsic3RyaW5nIiwibnVsbCJdfV19AHFrB9h2Q6CTwaMiKMEqR2wChgEAgAEzNTNhM2JhMWZkMWI0NzhhOGI0MTU0NGM1NDQyYjUzYTJhMjljOGNlNDI1YzUzN2RkODZlYzlkMzQ5NjBmMGMycWsH2HZDoJPBoyIowSpHbA=="
+    }
+
+*  Avro json format
+    
+        [
+        {
+            "schema": {
+                "fields": [
+                    {
+                        "name": "id",
+                        "schema": {
+                            "types": [
+                                {
+                                    "type": "STRING",
+                                    "hashCode": -2147483648,
+                                    "props": {},
+                                    "reserved": [
+                                        "values",
+                                        "symbols",
+                                        "items",
+                                        "name",
+                                        "doc",
+                                        "type",
+                                        "aliases",
+                                        "size",
+                                        "namespace",
+                                        "fields"
+                                    ]
+                                },
+                                {
+                                    "type": "NULL",
+                                    "hashCode": -2147483648,
+                                    "props": {},
+                                    "reserved": [
+                                        "values",
+                                        "symbols",
+                                        "items",
+                                        "name",
+                                        "doc",
+                                        "type",
+                                        "aliases",
+                                        "size",
+                                        "namespace",
+                                        "fields"
+                                    ]
+                                }
+                            ],
+                            "indexByName": {
+                                "string": 0,
+                                "null": 1
+                            },
+                            "type": "UNION",
+                            "hashCode": -2147483648,
+                            "props": {},
+                            "reserved": [
+                                "values",
+                                "symbols",
+                                "items",
+                                "name",
+                                "doc",
+                                "type",
+                                "aliases",
+                                "size",
+                                "namespace",
+                                "fields"
+                            ]
+                        },
+                        "order": "ASCENDING",
+                        "props": {},
+                        "reserved": [
+                            "default",
+                            "order",
+                            "name",
+                            "doc",
+                            "type",
+                            "aliases"
+                        ]
+                    }
+                ],
+                "fieldMap": {
+                    "id": {
+                        "name": "id",
+                        "schema": {
+                            "types": [
+                                {
+                                    "type": "STRING",
+                                    "hashCode": -2147483648,
+                                    "props": {},
+                                    "reserved": [
+                                        "values",
+                                        "symbols",
+                                        "items",
+                                        "name",
+                                        "doc",
+                                        "type",
+                                        "aliases",
+                                        "size",
+                                        "namespace",
+                                        "fields"
+                                    ]
+                                },
+                                {
+                                    "type": "NULL",
+                                    "hashCode": -2147483648,
+                                    "props": {},
+                                    "reserved": [
+                                        "values",
+                                        "symbols",
+                                        "items",
+                                        "name",
+                                        "doc",
+                                        "type",
+                                        "aliases",
+                                        "size",
+                                        "namespace",
+                                        "fields"
+                                    ]
+                                }
+                            ],
+                            "indexByName": {
+                                "string": 0,
+                                "null": 1
+                            },
+                            "type": "UNION",
+                            "hashCode": -2147483648,
+                            "props": {},
+                            "reserved": [
+                                "values",
+                                "symbols",
+                                "items",
+                                "name",
+                                "doc",
+                                "type",
+                                "aliases",
+                                "size",
+                                "namespace",
+                                "fields"
+                            ]
+                        },
+                        "order": "ASCENDING",
+                        "props": {},
+                        "reserved": [
+                            "default",
+                            "order",
+                            "name",
+                            "doc",
+                            "type",
+                            "aliases"
+                        ]
+                    }
+                },
+                "isError": false,
+                "name": {
+                    "name": "RECORD",
+                    "full": "RECORD"
+                },
+                "type": "RECORD",
+                "hashCode": -1456956472,
+                "props": {},
+                "reserved": [
+                    "values",
+                    "symbols",
+                    "items",
+                    "name",
+                    "doc",
+                    "type",
+                    "aliases",
+                    "size",
+                    "namespace",
+                    "fields"
+                ]
+            },
+            "values": [
+                "353a3ba1fd1b478a8b41544c5442b53a2a29c8ce425c537dd86ec9d34960f0c2"
+            ]
+        }
+    ]
+    
+#### Queries api:
+
+This api returns information about the executed queries. You can request information about queries either in a paginated manner, either specifying the list of queries you want to obtain. 
+
+1. retrieve queries info paginated: 
+
+        curl 'http://devbox.local:9080/jaws/queries?startQueryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&limit=50' -X GET
+     
+2. retrieve info for a certain list of queries 
+    
+        curl 'http://devbox.local:9080/jaws/queries?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7&queryID=142962545249766b92481-f437-4ee2-9284-cf192fcc2769' -X GET
 
 Parameters:
 
-  * startQueryID [not required] : uuid of the first executed query in the list to be returned
-  * limit [required] : number of queries to be returned
+  * startQueryID [not required] : (default first query) uuid of the first executed query in the list to be returned
+  * limit [not required] :(default 100) number of queries to be returned
+  * queryID [not required] : the query uuid to retrieve information about
 
 Results:
 
-The api returns a JSON containing a list of queries and associated meta information, in chronological order (most recent at the top)
+The api returns a JSON containing a list of queries and associated meta information. If there isn't any specific query id requested, then the api will return the queries paginated, in chronological order (most recent at the top). 
 
 Example:
     
-    {
-        "queries": [
-            {
-                "state": "DONE",
-                "queryID": "142962545249766b92481-f437-4ee2-9284-cf192fcc2769",
-                "query": "drop database if exists sample cascade;\ncreate database sample;\nuse sample;\n\nDROP TABLE IF EXISTS memrecno_raw;\n\ncreate external table memrecno_raw(line STRING) stored as textfile location 'hdfs://devbox.local:8020/user/ubuntu/tcomponent/restApiTest/';\n\nselect count(*) from memrecno_raw;",
-                "runMetaInfo": {
-                    "nrOfResults": 1,
-                    "maxNrOfResults": 100,
-                    "resultsDestination": 0,
-                    "isLimited": true
-                }
-            },
-            {
-                "state": "DONE",
-                "queryID": "1429534537434ecf62272-1273-4b3a-8b27-efd68ab0fe04",
-                "query": "USE ematest;\n\nselect count (*) from test",
-                "runMetaInfo": {
-                    "nrOfResults": 1,
-                    "maxNrOfResults": 100,
-                    "resultsDestination": 0,
-                    "isLimited": true
-                }
-            }
-        ]
-    }
-
-### queryInfo api:
-    curl 'http://devbox.local:9080/jaws/queryInfo?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7' -X GET
-
-Parameters:
-
-  * queryID [required] : uuid returned by the run api.
-
-Results:
-
-The api returns the status and the query string (could be one statement or an entire HiveQL script)
-
-Example:
-
-    {
+     {
+      "queries": [{
         "state": "DONE",
-        "queryID": "1429630175322f23cf070-42c1-4cde-80a3-5e2f74b98a0c",
-        "query": "USE ematest;\n\nselect count (*) from test",
+        "queryID": "1432051694672f716608c-49a1-4dfe-ab77-8f98810b317f",
+        "query": "select * from test limit 1",
         "runMetaInfo": {
-            "nrOfResults": 1,
-            "maxNrOfResults": 100,
-            "resultsDestination": 0,
-            "isLimited": true
+          "nrOfResults": 1,
+          "maxNrOfResults": 3,
+          "resultsDestination": 0,
+          "isLimited": true
         }
+      }, {
+        "state": "DONE",
+        "queryID": "143205136408871e22b82-e1b7-4b95-ac0f-1c798154628e",
+        "query": "select * from x limit 1",
+        "runMetaInfo": {
+          "nrOfResults": 1,
+          "maxNrOfResults": 3,
+          "resultsDestination": 0,
+          "isLimited": true
+        }
+      }]
     }
 
-### Databases api:
-    curl 'http://devbox.local:9080/jaws/databases' -X GET
 
-Results:
 
-The api returns a JSON containing a list of existing databases.
+#### Delete query api:
 
-{
+This is an API that deletes from the database all the information about a query:
+    - query state
+    - query details
+    - query logs
+    - query meta info
+    - query results
 
-    "schema": [
-        {
-            "name": "result",
-            "dataType": "stringType"
-        }
-    ],
-    "results": [
-        [
-            "default"
-        ],
-        [
-            "demo"
-        ],
-        [
-            "integrationtest"
-        ]
-  ]
-}
+    curl 'http://devbox.local:9080/jaws/queries/{queryID}' -X DELETE
+    
 
-Example:
+Path Segment :
 
-### Cancel api:
+  * queryID [required] : represents the query that needs to be deleted
+
+If the query is in progress or it is not found, an explanatory error message will be thrown.   
+
+ Results:
+
+"Query 140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7 was deleted"
+
+#### Cancel api:
+
+This api cancels a running query. Unless Jaws runs in fine-grained mode under Mesos, the underlying Spark job is also cancelled. Spark job cancellation in Mesos fine-grained mode is not implemented in Spark core yet! In this mode, if the query is still in the queue, it won't be executed, but we cannot stop it once it started.
+
     curl 'http://devbox.local:9080/jaws/cancel?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7' -X POST
 
 Parameters:
 
   * queryID [required] : uuid returned by the run api.
 
-This api cancels a running query. Unless Jaws runs in fine-grained mode under Mesos, the underlying Spark job is also cancelled. Spark job cancellation in Mesos fine-grained mode is not implemented in Spark core yet! In this mode, if the query is still in the queue, it won't be executed, but we cannot stop it once it started.
 
+###Parquet management apis
+The following apis are used to register a parquet table, run queries against it, list the registered parquet tables and delete them.
 
-### Tables api:
+#### Run parquet api:
 
-    curl 'http://devbox.local:9080/jaws/tables' -X GET
-    curl 'http://devbox.local:9080/jaws/tables?database=default' -X GET
-    curl 'http://devbox.local:9080/jaws/tables?database=default&describe=false' -X GET
-    curl 'http://devbox.local:9080/jaws/tables?database=default&tables=table1&tables=table2' -X GET
+This api is deprecated. You should first register the parquet table(see register api detailed below), and then query it with the RUN api explained above. However, the run parquet api is still functional.
 
-Parameters:
-
-  * database [not required] : is the database for which you want to retrieve all the tables.
-  * describe [not required] : the default value is true. Flag that specifies if describe table should be performed
-  * tables [not required] : lists the tables that will be described.
-
-Results:
-
-If the database parameter is set, the api returns a JSON containing all the tables from the specified database, otherwise, it will return all the databases with all their tables.
-If the describe parameter is set on true, also the tables columns are returned.
-If a table list is provided, then those will be the tables that will be described. (The database is needed)
-
-Example:
-
-{
-
-    "test": {
-        "user_predictions": {
-            "schema": [
-                "col_name",
-                "data_type",
-                "comment"
-            ],
-            "results": [
-                [
-                    "userid",
-                    "int",
-                    "None"
-                ],
-                [
-                    "moviename",
-                    "string",
-                    "None"
-                ]
-            ]
-        },
-        "testsimple": {
-            "schema": [
-                "col_name",
-                "data_type",
-                "comment"
-            ],
-            "results": [
-                [
-                    "ip",
-                    "string",
-                    "None"
-                ],
-                [
-                    "time",
-                    "string",
-                    "None"
-                ],
-                [
-                    "state",
-                    "string",
-                    "None"
-                ],
-                [
-                    "reason",
-                    "string",
-                    "None"
-                ]
-            ]
-        },
-    }
-}
-
-### Tables extended api:
-
-    curl 'http://devbox.local:9080/jaws/tables/extended?database=default&table=test' -X GET
-    curl 'http://devbox.local:9080/jaws/tables/extended?database=default' -X GET
+    curl -d "select * from testTable" 'http://devbox.local:9080/jaws/parquet/run?tablePath=tachyon://devbox.local:19998/user/jaws/parquetFolder&table=testTable&limited=true&numberOfResults=99&overwrite=false' -X POST
 
 Parameters:
 
-  * database [required] : is the database for which you want to retrieve extended information about tables
-  *  table [not required]: is the table for which you want to retrieve extended information
+  * tablePath [required] : the path to the parquet folder which you want to query
+  * table : the table name you want to give to your parquet folder
+  * limited [required]:  if set on true, the query will be limited to a fixed number of results. The number of results will be the one specified in the "numberOfResults" parameter, and they will be collected (in memory) and persisted in the configured backend database (cassandra or hdfs, no latency difference upon retrieval of small datasets). Otherwise, if not specified, the results number will be retrieved from the configuration file (nr.of.results field, default is 100).
+  However, for large datasets that exceed the default number of results (100, configurable), results will not be persisted in memory and the configured database anymore, they will only be stored as an RDD on HDFS, and used for paginated retrieval (offset and limit parameters in the results api).
+  If the limited parameter is set on false, then the query will return all the results and this time they will be stored in an RDD on HDFS, this is an indicator that a large dataset is about to be queried.
+  * numberOfResults [not required]: The parameter is considered only if the "limited" parameter is set on true
+  * overwrite [not required, default false] : if set on false and the table already exists, an error message will be returned to the client saying that the table already exists. If set on true, the table will be overwritten
 
 
 Results:
 
-If the table parameter is set, the api returns a JSON containing the extended information about it. Otherwise, the api will return the extended information about all the tables inside the specified database.
+The api returns an uuid representing the query that was submitted. The query is executed asynchronously and the expectation is that clients poll for logs and completion status.
 
 Example:
+ 1404998257416357bb29d-6801-41ca-82e4-7a265816b50c
 
-{
-
-    "test": {
-             "user_predictions": {
-            "schema": [
-                "col_name",
-                "data_type",
-                "comment"
-            ],
-            "results": [
-                [
-                    "userid",
-                    "int",
-                    "None"
-                ],
-                [
-                    "moviename",
-                    "string",
-                    "None"
-                ],
-                 [
-                  "",
-                  " ",
-                 " "
-               ],
-               [
-                "Detailed Table Information",
-                "Table(tableName:user_predictions, dbName:test, owner:root, createTime:1404128550, lastAccessTime:0, retention:0, sd:StorageDescriptor(cols:[FieldSchema(name:userid, type:int, comment:null), FieldSchema(name:moviename, type:string, comment:null)], location:hdfs://devBox.local:8020/user/hive/warehouse/test.db/user_predictions, inputFormat:org.apache.hadoop.mapred.SequenceFileInputFormat, outputFormat:org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat, compressed:false, numBuckets:-1, serdeInfo:SerDeInfo(name:null, serializationLib:org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe, parameters:{serialization.format=1}), bucketCols:[], sortCols:[], parameters:{}, skewedInfo:SkewedInfo(skewedColNames:[], skewedColValues:[], skewedColValueLocationMaps:{}), storedAsSubDirectories:false), partitionKeys:[], parameters:{numPartitions=0, numFiles=1, transient_lastDdlTime=1405336104, totalSize=1194934, numRows=29665, rawDataSize=797502}, viewOriginalText:null, viewExpandedText:null, tableType:MANAGED_TABLE)"
-          ]
-       ]
-        }
-    }
-
-}
-
-
-### Tables formatted api:
-
-    curl 'http://devbox.local:9080/jaws/tables/formatted?database=default&table=test' -X GET
-    curl 'http://devbox.local:9080/jaws/tables/formatted?database=default' -X GET
+####Register parquet table api:
+    curl 'http://devbox.local:9080/jaws/parquet/tables?path=tachyon://devbox.local:19998/user/jaws/parquetFolder&name=testTable&overwrite=false' -X POST
 
 Parameters:
 
-  * database [required] : is the database for which you want to retrieve formatted information about tables
-  *  table [not required]: is the table for which you want to retrieve formatted information
+  * path [required] : the path to the parquet folder you want to register as table
+  * name [reqired] : the table name you want to give to your parquet folder
+  * overwrite [not required, default false] : if set on false and the table already exists, an error message will be returned to the client saying that the table already exists. If set on true, the table will be overwritten
 
 
 Results:
+    
+The api returns message confirming the table registration or an error message in case of failure
 
-If the table parameter is set, the api returns a JSON containing the formatted information about it. Otherwise, the api will return the formatted information about all the tables inside the specified database.
+Exemple:
+ Table testTable was registered
+
+### List parquet tables api:
+
+Note: Jaws supports describing tables with nested schema types
+
+    curl 'http://devbox.local:9080/jaws/parquet/tables' -X GET
+    curl 'http://devbox.local:9080/jaws/parquet/tables?describe=true' -X GET
+    curl 'http://devbox.local:9080/jaws/parquet/tables?table=table1&table=table2' -X GET
+
+Parameters:
+
+  * describe [not required] : the default value is false. Flag that specifies if describe table should be performed
+  * table [not required] : lists the tables that will be described.
+
+Results:
+
+If no parameter is set, the api returns a JSON containing all the registered parquet tables without their schema.
+If the describe parameter is set on true, the api will return all the registered parquet tables with their schema.
+If a table list is provided, then those will be the tables that will be described.
 
 Example:
 
-{
+1. list parquet tables without schema:
 
-    "test": {
-             "user_predictions": {
-            "schema": [
-                "col_name",
-                "data_type",
-                "comment"
-            ],
-            "results": [
-                         [
-                            "# col_name",
-                            "data_type",
-                            "comment"
-                         ],
-                         [
-                             "",
-                             "",
-                             ""
-                         ],
-                        [
-                            "userid",
-                            "int",
-                            "None"
-                        ],
-                        [
-                            "moviename",
-                            "string",
-                            "None"
-                        ],
-                         [
-                          "",
-                          " ",
-                         " "
-                       ],
-                       [
-                         "# Detailed Table Information",
-                         "",
-                         ""
-                       ],
-                       [
-                         "Database:",
-                         "test",
-                         ""
-                       ],
-                       [
-                         "Owner:",
-                         "ubuntu",
-                         ""
-                       ],
-                       [
-                         "CreateTime:",
-                         "Tue Jul 22 17:56:49 EEST 2014",
-                         ""
-                       ],
-                       [
-                         "LastAccessTime:",
-                         "UNKNOWN",
-                         ""
-                       ],
-                       [
-                         "Protect Mode:",
-                         "None",
-                         ""
-                       ],
-                       [
-                         "Retention:",
-                         "0",
-                         ""
-                       ],
-                       [
-                         "Location:",
-                         "hdfs://devbox.local:8020/user/hive/warehouse/test.db/user_predictions",
-                         ""
-                       ],
-                       [
-                         "Table Type:",
-                         "MANAGED_TABLE",
-                         ""
-                       ],
-                       [
-                         "Table Parameters:",
-                         "",
-                         ""
-                       ],
-                       [
-                         "",
-                         "numFiles",
-                         "1"
-                       ],
-                       [
-                         "",
-                         "numPartitions",
-                         "0"
-                       ],
-                       [
-                         "",
-                         "numRows",
-                         "0"
-                       ],
-                       [
-                         "",
-                         "rawDataSize",
-                         "0"
-                       ],
-                       [
-                         "",
-                         "totalSize",
-                         "34"
-                       ],
-                       [
-                         "",
-                         "transient_lastDdlTime",
-                         "1406041077"
-                       ],
-                       [
-                         "",
-                         "",
-                         ""
-                       ],
-                       [
-                         "# Storage Information",
-                         "",
-                         ""
-                       ],
-                       [
-                         "SerDe Library:",
-                         "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe",
-                         ""
-                       ],
-                       [
-                         "InputFormat:",
-                         "org.apache.hadoop.mapred.TextInputFormat",
-                         ""
-                       ],
-                       [
-                         "OutputFormat:",
-                         "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat",
-                         ""
-                       ],
-                       [
-                         "Compressed:",
-                         "No",
-                         ""
-                       ],
-                       [
-                         "Num Buckets:",
-                         "-1",
-                         ""
-                       ],
-                       [
-                         "Bucket Columns:",
-                         "[]",
-                         ""
-                       ],
-                       [
-                         "Sort Columns:",
-                         "[]",
-                         ""
-                       ],
-                       [
-                         "Storage Desc Params:",
-                         "",
-                         ""
-                       ],
-                       [
-                         "",
-                         "field.delim",
-                         ","
-                       ],
-                       [
-                         "",
-                         "serialization.format",
-                         ","
-                       ]
-       ]
-        }
+        [{
+              "database": "None",
+              "tables": [{
+                "name": "complex",
+                "columns": [],
+                "extraInfo": []
+              }, {
+                "name": "complex2",
+                "columns": [],
+                "extraInfo": []
+              }, {
+                "name": "complexTest",
+                "columns": [],
+                "extraInfo": []
+              }, {
+                "name": "testTable",
+                "columns": [],
+                "extraInfo": []
+              }]
+     
+2. List parquet tables with their schema
+
+        [{
+          "database": "None",
+          "tables": [{
+            "name": "complex",
+            "columns": [{
+              "name": "s",
+              "dataType": "StringType",
+              "comment": "",
+              "members": []
+            }, {
+              "name": "obj",
+              "dataType": "StructType",
+              "comment": "",
+              "members": [{
+                "name": "myString",
+                "dataType": "StringType",
+                "comment": "",
+                "members": []
+              }, {
+                "name": "myInteger",
+                "dataType": "IntegerType",
+                "comment": "",
+                "members": []
+              }]
+            }],
+            "extraInfo": []
+          }]
+
+#### Unregister parquet table api:
+    curl 'http://devbox.local:9080/jaws/parquet/tables/{name}' -X DELETE
+
+Parameters:
+
+  * name [required] : the table name you want to unregister
+  
+
+Results:
+
+The api returns message confirming that table was unregistered successfully, or an error message in case of failure
+
+Exemple:
+ Table testTable was unregistered
+
+
+###Browse warehouse apis
+The following apis are used to browse the warehouse: show databases, tables, describing tables.
+
+#### Databases api:
+    curl 'http://devbox.local:9080/jaws/databases' -X GET
+
+Results:
+
+The api returns a JSON containing a list of existing databases.
+
+Example:
+
+    {
+        "databases": [
+            "default",
+            "demo",
+            "sample"     
+        ]
     }
 
-
-### Schema api:
+#### Schema api:
 
     curl 'http://devbox.local:9080/jaws/schema?path=databaseName.tableName&sourceType=hive' -X GET
     curl 'http://devbox.local:9080/jaws/schema?path=/user/test/location&sourceType=parquet&storageType=tachyon' -X GET
@@ -859,27 +910,271 @@ Example:
         }
     ]}
 
-### Delete query api:
 
-This is an API that deletes from the database all the information about a query:
-    - query state
-    - query details
-    - query logs
-    - query meta info
-    - query results
+### Tables api:
 
-    curl 'http://devbox.local:9080/jaws/query?queryID=140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7' -X DELETE
-    
+    curl 'http://devbox.local:9080/jaws/tables' -X GET
+    curl 'http://devbox.local:9080/jaws/tables?database=default' -X GET
+    curl 'http://devbox.local:9080/jaws/tables?database=default&describe=true' -X GET
+    curl 'http://devbox.local:9080/jaws/tables?database=default&table=table1&table=table2' -X GET
 
 Parameters:
 
-  * queryID [required] : represents the query that needs to be deleted
+  * database [not required] : is the database for which you want to retrieve all the tables.
+  * describe [not required] : the default value is true. Flag that specifies if describe table should be performed
+  * tables [not required] : lists the tables that will be described.
 
-If the query is in progress or it is not found, an explanatory error message will be thrown.   
+Results:
 
- Results:
+If the database parameter is set, the api returns a JSON containing all the tables from the specified database, otherwise, it will return all the databases with all their tables.
+If the describe parameter is set on true, also the tables columns are returned.
+If a table list is provided, then those will be the tables that will be described. (The database is needed)
 
-"Query 140413187977964cf5f85-0dd3-4484-84a3-7703b098c2e7 was deleted"
+Example:
+
+    [{
+      "database": "default",
+      "tables": [{
+        "name": "x",
+        "columns": [{
+          "name": "id",
+          "dataType": "string",
+          "comment": "None",
+          "members": []
+        }],
+        "extraInfo": []
+      }, {
+        "name": "comm",
+        "columns": [{
+          "name": "nume",
+          "dataType": "string",
+          "comment": "comentariu",
+          "members": []
+        }, {
+          "name": "varsta",
+          "dataType": "int",
+          "comment": "comentariu2",
+          "members": []
+        }],
+        "extraInfo": []
+      }]
+
+#### Tables extended api:
+
+    curl 'http://devbox.local:9080/jaws/tables/extended?database=default&table=test' -X GET
+    curl 'http://devbox.local:9080/jaws/tables/extended?database=default' -X GET
+
+Parameters:
+
+  * database [required] : is the database for which you want to retrieve extended information about tables
+  *  table [not required]: is the table for which you want to retrieve extended information
+
+
+Results:
+
+If the table parameter is set, the api returns a JSON containing the extended information about it. Otherwise, the api will return the extended information about all the tables inside the specified database.
+The extra information the extended table api offers, will be in the "extraInfo" field
+
+Example:
+
+    [
+        {
+            "database": "default",
+            "tables": [
+                {
+                    "name": "x",
+                    "columns": [
+                        {
+                            "name": "id",
+                            "dataType": "string",
+                            "comment": "None",
+                            "members": []
+                        }
+                    ],
+                    "extraInfo": [
+                        [
+                            "Detailed Table Information",
+                            "Table(tableName:x, dbName:default, owner:ubuntu, createTime:1427875914, lastAccessTime:0, retention:0, sd:StorageDescriptor(cols:[FieldSchema(name:id, type:string, comment:null)], location:hdfs://main:8020/user/hive/warehouse/x, inputFormat:org.apache.hadoop.mapred.TextInputFormat, outputFormat:org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat, compressed:false, numBuckets:-1, serdeInfo:SerDeInfo(name:null, serializationLib:org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe, parameters:{serialization.format=1}), bucketCols:[], sortCols:[], parameters:{}, skewedInfo:SkewedInfo(skewedColNames:[], skewedColValues:[], skewedColValueLocationMaps:{}), storedAsSubDirectories:false), partitionKeys:[], parameters:{numFiles=1, transient_lastDdlTime=1427875914, COLUMN_STATS_ACCURATE=true, totalSize=195, numRows=3, rawDataSize=192}, viewOriginalText:null, viewExpandedText:null, tableType:MANAGED_TABLE)"
+                        ]
+                    ]
+                }
+            ]
+        }
+    ]
+
+
+### Tables formatted api:
+
+    curl 'http://devbox.local:9080/jaws/tables/formatted?database=default&table=test' -X GET
+    curl 'http://devbox.local:9080/jaws/tables/formatted?database=default' -X GET
+
+Parameters:
+
+  * database [required] : is the database for which you want to retrieve formatted information about tables
+  *  table [not required]: is the table for which you want to retrieve formatted information
+
+
+Results:
+
+If the table parameter is set, the api returns a JSON containing the formatted information about it. Otherwise, the api will return the formatted information about all the tables inside the specified database. The extra information the get formatted table api is returned in the "extraInfo" field
+
+Example:
+
+    [
+        {
+            "database": "default",
+            "tables": [
+                {
+                    "name": "x",
+                    "columns": [
+                        {
+                            "name": "id",
+                            "dataType": "string",
+                            "comment": "None",
+                            "members": []
+                        }
+                    ],
+                    "extraInfo": [
+                        [
+                            "# Detailed Table Information",
+                            "",
+                            ""
+                        ],
+                        [
+                            "Database:",
+                            "default",
+                            ""
+                        ],
+                        [
+                            "Owner:",
+                            "ubuntu",
+                            ""
+                        ],
+                        [
+                            "CreateTime:",
+                            "Wed Apr 01 11:11:54 EEST 2015",
+                            ""
+                        ],
+                        [
+                            "LastAccessTime:",
+                            "UNKNOWN",
+                            ""
+                        ],
+                        [
+                            "Protect Mode:",
+                            "None",
+                            ""
+                        ],
+                        [
+                            "Retention:",
+                            "0",
+                            ""
+                        ],
+                        [
+                            "Location:",
+                            "hdfs://main:8020/user/hive/warehouse/x",
+                            ""
+                        ],
+                        [
+                            "Table Type:",
+                            "MANAGED_TABLE",
+                            ""
+                        ],
+                        [
+                            "Table Parameters:",
+                            "",
+                            ""
+                        ],
+                        [
+                            "",
+                            "COLUMN_STATS_ACCURATE",
+                            "true"
+                        ],
+                        [
+                            "",
+                            "numFiles",
+                            "1"
+                        ],
+                        [
+                            "",
+                            "numRows",
+                            "3"
+                        ],
+                        [
+                            "",
+                            "rawDataSize",
+                            "192"
+                        ],
+                        [
+                            "",
+                            "totalSize",
+                            "195"
+                        ],
+                        [
+                            "",
+                            "transient_lastDdlTime",
+                            "1427875914"
+                        ],
+                        [
+                            "",
+                            "",
+                            ""
+                        ],
+                        [
+                            "# Storage Information",
+                            "",
+                            ""
+                        ],
+                        [
+                            "SerDe Library:",
+                            "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe",
+                            ""
+                        ],
+                        [
+                            "InputFormat:",
+                            "org.apache.hadoop.mapred.TextInputFormat",
+                            ""
+                        ],
+                        [
+                            "OutputFormat:",
+                            "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat",
+                            ""
+                        ],
+                        [
+                            "Compressed:",
+                            "No",
+                            ""
+                        ],
+                        [
+                            "Num Buckets:",
+                            "-1",
+                            ""
+                        ],
+                        [
+                            "Bucket Columns:",
+                            "[]",
+                            ""
+                        ],
+                        [
+                            "Sort Columns:",
+                            "[]",
+                            ""
+                        ],
+                        [
+                            "Storage Desc Params:",
+                            "",
+                            ""
+                        ],
+                        [
+                            "",
+                            "serialization.format",
+                            "1"
+                        ]
+                    ]
+                }
+            ]
+        }
+    ]
 
 
 # jaws-hive-sql-rest
