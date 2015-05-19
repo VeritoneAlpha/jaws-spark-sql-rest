@@ -15,6 +15,7 @@ import com.xpatterns.jaws.data.utils.ResultsConverter
 import com.xpatterns.jaws.data.DTO.AvroResult
 import com.xpatterns.jaws.data.DTO.CustomResult
 import org.apache.avro.Schema
+import com.google.gson.GsonBuilder
 
 class JawsHdfsResults(configuration: Configuration) extends TJawsResults {
 
@@ -48,14 +49,15 @@ class JawsHdfsResults(configuration: Configuration) extends TJawsResults {
   def setCustomResults(uuid: String, results: CustomResult) {
     logger.debug("Writing custom results to query " + uuid)
     val customFile = getCustomResultsFilePaths(uuid)
-    Utils.rewriteFile(results.toJson.toString(), configuration, customFile)
+    val gson = new GsonBuilder().create()
+    Utils.rewriteFile(gson.toJson(results), configuration, customFile)
   }
   def getCustomResults(uuid: String): CustomResult = {
     logger.debug("Reading custom results for query: " + uuid)
     val customFile = getCustomResultsFilePaths(uuid)
     if (Utils.checkFileExistence(customFile, configuration)) {
-      val json = parse(Utils.readFile(configuration, customFile))
-      json.extract[CustomResult]
+     val gson = new GsonBuilder().create()
+     gson.fromJson(Utils.readFile(configuration, customFile), classOf[CustomResult])
     } else new CustomResult()
   }
 

@@ -30,6 +30,7 @@ import java.io.ByteArrayInputStream
 import java.io.ObjectInputStream
 import org.apache.avro.generic.GenericRecord
 import org.apache.avro.Schema
+import com.google.gson.GsonBuilder
 
 class JawsCassandraResults(keyspace: Keyspace) extends TJawsResults {
 
@@ -165,10 +166,8 @@ class JawsCassandraResults(keyspace: Keyspace) extends TJawsResults {
           Option(hColumn) match {
             case None => new CustomResult()
             case _ => {
-              implicit val formats = DefaultFormats
-              val value = hColumn.getValue()
-              val json = parse(value)
-              json.extract[CustomResult]
+              val gson = new GsonBuilder().create()
+              gson.fromJson(hColumn.getValue(), classOf[CustomResult])
             }
           }
         }
@@ -179,7 +178,7 @@ class JawsCassandraResults(keyspace: Keyspace) extends TJawsResults {
   def setCustomResults(uuid: String, results: CustomResult) {
     Utils.TryWithRetry {
       logger.debug("Writing custom results to query " + uuid)
-
+      val gson = new GsonBuilder().create()
       val key = computeRowKey(uuid)
 
       val column = new Composite()
@@ -187,7 +186,7 @@ class JawsCassandraResults(keyspace: Keyspace) extends TJawsResults {
       column.setComponent(LEVEL_FORMAT, FORMAT_CUSTOM, ss)
 
       val mutator = HFactory.createMutator(keyspace, is)
-      mutator.addInsertion(key, CF_SPARK_RESULTS, HFactory.createColumn(column, results.toJson.toString(), cs, ss))
+      mutator.addInsertion(key, CF_SPARK_RESULTS, HFactory.createColumn(column, gson.toJson(results), cs, ss))
 
       mutator.execute()
     }

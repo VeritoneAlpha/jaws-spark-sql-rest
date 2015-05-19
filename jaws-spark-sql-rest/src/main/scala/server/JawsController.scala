@@ -1,5 +1,6 @@
 package server
 
+import com.xpatterns.jaws.data.utils.GsonHelper._
 import java.net.InetAddress
 import com.xpatterns.jaws.data.utils.Utils._
 import scala.collection.JavaConverters._
@@ -315,26 +316,15 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
             validate(queryID != null && !queryID.trim.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE) {
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
 
-                implicit def avroBinaryResultMarshaller[T] =
+                implicit def customResultMarshaller[T] =
                   Marshaller.delegate[T, String](ContentTypes.`application/json`) { value ⇒
-                    val gson = new Gson()
-                    gson.toJson(value)
-
+                    customGson.toJson(value)
                   }
-//                implicit def avroResultMarshaller[AvroResult] =
-//                  Marshaller.delegate[AvroResult, String](ContentTypes.`application/json`) { value ⇒
-//                    val gson = new Gson()
-//                    gson.toJson(value)
-//
-//                  }
-                                
 
                 val future = ask(getResultsActor, GetResultsMessage(queryID, offset, limit, format.toLowerCase()))
                 future.map {
-                  case e: ErrorMessage          => ctx.complete(StatusCodes.InternalServerError, e.message)
-                  case result: AvroResult       => ctx.complete(StatusCodes.OK, result)
-                  case result: AvroBinaryResult => ctx.complete(StatusCodes.OK, result)
-                  case result: CustomResult     => ctx.complete(StatusCodes.OK, result)
+                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                  case result: Any     => ctx.complete(StatusCodes.OK, result)
                 }
               }
             }

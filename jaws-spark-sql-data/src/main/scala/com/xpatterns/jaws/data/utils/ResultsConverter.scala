@@ -23,17 +23,16 @@ class ResultsConverter(val schema: StructType, val result: Array[Row]) {
     val avroResults = AvroConverter.getAvroResult(result, schema)
     new AvroResult(avroSchema, avroResults)
   }
-  
-  def toAvroBinaryResults(): AvroBinaryResult = {
-    new AvroBinaryResult(toAvroResults())
-  }
 
   def toCustomResults(): CustomResult = {
     val gson = new GsonBuilder().create()
     val customSchema = CustomConverter.getCustomSchema(schema)
-    val customResults = CustomConverter.getCustomResult(result, schema) map (arr => arr map (value => gson.toJson(value)))
-    
 
-    new CustomResult(customSchema, customResults)
+    new CustomResult(customSchema, CustomConverter.getCustomResult(result, schema))
   }
+
+  def toAvroBinaryResults(): AvroBinaryResult = {
+    new AvroBinaryResult(toAvroResults())
+  }
+
 }

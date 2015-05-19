@@ -34,9 +34,9 @@ class CustomConverterTest extends FunSuite {
     val customRes = resultsConverter.toCustomResults()
 
     val expectedSchema = Array(new Column("int", "IntegerType", "", Array.empty),
-      new Column("str", "StringType","", Array.empty))
+      new Column("str", "StringType", "", Array.empty))
 
-    val expectedResult = Array(Array("1", "\"a\""), Array("2", "\"b\""))
+    val expectedResult: Array[Array[Any]] = Array(Array(1, "a"), Array(2, "b"))
 
     val expectedCustomResult = new CustomResult(expectedSchema, expectedResult)
     assert(customRes === expectedCustomResult, "Different custom results")
@@ -49,12 +49,12 @@ class CustomConverterTest extends FunSuite {
     val resultsConverter = new ResultsConverter(complexStructType, complexStructTypeRow)
     val customRes = resultsConverter.toCustomResults()
 
-    val expectedSchema = Array(new Column("str", "StringType","", Array.empty),
-      new Column("record", "StructType","", Array(
-        new Column("int", "IntegerType","", Array.empty),
-        new Column("str", "StringType", "",Array.empty))))
+    val expectedSchema = Array(new Column("str", "StringType", "", Array.empty),
+      new Column("record", "StructType", "", Array(
+        new Column("int", "IntegerType", "", Array.empty),
+        new Column("str", "StringType", "", Array.empty))))
 
-    val expectedResult = Array(Array("\"aa\"", "[1,\"a\"]"), Array("\"bb\"", "[2,\"b\"]"))
+    val expectedResult: Array[Array[Any]] = Array(Array("aa", Array(1, "a")), Array("bb", Array(2, "b")))
 
     val expectedCustomResult = new CustomResult(expectedSchema, expectedResult)
     assert(customRes === expectedCustomResult, "Different custom results")
@@ -68,11 +68,11 @@ class CustomConverterTest extends FunSuite {
     val resultsConverter = new ResultsConverter(arrStructType, arrStructTypeRow)
     val customRes = resultsConverter.toCustomResults()
 
-    val expectedSchema = Array(new Column("int", "IntegerType","", Array.empty),
-      new Column("arr", "ArrayType", "",Array(
-        new Column("items", "StringType","", Array.empty))))
+    val expectedSchema = Array(new Column("int", "IntegerType", "", Array.empty),
+      new Column("arr", "ArrayType", "", Array(
+        new Column("items", "StringType", "", Array.empty))))
 
-    val expectedResult = Array(Array("1", "[\"a\",\"b\",\"c\"]"), Array("2", "[\"d\",\"e\",\"f\"]"))
+    val expectedResult: Array[Array[Any]] = Array(Array(1, Array("a", "b", "c")), Array(2, Array("d", "e", "f")))
 
     val expectedCustomResult = new CustomResult(expectedSchema, expectedResult)
     assert(customRes === expectedCustomResult, "Different custom results")
@@ -97,10 +97,10 @@ class CustomConverterTest extends FunSuite {
     val customRes = resultsConverter.toCustomResults()
 
     val expectedSchema = Array(new Column("int", "IntegerType", "", Array.empty),
-      new Column("arrOfRec", "ArrayType","", Array(
-        new Column("items", "StructType", "", Array(new Column("str", "StringType", "",Array.empty))))))
+      new Column("arrOfRec", "ArrayType", "", Array(
+        new Column("items", "StructType", "", Array(new Column("str", "StringType", "", Array.empty))))))
 
-    val expectedResult = Array(Array("1", "[[\"a\"],[\"b\"]]"), Array("2", "[[\"c\"],[\"d\"]]"))
+    val expectedResult: Array[Array[Any]] = Array(Array(1, Array(Array("a"), Array("b"))), Array(2, Array(Array("c"), Array("d"))))
 
     val expectedCustomResult = new CustomResult(expectedSchema, expectedResult)
     assert(customRes === expectedCustomResult, "Different custom results")
@@ -122,7 +122,8 @@ class CustomConverterTest extends FunSuite {
       new Column("map", "MapType", "", Array(
         new Column("values", "StringType", "", Array.empty))))
 
-    val expectedResult = Array(Array("1", "{\"a\":\"b\",\"c\":\"d\"}"), Array("2", "{\"d\":\"e\",\"f\":\"g\"}"))
+    import collection.JavaConversions._
+    val expectedResult: Array[Array[Any]] = Array(Array(1, mapAsJavaMap(Map("a" -> "b", "c" -> "d"))), Array(2, mapAsJavaMap(Map("d" -> "e", "f" -> "g"))))
 
     val expectedCustomResult = new CustomResult(expectedSchema, expectedResult)
     assert(customRes === expectedCustomResult, "Different custom results")
@@ -142,12 +143,37 @@ class CustomConverterTest extends FunSuite {
       new Column("mapOfRec", "MapType", "", Array(
         new Column("values", "StructType", "", Array(new Column("str", "StringType", "", Array.empty))))))
 
-    val expectedResult = Array(Array("1", "{\"a\":[\"b\"],\"c\":[\"d\"]}"), Array("2", "{\"d\":[\"e\"],\"f\":[\"g\"]}"))
+    import collection.JavaConversions._
+    val expectedResult: Array[Array[Any]] = Array(
+      Array(1, mapAsJavaMap(Map(
+        "a" -> Array("b"),
+        "c" -> Array("d")))),
+      Array(2, mapAsJavaMap(Map(
+        "d" -> Array("e"),
+        "f" -> Array("g")))))
 
     val expectedCustomResult = new CustomResult(expectedSchema, expectedResult)
-    assert(customRes === expectedCustomResult, "Different custom results")
+    assert(customRes.schema === expectedSchema, "Different custom schema")
+    assert(customRes.result.length === expectedResult.length, "Different custom result length")
+    assert(customRes.result(0)(0) === 1, "Different custom result first integer")
+    assert(customRes.result(1)(0) === 2, "Different custom result second integer")
+
+    val actualMap1 = customRes.result(0)(1).asInstanceOf[MapWrapper[String, Array[Object]]]
+    val expectedMap1 = expectedResult(0)(1).asInstanceOf[MapWrapper[String, Array[String]]]
+    val valuesIterator1 = actualMap1.values().iterator()
+    assert(expectedMap1.keySet.sameElements(actualMap1.keySet), "Different keys in first map")
+    assert(valuesIterator1.next() === Array("b"), "Different values in first map")
+    assert(valuesIterator1.next() === Array("d"), "Different values in first map")
+
+    val actualMap2 = customRes.result(1)(1).asInstanceOf[MapWrapper[String, Array[String]]]
+    val expectedMap2 = expectedResult(1)(1).asInstanceOf[MapWrapper[String, Array[String]]]
+    val valuesIterator2 = actualMap2.values().iterator()
+    assert(expectedMap2.keySet.sameElements(actualMap2.keySet), "Different keys in second map")
+    assert(valuesIterator2.next() === Array("e"), "Different values in second map")
+    assert(valuesIterator2.next() === Array("g"), "Different values in second map")
+
   }
-  
+
 }
 
 

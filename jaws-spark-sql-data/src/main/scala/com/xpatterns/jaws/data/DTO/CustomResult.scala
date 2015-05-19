@@ -1,8 +1,9 @@
 package com.xpatterns.jaws.data.DTO
 
 import spray.json.DefaultJsonProtocol._
+import spray.json.RootJsonFormat
 
-case class CustomResult(schema: Array[Column], result: Array[Array[String]]) {
+case class CustomResult(schema: Array[Column], result: Array[Array[Any]]) {
 
   def this() = {
     this(Array.empty, Array.empty)
@@ -36,7 +37,3 @@ case class CustomResult(schema: Array[Column], result: Array[Array[String]]) {
     }
   }
 }
-
-object CustomResult {
-  implicit val customResultJson = jsonFormat2(apply) 
-  }

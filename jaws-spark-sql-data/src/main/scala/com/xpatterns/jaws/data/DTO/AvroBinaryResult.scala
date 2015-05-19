@@ -12,13 +12,13 @@ import org.apache.avro.io.EncoderFactory
 import org.apache.avro.generic.GenericDatumReader
 import org.apache.avro.io.DecoderFactory
 
-case class AvroBinaryResult(schema: Schema, result: Array[Array[Byte]]) {
+case class AvroBinaryResult(schema: Schema, result: Array[Byte]) {
   def this() = {
     this(null, Array.empty)
   }
   
   def this(avroResult : AvroResult) = {
-    this(avroResult.schema, avroResult.resultToBinary())
+    this(avroResult.schema, avroResult.serializeResult())
   }
 
   override def hashCode(): Int = {

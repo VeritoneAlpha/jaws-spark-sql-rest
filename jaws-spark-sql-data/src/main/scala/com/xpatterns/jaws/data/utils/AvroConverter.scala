@@ -13,10 +13,10 @@ import java.sql.Timestamp
 import java.util.HashMap
 import org.apache.avro.generic.GenericData.Record
 import collection.JavaConversions._
+import java.nio.ByteBuffer
 
 object AvroConverter {
 
-  val RECORD_NAME = "RECORD"
   private def callMethod(builder: Object, method: String) = {
     builder.getClass.getMethod(method).invoke(builder)
   }
@@ -48,7 +48,7 @@ object AvroConverter {
         var arrayItemsBuilder = callMethod(arrayBuilder, "items")
         if (arrayType.containsNull)
           arrayItemsBuilder = callMethod(arrayItemsBuilder, "nullable")
-        addFields(arrayType.elementType, fieldName, arrayItemsBuilder)
+        addFields(arrayType.elementType, "items", arrayItemsBuilder)
       }
       case mapType: MapType => {
         val mapBuilder = callMethod(typeBuilder, "map")
@@ -60,7 +60,7 @@ object AvroConverter {
           case _          => throw new IllegalArgumentException("Avro schema map key has to be String")
         }
 
-        addFields(mapType.valueType, fieldName, mapValuesBuilder)
+        addFields(mapType.valueType, "values", mapValuesBuilder)
 
       }
       case unsupportedType => throw new IllegalArgumentException(s"Unhandled Avro schema type $unsupportedType")
@@ -79,15 +79,16 @@ object AvroConverter {
     }
   }
 
-  def getAvroSchema(structType: StructType): Schema = {
-    var recordAssembler = SchemaBuilder.record(RECORD_NAME).fields()
+  def getAvroSchema(structType: StructType, structName: String = "RECORD"): Schema = {
+    var recordAssembler = SchemaBuilder.record(structName).fields()
     addStructType(structType, recordAssembler)
     recordAssembler.endRecord()
   }
 
   def getAvroResult(result: Array[Row], schema: StructType): Array[GenericRecord] = {
-    val converter = createConverter(schema, RECORD_NAME, "")
-    result map (row => converter(row).asInstanceOf[GenericRecord])  
+
+    val converter = createConverter(schema, "RECORD", "")
+    result map (row => converter(row).asInstanceOf[GenericRecord])
   }
 
   /**
@@ -99,9 +100,18 @@ object AvroConverter {
     structName: String,
     recordNamespace: String): (Any) => Any = {
     dataType match {
-      case ByteType | ShortType | IntegerType | LongType | FloatType | DoubleType | StringType |
-        BinaryType | BooleanType =>
+      case  IntegerType | LongType | FloatType | DoubleType | StringType |
+        BooleanType =>
         (item: Any) => item
+
+        case ShortType =>
+        (item: Any) => if (item == null) null else item.asInstanceOf[Short].toInt
+        
+        case ByteType =>
+        (item: Any) => if (item == null) null else item.asInstanceOf[Byte].toInt
+
+        case BinaryType =>
+        (item: Any) => if (item == null) null else ByteBuffer.wrap(item.asInstanceOf[Array[Byte]])
 
         case DecimalType =>
         (item: Any) => if (item == null) null else item.toString
@@ -112,24 +122,24 @@ object AvroConverter {
         }
 
         case ArrayType(elementType, _) =>
-         val elementConverter = createConverter(elementType, structName, recordNamespace)
-         (item: Any) => {
+        val elementConverter = createConverter(elementType, "items", recordNamespace)
+        (item: Any) => {
           if (item == null) {
             null
           } else {
-            
-            val schema = getAvroSchema(new StructType(Seq(new StructField("array", dataType, false))))
+
+            val schema = getAvroSchema(new StructType(Seq(new StructField("array", dataType, false))), "arrayStruct")
             val sourceArray = item.asInstanceOf[Seq[Any]]
-            
+
             val destination = sourceArray map { element => elementConverter(element) }
             val arrayRecord = new GenericData.Array(schema.getField("array").schema(), destination)
-            
+
             arrayRecord
           }
-         }
-       
+        }
+
         case MapType(StringType, valueType, _) =>
-        val valueConverter = createConverter(valueType, structName, recordNamespace)
+        val valueConverter = createConverter(valueType, "values", recordNamespace)
 
         (item: Any) => {
           if (item == null) {
@@ -137,14 +147,14 @@ object AvroConverter {
           } else {
             val smap = item.asInstanceOf[Map[String, Any]] map {
               case (key, value) =>
-               (key -> valueConverter(value))
-            } 
+                (key -> valueConverter(value))
+            }
             mapAsJavaMap(smap)
           }
         }
 
         case structType: StructType =>
-        val schema: Schema = getAvroSchema(structType)
+        val schema: Schema = getAvroSchema(structType, structName)
         val fieldConverters = structType.fields.map(field =>
           createConverter(field.dataType, field.name, recordNamespace))
 
