@@ -20,6 +20,7 @@ import org.apache.avro.file.SeekableInput
 import org.apache.avro.file.DataFileWriter
 
 case class AvroResult(schema: Schema, result: Array[GenericRecord]) {
+
   def this() = {
     this(null, Array.empty)
   }
@@ -64,12 +65,19 @@ case class AvroResult(schema: Schema, result: Array[GenericRecord]) {
     fileWriter.close()
     baos.toByteArray()
   }
+  
+  override def toString() = {
+    var s = s"schema = ${schema.toString()} \n results = "
+    result.foreach { r => s+=  r.toString() }
+    s
+  }
 }
 object AvroResult {
 
   def deserializeResult(byteArray: Array[Byte], schema: Schema): Array[GenericRecord] = {
     val reader = new GenericDatumReader[GenericRecord](schema)
     val in = new SeekableByteArrayInput(byteArray)
+   
     var dfr: FileReader[GenericRecord] = null
     val records = ArrayBuffer[GenericRecord]()
     try {

@@ -16,6 +16,9 @@ import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import com.xpatterns.jaws.data.DTO.AvroResult
 import com.xpatterns.jaws.data.DTO.CustomResult
+import org.apache.spark.sql.catalyst.types._
+import scala.collection.mutable.ArrayBuffer
+import org.apache.spark.sql.catalyst.expressions.Row
 
 @RunWith(classOf[JUnitRunner])
 class JawsResultsTest extends FunSuite with BeforeAndAfter {
@@ -56,7 +59,7 @@ class JawsResultsTest extends FunSuite with BeforeAndAfter {
     assert(resultsConverter.toCustomResults() === customResults)
 
   }
-
+  
   test("testDeleteResults") {
     val uuid = Randomizer.getRandomString(10)
     val resultsConverter = Randomizer.getResultsConverter
