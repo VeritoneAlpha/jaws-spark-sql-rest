@@ -1,6 +1,6 @@
 package com.xpatterns.jaws.data.DTO
 import spray.json.DefaultJsonProtocol._
-import spray.json.RootJsonFormat
+import spray.json.JsonFormat
 
 /**
  * Created by emaorhian
@@ -51,5 +51,5 @@ case class Column(name: String, dataType: String, comment: String, members: Arra
 }
 
 object Column {
-  implicit val columnJsonFormat: RootJsonFormat[Column] = jsonFormat(Column.apply, "name", "dataType","comment", "members")
+  implicit val columnJsonFormat: JsonFormat[Column] = lazyFormat(jsonFormat(Column.apply, "name", "dataType","comment", "members"))
 }

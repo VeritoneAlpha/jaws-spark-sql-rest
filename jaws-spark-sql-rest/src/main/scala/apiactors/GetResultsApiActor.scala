@@ -49,7 +49,7 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCon
               var endIndex = offset + limit
               message.format match {
                 case AVRO_BINARY_FORMAT => new AvroBinaryResult(getDBAvroResults(message.queryID, offset, endIndex))
-                case AVRO_JSON_FORMAT   => getDBAvroResults(message.queryID, offset, endIndex)
+                case AVRO_JSON_FORMAT   => getDBAvroResults(message.queryID, offset, endIndex).result
                 case _                  => getCustomResults(message.queryID, offset, endIndex)
               }
 
@@ -136,7 +136,7 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCon
   private def getFormattedResult(format: String, resultsConverter: ResultsConverter) = {
     format match {
       case AVRO_BINARY_FORMAT => resultsConverter.toAvroBinaryResults()
-      case AVRO_JSON_FORMAT   => resultsConverter.toAvroResults()
+      case AVRO_JSON_FORMAT   => resultsConverter.toAvroResults().result
       case _                  => resultsConverter.toCustomResults()
     }
   }
