@@ -8,11 +8,8 @@
 	</formats>
 	<fileSets>
 		<fileSet>
-			<directory>./</directory>
+			<directory>${basedir}/src/main/webapp</directory>
 			<outputDirectory>resources/webapp</outputDirectory>
-			<excludes>
-				<exclude>*/**</exclude>
-			</excludes>
 		</fileSet>
 		<fileSet>
 			<directory>${project.build.directory}/temp_build</directory>
