@@ -4,7 +4,7 @@
 
 	<groupId>com.xpatterns</groupId>
 	<artifactId>jaws-spark-sql-rest</artifactId>
-	<version>1.1.0</version>
+	<version>1.0.0-spark1.3.1</version>
 	<packaging>jar</packaging>
 
 	<name>jaws-spark-sql-rest</name>
@@ -212,7 +212,7 @@
 		<dependency>
 			<groupId>com.xpatterns</groupId>
 			<artifactId>jaws-spark-sql-data</artifactId>
-			<version>1.1.0</version>
+			<version>1.0.0-spark1.3.1</version>
 			<exclusions>
 				<exclusion>
 					<groupId>com.typesafe</groupId>
