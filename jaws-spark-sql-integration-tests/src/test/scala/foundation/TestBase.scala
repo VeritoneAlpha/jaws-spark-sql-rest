@@ -32,7 +32,6 @@ import spray.httpx.encoding.{ Gzip, Deflate }
 import spray.httpx.SprayJsonSupport._
 import scala.collection.GenSeq
 
-
 class TestBase extends FunSuite with BeforeAndAfterAll {
   implicit val system = ActorSystem()
   import system.dispatcher // execution context for futures
@@ -48,6 +47,8 @@ class TestBase extends FunSuite with BeforeAndAfterAll {
   val database = appConf.getString("database")
   val table = appConf.getString("table")
   val runTachyon = appConf.getBoolean("runTachyon")
+  val parquetFolder = appConf.getString("parquetFolder")
+  val parquetTable = appConf.getString("parquetTable")
 
   val hadoopConf = getHadoopConf
   def getHadoopConf(): org.apache.hadoop.conf.Configuration = {
@@ -73,6 +74,16 @@ class TestBase extends FunSuite with BeforeAndAfterAll {
       }
     }
     queryID
+  }
+
+  def post(url: String, body: String) = {
+    val pipeline: HttpRequest => Future[HttpResponse] = sendReceive
+    pipeline(Post(url, body))
+  }
+  
+  def delete(url: String) = {
+    val pipeline: HttpRequest => Future[HttpResponse] = sendReceive
+    pipeline(Delete(url))
   }
 
   def waitforCompletion(queryId: String, retry: Int) = {
@@ -106,8 +117,8 @@ class TestBase extends FunSuite with BeforeAndAfterAll {
     }
     status
   }
-  
-  def getResults(queryId : String, offset:Long, limit : Int) = {
+
+  def getResults(queryId: String, offset: Long, limit: Int) = {
     val pipeline: HttpRequest => Future[Result] = (
       addHeader("X-My-Special-Header", "fancy-value")
       ~> addCredentials(BasicHttpCredentials("bob", "secret"))
@@ -115,8 +126,8 @@ class TestBase extends FunSuite with BeforeAndAfterAll {
       ~> sendReceive
       ~> decode(Deflate)
       ~> unmarshal[Result])
-    var result : Result = null  
-    val url = s"${jawsUrl}results?queryID=$queryId&offset=$offset&limit=$limit"  
+    var result: Result = null
+    val url = s"${jawsUrl}results?queryID=$queryId&offset=$offset&limit=$limit"
     val response: Future[Result] = pipeline(Get(url))
     Await.ready(response, Inf).value.get match {
       case Success(r: Result) => {
@@ -130,13 +141,18 @@ class TestBase extends FunSuite with BeforeAndAfterAll {
     }
     result
   }
-  
-   def selectAllFromTable(url: String) = {
-    val body = s"use $database;\nselect * from $table"
+
+  def selectAllFromTable(url: String, tableName: String) = {
+    val body = s"use $database;\nselect * from $tableName"
 
     val queryId = postRun(url, body)
     val queryStatus = waitforCompletion(queryId, 100)
     assert(queryStatus === "DONE", "Query is not DONE!")
+    queryId
+  }
+
+  def validataAllResultsFromNormalTable(queryId: String) {
+
     val results = getResults(queryId, 0, 200)
     val flatResults = results.results.flatMap(x => x)
     assert(6 === results.results.length, "Different number of rows")
@@ -147,5 +163,15 @@ class TestBase extends FunSuite with BeforeAndAfterAll {
     assert(flatResults.containsSlice(GenSeq("Paul", "12", "m")), "Paul is missing")
     assert(flatResults.containsSlice(GenSeq("Pavel", "16", "m")), "Pavel is missing")
     assert(flatResults.containsSlice(GenSeq("Ioana", "30", "f")), "Ioana is missing")
+  }
+
+  def validataAllResultsFromParquetTable(queryId: String) {
+
+    val results = getResults(queryId, 0, 200)
+    val flatResults = results.results.flatMap(x => x)
+    assert(9 === results.results.length, "Different number of rows")
+    assert(1 === results.results(0).length, "Different number of columns")
+    for (i <- 1 to 9) assert(flatResults.containsSlice(GenSeq(i.toString())), s"Value $i does not exist")
+
   }
 }

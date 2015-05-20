@@ -6,7 +6,8 @@ import com.xpatterns.jaws.data.utils.{ Randomizer, Utils }
 import com.xpatterns.jaws.data.contracts.TJawsResults
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
-import com.xpatterns.jaws.data.DTO.Result
+import com.xpatterns.jaws.data.DTO.AvroResult
+import com.xpatterns.jaws.data.DTO.CustomResult
 
 /**
  * Created by emaorhian on 7/28/14.
@@ -60,28 +61,34 @@ class JawsResultsOnHdfsTest extends FunSuite with BeforeAndAfter {
 
   test("testWriteReadResults") {
     val uuid = Randomizer.getRandomString(10)
-    val resultDTO = Randomizer.getResult
-    resultsDal.setResults(uuid, resultDTO)
+    val resultsConverter = Randomizer.getResultsConverter
+    resultsDal.setResults(uuid, resultsConverter)
 
-    val results = resultsDal.getResults(uuid)
+    val avroResults = resultsDal.getAvroResults(uuid)
+    val customResults = resultsDal.getCustomResults(uuid)
 
-    assert(resultDTO === results)
+    assert(resultsConverter.toAvroResults() === avroResults)
+    assert(resultsConverter.toCustomResults() === customResults)
 
   }
 
   test("testDeleteResults") {
     val uuid = Randomizer.getRandomString(10)
-    val resultDTO = Randomizer.getResult
-    resultsDal.setResults(uuid, resultDTO)
+    val resultsConverter = Randomizer.getResultsConverter
+    resultsDal.setResults(uuid, resultsConverter)
 
-    val results = resultsDal.getResults(uuid)
+    val avroResults = resultsDal.getAvroResults(uuid)
+    val customResults = resultsDal.getCustomResults(uuid)
 
     resultsDal.deleteResults(uuid)
 
-    val resultsDeleted = resultsDal.getResults(uuid)
+    val avroResultsDeleted = resultsDal.getAvroResults(uuid)
+    val customResultsDeleted = resultsDal.getCustomResults(uuid)
 
-    assert(resultDTO === results)
-    assert(new Result() === resultsDeleted)
+    assert(resultsConverter.toAvroResults() === avroResults)
+    assert(resultsConverter.toCustomResults() === customResults)
+    assert(new AvroResult() === avroResultsDeleted)
+    assert(new CustomResult() === customResultsDeleted)
 
   }
 

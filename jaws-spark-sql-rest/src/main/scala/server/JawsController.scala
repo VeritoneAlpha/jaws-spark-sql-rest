@@ -1,5 +1,6 @@
 package server
 
+import com.xpatterns.jaws.data.utils.GsonHelper._
 import java.net.InetAddress
 import com.xpatterns.jaws.data.utils.Utils._
 import scala.collection.JavaConverters._
@@ -23,7 +24,7 @@ import com.xpatterns.jaws.data.impl.HdfsDal
 import messages._
 import com.xpatterns.jaws.data.DTO.Queries
 import spray.http.{ StatusCodes, HttpHeaders, HttpMethods, MediaTypes }
-import spray.httpx.SprayJsonSupport.sprayJsonMarshaller
+import spray.httpx.SprayJsonSupport._
 import spray.httpx.marshalling.ToResponseMarshallable.isMarshallable
 import spray.json.DefaultJsonProtocol._
 import spray.routing.Directive.pimpApply
@@ -32,7 +33,6 @@ import spray.routing.directives.ParamDefMagnet.apply
 import com.xpatterns.jaws.data.contracts.DAL
 import messages.GetResultsMessage
 import com.xpatterns.jaws.data.DTO.Logs
-import com.xpatterns.jaws.data.DTO.Result
 import com.xpatterns.jaws.data.DTO.Query
 import scala.util.{ Failure, Success, Try }
 import server.MainActors._
@@ -46,6 +46,18 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.concurrent.duration.Duration._
 import spray.routing.Route
+import com.xpatterns.jaws.data.DTO.Databases
+import scala.collection.mutable.ListBuffer
+import com.xpatterns.jaws.data.DTO.Tables
+import scala.collection.mutable.ArrayBuffer
+import com.xpatterns.jaws.data.DTO.AvroResult
+import com.xpatterns.jaws.data.DTO.CustomResult
+import spray.json.RootJsonWriter
+import spray.json.JsonPrinter
+import spray.json.PrettyPrinter
+import spray.httpx.marshalling.Marshaller
+import spray.http.ContentTypes
+import com.xpatterns.jaws.data.DTO.AvroBinaryResult
 
 /**
  * Created by emaorhian
@@ -63,7 +75,6 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
   val getTablesActor = createActor(Props(new GetTablesApiActor(hiveContext, dals)), GET_TABLES_ACTOR_NAME, localSupervisor)
   val getLogsActor = createActor(Props(new GetLogsApiActor(dals)), GET_LOGS_ACTOR_NAME, localSupervisor)
   val getResultsActor = createActor(Props(new GetResultsApiActor(hdfsConf, hiveContext, dals)), GET_RESULTS_ACTOR_NAME, localSupervisor)
-  val getQueryInfoActor = createActor(Props(new GetQueryInfoApiActor(dals)), GET_QUERY_INFO_ACTOR_NAME, localSupervisor)
   val getDatabasesActor = createActor(Props(new GetDatabasesApiActor(hiveContext, dals)), GET_DATABASES_ACTOR_NAME, localSupervisor)
   val getDatasourceSchemaActor = createActor(Props(new GetDatasourceSchemaActor(hiveContext)), GET_DATASOURCE_SCHEMA_ACTOR_NAME, localSupervisor)
   val deleteQueryActor = createActor(Props(new DeleteQueryApiActor(dals)), DELETE_QUERY_ACTOR_NAME, localSupervisor)
@@ -161,22 +172,24 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
           }
         }
     } ~
-      path("registerTable") {
-        post {
-          parameters('name.as[String], 'path.as[String], 'overwrite.as[Boolean] ? false) { (name, path, overwrite) =>
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              {
-                validate(path != null && !path.trim.isEmpty, Configuration.FILE_EXCEPTION_MESSAGE) {
-                  validate(name != null && !name.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
-                    validate(overwrite == true || dals.parquetTableDal.tableExists(name) == false, Configuration.TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE) {
-                      respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
-                        Configuration.log4j.info(s"Registering table $name having the path $path")
-                        val future = ask(balancerActor, RegisterTableMessage(name, path))
-                          .map(innerFuture => innerFuture.asInstanceOf[Future[Any]])
-                          .flatMap(identity)
-                        future.map {
-                          case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                          case result: String  => ctx.complete(StatusCodes.OK, result)
+      pathPrefix("tables") {
+        pathEnd {
+          post {
+            parameters('name.as[String], 'path.as[String], 'overwrite.as[Boolean] ? false) { (name, path, overwrite) =>
+              corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+                {
+                  validate(path != null && !path.trim.isEmpty, Configuration.FILE_EXCEPTION_MESSAGE) {
+                    validate(name != null && !name.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
+                      validate(overwrite == true || dals.parquetTableDal.tableExists(name) == false, Configuration.TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE) {
+                        respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
+                          Configuration.log4j.info(s"Registering table $name having the path $path")
+                          val future = ask(balancerActor, RegisterTableMessage(name, path))
+                            .map(innerFuture => innerFuture.asInstanceOf[Future[Any]])
+                            .flatMap(identity)
+                          future.map {
+                            case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                            case result: String  => ctx.complete(StatusCodes.OK, result)
+                          }
                         }
                       }
                     }
@@ -184,77 +197,54 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
                 }
               }
             }
-          }
-        } ~
-          options {
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.POST))) {
-              complete {
-                "OK"
-              }
-            }
-          }
-      } ~
-      path("table") {
-        delete {
-          parameters('name.as[String]) { (name) =>
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              {
-                validate(name != null && !name.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
-                  respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
-                    Configuration.log4j.info(s"Unregistering table $name ")
-                    val future = ask(balancerActor, UnregisterTableMessage(name))
-                      .map(innerFuture => innerFuture.asInstanceOf[Future[Any]])
-                      .flatMap(identity)
+          } ~
+            get {
+              parameterSeq { params =>
+                corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+
+                  respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+                    var tables = ArrayBuffer[String]()
+                    var describe = false
+
+                    params.foreach(touple => touple match {
+                      case ("describe", value)                    => describe = Try(value.toBoolean).getOrElse(false)
+                      case ("table", value) if (!value.isEmpty()) => tables += value
+                      case (key, value)                           => Configuration.log4j.warn(s"Unknown parameter $key!")
+                    })
+                    Configuration.log4j.info(s"Retrieving table information for parquet tables= $tables")
+                    val future = ask(getParquetTablesActor, new GetParquetTablesMessage(tables.toArray, describe))
+
                     future.map {
-                      case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                      case result: String  => ctx.complete(StatusCodes.OK, result)
+                      case e: ErrorMessage       => ctx.complete(StatusCodes.InternalServerError, e.message)
+                      case result: Array[Tables] => ctx.complete(StatusCodes.OK, result)
                     }
                   }
                 }
               }
             }
-          }
         } ~
-          options {
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.DELETE))) {
-              complete {
-                "OK"
-              }
-            }
-          }
-      } ~
-      path("tables") {
-        get {
-          parameterMultiMap { params =>
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-
-              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                var tables: List[String] = List()
-                var describe = false
-
-                params.foreach(touple => touple._1 match {
-                  case "tables" => {
-                    tables = touple._2
+          delete {
+            path(Segment) { name =>
+              corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+                {
+                  validate(name != null && !name.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
+                    respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
+                      Configuration.log4j.info(s"Unregistering table $name ")
+                      val future = ask(balancerActor, UnregisterTableMessage(name))
+                        .map(innerFuture => innerFuture.asInstanceOf[Future[Any]])
+                        .flatMap(identity)
+                      future.map {
+                        case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                        case result: String  => ctx.complete(StatusCodes.OK, result)
+                      }
+                    }
                   }
-                  case "describe" => {
-                    if (touple._2 != null && !touple._2.isEmpty)
-                      describe = Try(touple._2(0).toBoolean).getOrElse(false)
-                  }
-                  case _ => Configuration.log4j.warn(s"Unknown parameter ${touple._1}!")
-                })
-                Configuration.log4j.info(s"Retrieving table information for parquet tables= $tables")
-                val future = ask(getParquetTablesActor, new GetParquetTablesMessage(tables, describe))
-
-                future.map {
-                  case e: ErrorMessage                          => ctx.complete(StatusCodes.InternalServerError, e.message)
-                  case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
                 }
               }
             }
-          }
-        } ~
+          } ~
           options {
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.POST, HttpMethods.DELETE, HttpMethods.GET))) {
               complete {
                 "OK"
               }
@@ -321,61 +311,20 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
     } ~
     path("results") {
       get {
-        parameters('queryID, 'offset.as[Int], 'limit.as[Int]) { (queryID, offset, limit) =>
+        parameters('queryID, 'offset.as[Int], 'limit.as[Int], 'format ? "default") { (queryID, offset, limit, format) =>
           corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
             validate(queryID != null && !queryID.trim.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE) {
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                val future = ask(getResultsActor, GetResultsMessage(queryID, offset, limit))
-                future.map {
-                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                  case result: Result  => ctx.complete(StatusCodes.OK, result)
-                }
-              }
-            }
-          }
-        }
-      } ~
-        options {
-          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
-            complete {
-              "OK"
-            }
-          }
-        }
-    } ~
-    path("queries") {
-      get {
-        parameters('startQueryID.?, 'limit.as[Int]) { (startQueryID, limit) =>
-          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-            respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-              val future = ask(getQueriesActor, GetQueriesMessage(startQueryID.getOrElse(null), limit))
-              future.map {
-                case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                case result: Queries => ctx.complete(StatusCodes.OK, result)
-              }
-            }
-          }
-        }
-      } ~
-        options {
-          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
-            complete {
-              "OK"
-            }
-          }
-        }
-    } ~
-    path("queryInfo") {
-      get {
-        parameters('queryID) { queryID =>
-          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-            validate(queryID != null && !queryID.trim.isEmpty, Configuration.UUID_EXCEPTION_MESSAGE) {
 
-              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                val future = ask(getQueryInfoActor, GetQueryInfoMessage(queryID))
+                implicit def customResultMarshaller[T] =
+                  Marshaller.delegate[T, String](ContentTypes.`application/json`) { value ⇒
+                    customGson.toJson(value)
+                  }
+
+                val future = ask(getResultsActor, GetResultsMessage(queryID, offset, limit, format.toLowerCase()))
                 future.map {
                   case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                  case result: Query   => ctx.complete(StatusCodes.OK, result)
+                  case result: Any     => ctx.complete(StatusCodes.OK, result)
                 }
               }
             }
@@ -389,6 +338,61 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
             }
           }
         }
+    } ~
+    pathPrefix("queries") {
+      pathEnd {
+        get {
+          parameterSeq { params =>
+
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+
+                var limit: Int = 100
+                var startQueryID: String = null
+                val queries = ListBuffer[String]()
+
+                params.foreach(touple => touple match {
+                  case ("limit", value)                         => limit = Try(value.toInt).getOrElse(100)
+                  case ("startQueryID", value)                  => startQueryID = Option(value).getOrElse(null)
+                  case ("queryID", value) if (!value.isEmpty()) => queries += value
+                  case (key, value)                             => Configuration.log4j.warn(s"Unknown parameter $key!")
+                })
+
+                val future = if (queries isEmpty) ask(getQueriesActor, GetPaginatedQueriesMessage(startQueryID, limit))
+                else ask(getQueriesActor, GetQueriesMessage(queries))
+
+                future.map {
+                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                  case result: Queries => ctx.complete(StatusCodes.OK, result)
+                }
+              }
+            }
+          }
+        }
+      } ~
+        delete {
+          path(Segment) { queryID =>
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+              validate(queryID != null && !queryID.trim.isEmpty, Configuration.UUID_EXCEPTION_MESSAGE) {
+                respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
+                  val future = ask(deleteQueryActor, new DeleteQueryMessage(queryID))
+                  future.map {
+                    case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                    case message: String => ctx.complete(StatusCodes.OK, message)
+                  }
+                }
+              }
+            }
+          }
+        } ~
+        options {
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET, HttpMethods.DELETE))) {
+            complete {
+              "OK"
+            }
+          }
+        }
+
     } ~
     path("cancel") {
       post {
@@ -410,63 +414,24 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
             }
           }
         }
-    } ~
-    path("query") {
-      delete {
-        parameters('queryID.as[String]) { queryID =>
-          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-            validate(queryID != null && !queryID.trim.isEmpty, Configuration.UUID_EXCEPTION_MESSAGE) {
-              respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
-                val future = ask(deleteQueryActor, new DeleteQueryMessage(queryID))
-                future.map {
-                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                  case message: String => ctx.complete(StatusCodes.OK, message)
-                }
-              }
-            }
-          }
-        }
-      } ~
-        options {
-          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.DELETE))) {
-            complete {
-              "OK"
-            }
-          }
-        }
     }
 
   def tablesRoute: Route = pathPrefix("tables") {
     pathEnd {
       get {
-        parameterMultiMap { params =>
+        parameterSeq { params =>
           corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
 
             respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-              var database = ""
-              var describe = true
-              var tables: List[String] = List()
 
-              params.foreach(touple => touple._1 match {
-                case "database" => {
-                  if (touple._2 != null && !touple._2.isEmpty)
-                    database = touple._2(0)
-                }
-                case "describe" => {
-                  if (touple._2 != null && !touple._2.isEmpty)
-                    describe = Try(touple._2(0).toBoolean).getOrElse(true)
-                }
-                case "tables" => {
-                  tables = touple._2
-                }
-                case _ => Configuration.log4j.warn(s"Unknown parameter ${touple._1}!")
-              })
+              val (database, describe, tables) = getTablesParameters(params)
+
               Configuration.log4j.info(s"Retrieving table information for database=$database, tables= $tables, with describe flag set on: $describe")
               val future = ask(getTablesActor, new GetTablesMessage(database, describe, tables))
 
               future.map {
-                case e: ErrorMessage                          => ctx.complete(StatusCodes.InternalServerError, e.message)
-                case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
+                case e: ErrorMessage       => ctx.complete(StatusCodes.InternalServerError, e.message)
+                case result: Array[Tables] => ctx.complete(StatusCodes.OK, result)
               }
             }
           }
@@ -482,14 +447,21 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
       } ~
       path("extended") {
         get {
-          parameters('database.as[String], 'table.?) { (database, table) =>
+          parameterSeq { params =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+              val (database, describe, tables) = getTablesParameters(params)
+              validate(database != null && !database.trim.isEmpty, Configuration.DATABASE_EXCEPTION_MESSAGE) {
+                respondWithMediaType(MediaTypes.`application/json`) {
+                  ctx =>
 
-              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                val future = ask(getTablesActor, new GetExtendedTablesMessage(database, table.getOrElse("")))
-                future.map {
-                  case e: ErrorMessage                          => ctx.complete(StatusCodes.InternalServerError, e.message)
-                  case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
+                    Configuration.log4j.info(s"Retrieving extended table information for database=$database, tables= $tables")
+                    val future = ask(getTablesActor, new GetExtendedTablesMessage(database, tables))
+
+                    future.map {
+                      case e: ErrorMessage       => ctx.complete(StatusCodes.InternalServerError, e.message)
+                      case result: Array[Tables] => ctx.complete(StatusCodes.OK, result)
+                      case _                     => ctx.complete(StatusCodes.Accepted, "Other")
+                    }
                 }
               }
             }
@@ -505,17 +477,23 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
       } ~
       path("formatted") {
         get {
-          parameters('database.as[String], 'table.?) { (database, table) =>
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+          parameterSeq {
+            params =>
+              corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+                val (database, describe, tables) = getTablesParameters(params)
+                validate(database != null && !database.trim.isEmpty, Configuration.DATABASE_EXCEPTION_MESSAGE) {
+                  respondWithMediaType(MediaTypes.`application/json`) {
+                    ctx =>
+                      Configuration.log4j.info(s"Retrieving formatted table information for database=$database, tables= $tables")
+                      val future = ask(getTablesActor, new GetFormattedTablesMessage(database, tables.toArray))
 
-              respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                val future = ask(getTablesActor, new GetFormattedTablesMessage(database, table.getOrElse("")))
-                future.map {
-                  case e: ErrorMessage                          => ctx.complete(StatusCodes.InternalServerError, e.message)
-                  case result: Map[String, Map[String, Result]] => ctx.complete(StatusCodes.OK, result)
+                      future.map {
+                        case e: ErrorMessage       => ctx.complete(StatusCodes.InternalServerError, e.message)
+                        case result: Array[Tables] => ctx.complete(StatusCodes.OK, result)
+                      }
+                  }
                 }
               }
-            }
           }
         } ~
           options {
@@ -536,8 +514,8 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
         respondWithMediaType(MediaTypes.`application/json`) { ctx =>
           val future = ask(getDatabasesActor, GetDatabasesMessage())
           future.map {
-            case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-            case result: Result  => ctx.complete(StatusCodes.OK, result)
+            case e: ErrorMessage   => ctx.complete(StatusCodes.InternalServerError, e.message)
+            case result: Databases => ctx.complete(StatusCodes.OK, result)
           }
         }
       }
@@ -700,6 +678,19 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
     })
   }
 
+  private def getTablesParameters(params: Seq[(String, String)]): Tuple3[String, Boolean, Array[String]] = {
+    var database = ""
+    var describe = false
+    var tables = ArrayBuffer[String]()
+    params.foreach(touple => touple match {
+      case ("database", value)                    => database = Option(value).getOrElse("")
+      case ("describe", value)                    => describe = Try(value.toBoolean).getOrElse(false)
+      case ("table", value) if (!value.isEmpty()) => tables += value
+      case (key, value)                           => Configuration.log4j.warn(s"Unknown parameter $key!")
+    })
+
+    (database, describe, tables.toArray)
+  }
 }
 
 object Configuration {
@@ -755,6 +746,7 @@ object Configuration {
   val LIMITED_EXCEPTION_MESSAGE = "The limited flag is null!"
   val RESULTS_NUMBER_EXCEPTION_MESSAGE = "The results number is null!"
   val FILE_EXCEPTION_MESSAGE = "The file is null or empty!"
+  val DATABASE_EXCEPTION_MESSAGE = "The database is null or empty!"
   val TABLE_EXCEPTION_MESSAGE = "The table name is null or empty!"
   val PATH_IS_EMPTY = "Request parameter \'path\' must not be empty!"
   val TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE = "The table already exists!"

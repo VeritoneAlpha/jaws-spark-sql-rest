@@ -20,12 +20,15 @@ export CLASSPATH_PREFIX=$parentdir"/resources"
 echo "Exporting system variables..."
 . $parentdir/conf/jaws-env.sh
 
+
+export CLASSPATH_PREFIX=$parentdir"/resources"
+
+
 echo $TACHYON_WAREHOUSE_PATH
 echo $TACHYON_MASTER
 echo $MESOS_NATIVE_LIBRARY
 echo $JAVA_OPTS
 echo $CLASSPATH_PREFIX
-
 
 echo "Deploying jaws..."
 $dir/main-jaws.sh

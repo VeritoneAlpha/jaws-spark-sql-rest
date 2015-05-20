@@ -1,12 +1,26 @@
 package com.xpatterns.jaws.data.contracts
 
-import com.xpatterns.jaws.data.DTO.Result
+import com.xpatterns.jaws.data.utils.Utils
+import com.xpatterns.jaws.data.utils.ResultsConverter
+import spray.json.DefaultJsonProtocol._
+import com.xpatterns.jaws.data.DTO.AvroResult
+import com.xpatterns.jaws.data.DTO.CustomResult
 
 /**
  * Created by emaorhian
  */
 trait TJawsResults {
-  def getResults(uuid: String): Result
-  def setResults(uuid: String, resultDTO: Result)
+  def setAvroResults (uuid: String, avroResults : AvroResult)
+  def getAvroResults(uuid: String) : AvroResult
+  def setCustomResults(uuid: String, results: CustomResult)
+  def getCustomResults(uuid: String): CustomResult
+  
+  def setResults(uuid: String, results: ResultsConverter) {
+    Utils.TryWithRetry { 
+      
+      setAvroResults(uuid, results.toAvroResults())
+      setCustomResults(uuid, results.toCustomResults())
+    }
+  }
   def deleteResults(uuid: String)
 }

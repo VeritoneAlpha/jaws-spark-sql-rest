@@ -3,11 +3,16 @@ package com.xpatterns.jaws.data.utils
 import java.util.ArrayList
 import org.apache.commons.lang.RandomStringUtils
 import org.apache.commons.lang.math.RandomUtils
-import com.xpatterns.jaws.data.DTO.Result
 import com.xpatterns.jaws.data.DTO.Column
 import com.xpatterns.jaws.data.DTO.Log
 import com.xpatterns.jaws.data.DTO.QueryMetaInfo
 import com.xpatterns.jaws.data.DTO.ParquetTable
+import com.xpatterns.jaws.data.DTO.AvroResult
+import org.apache.spark.sql.catalyst.types.StructField
+import org.apache.spark.sql.catalyst.types.DataType
+import org.apache.spark.sql.catalyst.types.StructType
+import org.apache.spark.sql.catalyst.expressions.Row
+
 
 
 object Randomizer {
@@ -33,24 +38,16 @@ object Randomizer {
 		result
 	}
 	
-	def getResult : Result = {
-		
-		var schema = Array[Column]()
-		for (i <- 0 to 10) {
-			schema = schema ++ Array(new Column(RandomStringUtils.randomAlphabetic(10) , RandomStringUtils.randomAlphabetic(10)))
-		 
-		}
+  def getResultsConverter : ResultsConverter = {
+    
+  val intField = new StructField("int", DataType("IntegerType"), false)
+  val strField = new StructField("str", DataType("StringType"), true)
+  val structType = new StructType(Seq(intField, strField))
 
-		var results = Array[Array[String]]()
-		for (i <- 0 to 10) {
-			var row = Array [String]()
-			for (j <- 0 to 10) {
-				row = row ++ Array (RandomStringUtils.randomAlphabetic(10))
-			}
-			results = results ++ Array(row)
-		}
-		return new Result(schema, results)
-	}
+  val structTypeRow = Array(Row.fromSeq(Seq(1, "a")), Row.fromSeq(Seq(2, "b")))
+  new ResultsConverter(structType, structTypeRow)
+ 
+  }
 
 	def getLogDTO: Log = {
 		return new Log(Randomizer.getRandomString(5000), Randomizer.getRandomString(10), Randomizer.getRandomLong)

@@ -142,7 +142,7 @@ class JawsLoggingTest extends FunSuite with BeforeAndAfter {
     logingDal.setState(uuid5, QueryState.FAILED)
     logingDal.setState(uuid6, QueryState.FAILED)
 
-    var stateOfQuery = logingDal.getQueriesStates(null, 3)
+    var stateOfQuery = logingDal.getQueries(null, 3)
 
     assert(3 === stateOfQuery.queries.size)
 
@@ -150,7 +150,7 @@ class JawsLoggingTest extends FunSuite with BeforeAndAfter {
     assert(uuid5 === stateOfQuery.queries(1).queryID)
     assert(uuid4 === stateOfQuery.queries(2).queryID)
 
-    stateOfQuery = logingDal.getQueriesStates(uuid4, 3)
+    stateOfQuery = logingDal.getQueries(uuid4, 3)
     System.out.println(stateOfQuery)
     assert(3 === stateOfQuery.queries.size)
 
@@ -158,7 +158,7 @@ class JawsLoggingTest extends FunSuite with BeforeAndAfter {
     assert(uuid2 === stateOfQuery.queries(1).queryID)
     assert(uuid === stateOfQuery.queries(2).queryID)
 
-    stateOfQuery = logingDal.getQueriesStates(uuid3, 2)
+    stateOfQuery = logingDal.getQueries(uuid3, 2)
 
     assert(2 === stateOfQuery.queries.size)
 

@@ -31,6 +31,8 @@ import me.prettyprint.hector.api.query.MultigetSliceQuery
 import me.prettyprint.hector.api.beans.Rows
 import java.util.ArrayList
 import com.xpatterns.jaws.data.DTO.QueryMetaInfo
+import scala.collection.mutable.ListBuffer
+import scala.collection.JavaConversions._
 
 class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
 
@@ -87,7 +89,7 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
     }
   }
 
-  private def computeRowKey(uuid: String): Integer = {
+  private def computeRowKey(uuid: String): Int = {
     Math.abs(uuid.hashCode() % CF_SPARK_LOGS_NUMBER_OF_ROWS)
   }
 
@@ -257,8 +259,7 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
       }
     }
   }
-
-  override def getQueriesStates(queryId: String, limit: Int): Queries = {
+  override def getQueries(queryId: String, limit: Int): Queries = {
     Utils.TryWithRetry {
 
       var skipFirst = false
@@ -419,18 +420,17 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
       mutator.addDeletion(key, CF_SPARK_LOGS, columnMetaInfo, cs)
 
       logger.debug(s"Deleting query logs for: $queryId")
-      var logs = getLogs(queryId, 0, 100)     
+      var logs = getLogs(queryId, 0, 100)
       while (logs.logs.isEmpty == false) {
         logs.logs.foreach(log => {
-          println(log.timestamp)
           var columnLogs = new Composite()
           columnLogs.setComponent(LEVEL_TYPE, TYPE_LOG, is)
           columnLogs.setComponent(LEVEL_UUID, queryId, ss)
-	      columnLogs.setComponent(LEVEL_TIME_STAMP, log.timestamp, ls)
+          columnLogs.setComponent(LEVEL_TIME_STAMP, log.timestamp, ls)
           mutator.addDeletion(key, CF_SPARK_LOGS, columnLogs, cs)
         })
-         mutator.execute()
-         logs = getLogs(queryId, logs.logs(logs.logs.length -1).timestamp + 1, 100)
+        mutator.execute()
+        logs = getLogs(queryId, logs.logs(logs.logs.length - 1).timestamp + 1, 100)
       }
 
       mutator.execute()

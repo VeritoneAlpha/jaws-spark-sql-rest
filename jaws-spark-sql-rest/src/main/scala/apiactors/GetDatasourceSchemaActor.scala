@@ -3,7 +3,7 @@ package apiactors
 import akka.actor.Actor
 import apiactors.ActorOperations._
 import implementation.SchemaSettingsFactory.{ Hdfs, Hive, Parquet, Tachyon }
-import implementation.{ AvroConverter, HiveContextWrapper }
+import implementation.HiveContextWrapper
 import messages.GetDatasourceSchemaMessage
 import org.apache.spark.scheduler.HiveUtils
 import org.apache.spark.sql.catalyst.types.StructType
@@ -13,6 +13,7 @@ import scala.concurrent._
 import ExecutionContext.Implicits.global
 import scala.util.{ Success, Failure }
 import messages.ErrorMessage
+import com.xpatterns.jaws.data.utils.AvroConverter
 
 /**
  * Created by lucianm on 06.02.2015.

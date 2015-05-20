@@ -6,7 +6,6 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.hive.HiveContext
 import com.google.common.base.Preconditions
 import com.xpatterns.jaws.data.DTO.Column
-import com.xpatterns.jaws.data.DTO.Result
 import com.xpatterns.jaws.data.utils.Utils
 import server.Configuration
 import akka.actor.Actor
@@ -21,6 +20,12 @@ import scala.util.Try
 import scala.util.Success
 import scala.util.Failure
 import messages.ErrorMessage
+import messages.ResultFormat._
+import com.xpatterns.jaws.data.DTO.AvroResult
+import com.xpatterns.jaws.data.DTO.CustomResult
+import com.xpatterns.jaws.data.utils.ResultsConverter
+import org.apache.spark.sql.catalyst.expressions.Row
+import com.xpatterns.jaws.data.DTO.AvroBinaryResult
 
 /**
  * Created by emaorhian
@@ -31,9 +36,8 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCon
 
     case message: GetResultsMessage =>
       {
-        Configuration.log4j.info("[GetResultsMessage]: retrieving results for: " + message.queryID)
+        Configuration.log4j.info(s"[GetResultsMessage]: retrieving results for: ${message.queryID} in the ${message.format}")
         val currentSender = sender
-
         val getResultsFuture = future {
 
           val (offset, limit) = getOffsetAndLimit(message)
@@ -42,50 +46,51 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCon
           metaInfo.resultsDestination match {
             // cassandra
             case 0 => {
-              var result = dals.resultsDal.getResults(message.queryID)
               var endIndex = offset + limit
-              if (endIndex > result.results.length) {
-                endIndex = result.results.length
+              message.format match {
+                case AVRO_BINARY_FORMAT => new AvroBinaryResult(getDBAvroResults(message.queryID, offset, endIndex))
+                case AVRO_JSON_FORMAT   => getDBAvroResults(message.queryID, offset, endIndex).result
+                case _                  => getCustomResults(message.queryID, offset, endIndex)
               }
-              new Result(result.schema, result.results.slice(offset, endIndex))
 
             }
             //hdfs
             case 1 => {
               val destinationPath = HiveUtils.getHdfsPath(Configuration.rddDestinationIp.get)
-              getResults(offset, limit, destinationPath)
+              getFormattedResult(message.format, getResults(offset, limit, destinationPath))
 
             }
             //tachyon
             case 2 => {
               val destinationPath = HiveUtils.getTachyonPath(Configuration.rddDestinationIp.get)
-              getResults(offset, limit, destinationPath)
+              getFormattedResult(message.format, getResults(offset, limit, destinationPath))
 
             }
             case _ => {
               Configuration.log4j.info("[GetResultsMessage]: Unidentified results path : " + metaInfo.resultsDestination)
-              new Result
+              null
             }
           }
         }
 
         getResultsFuture onComplete {
           case Success(results) => currentSender ! results
-          case Failure(e) => currentSender ! ErrorMessage(s"GET results failed with the following message: ${e.getMessage}") 
+          case Failure(e)       => currentSender ! ErrorMessage(s"GET results failed with the following message: ${e.getMessage}")
         }
-       
+
       }
 
-      def getResults(offset: Int, limit: Int, destinationPath: String): Result = {
-        val schemaString = Utils.readFile(hdfsConf, Configuration.schemaFolder.getOrElse("jawsSchemaFolder") + "/" + message.queryID)
-        val json = parse(schemaString)
-        val schema = json.extract[Array[Column]]
+      def getResults(offset: Int, limit: Int, destinationPath: String): ResultsConverter = {
+        val schemaBytes = Utils.readBytes(hdfsConf, Configuration.schemaFolder.getOrElse("jawsSchemaFolder") + "/" + message.queryID)
+        val schema = HiveUtils.deserializaSchema(schemaBytes)
 
         val resultsRDD: RDD[Tuple2[Object, Array[Object]]] = hiveContext.sparkContext.objectFile(HiveUtils.getRddDestinationPath(message.queryID, destinationPath))
 
         val filteredResults = resultsRDD.filter(tuple => tuple._1.asInstanceOf[Long] >= offset && tuple._1.asInstanceOf[Long] < offset + limit).collect()
 
-        new Result(schema, filteredResults)
+        val resultRows = filteredResults map { case (index, row) => Row.fromSeq(row) }
+
+        new ResultsConverter(schema, resultRows)
 
       }
   }
@@ -114,5 +119,25 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCon
       }
     }
     (offset, limit)
+  }
+
+  private def getDBAvroResults(queryID: String, offset: Int, limit: Int) = {
+    val result = dals.resultsDal.getAvroResults(queryID)
+    val lastResultIndex = if (limit > result.result.length) result.result.length else limit
+    new AvroResult(result.schema, result.result.slice(offset, lastResultIndex))
+  }
+
+  private def getCustomResults(queryID: String, offset: Int, limit: Int) = {
+    val result = dals.resultsDal.getCustomResults(queryID)
+    val lastResultIndex = if (limit > result.result.length) result.result.length else limit
+    new CustomResult(result.schema, result.result.slice(offset, lastResultIndex))
+  }
+
+  private def getFormattedResult(format: String, resultsConverter: ResultsConverter) = {
+    format match {
+      case AVRO_BINARY_FORMAT => resultsConverter.toAvroBinaryResults()
+      case AVRO_JSON_FORMAT   => resultsConverter.toAvroResults().result
+      case _                  => resultsConverter.toCustomResults()
+    }
   }
 }
