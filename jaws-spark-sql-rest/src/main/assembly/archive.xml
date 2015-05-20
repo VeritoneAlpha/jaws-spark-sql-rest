@@ -8,6 +8,13 @@
 	</formats>
 	<fileSets>
 		<fileSet>
+			<directory>./</directory>
+			<outputDirectory>resources/webapp</outputDirectory>
+			<excludes>
+				<exclude>*/**</exclude>
+			</excludes>
+		</fileSet>
+		<fileSet>
 			<directory>${project.build.directory}/temp_build</directory>
 			<outputDirectory>/</outputDirectory>
 		</fileSet>
