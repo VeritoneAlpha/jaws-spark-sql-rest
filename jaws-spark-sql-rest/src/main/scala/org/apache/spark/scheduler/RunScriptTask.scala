@@ -10,7 +10,7 @@ import org.apache.commons.lang.time.DurationFormatUtils
 import com.xpatterns.jaws.data.utils.QueryState
 import implementation.HiveContextWrapper
 import com.xpatterns.jaws.data.DTO.QueryMetaInfo
-import org.apache.spark.sql.parquet.ParquetSparkUtility._
+import org.apache.spark.sql.parquet.SparkParquetUtility._
 import com.xpatterns.jaws.data.DTO.ParquetTable
 import akka.actor.ActorSelection
 import akka.pattern.ask
