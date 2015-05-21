@@ -44,9 +44,9 @@
 	<dependencies>
 
 		<dependency>
-			<groupId>parquet-spark-utility</groupId>
-			<artifactId>parquet-spark-utility</artifactId>
-			<version>1.0.0</version>
+			<groupId>com.xpatterns.spark.parquet</groupId>
+			<artifactId>spark-parquet-utility</artifactId>
+			<version>1.0.0-spark1.1.0</version>
 		</dependency>
 
 		<dependency>
