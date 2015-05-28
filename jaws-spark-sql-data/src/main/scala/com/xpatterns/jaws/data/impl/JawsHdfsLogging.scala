@@ -210,6 +210,10 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
     filePath = getQueryDetailsFilePath(queryId)
     Utils.deleteFile(configuration, filePath)
 
+    logger.debug(s"Deleting execution time for: $queryId")
+    filePath = getExecutionTimeFilePath(queryId)
+    Utils.deleteFile(configuration, filePath)
+
     logger.debug(s"Deleting meta info for: $queryId")
     filePath = getQueryMetaInfoFilePath(queryId)
     Utils.deleteFile(configuration, filePath)
