@@ -50,7 +50,7 @@ class RunScriptTask(dals: DAL, hiveContext: HiveContextWrapper,
       val formattedDuration = DurationFormatUtils.formatDurationHMS(executionTime)
 
       HiveUtils.logInfoMessage(uuid, s"The total execution time was: $formattedDuration!", "hql", dals.loggingDal)
-      writeResults(result)
+      writeResults(result, executionTime)
     } catch {
       case e: Exception => {
         val message = getCompleteStackTrace(e)
@@ -89,7 +89,7 @@ class RunScriptTask(dals: DAL, hiveContext: HiveContextWrapper,
     result
   }
 
-  def writeResults(result: ResultsConverter) {
+  def writeResults(result: ResultsConverter, executionTime:Long) {
     isCanceled match {
       case false => {
         Option(result) match {
@@ -97,12 +97,14 @@ class RunScriptTask(dals: DAL, hiveContext: HiveContextWrapper,
           case _    => dals.resultsDal.setResults(uuid, result)
         }
         dals.loggingDal.setState(uuid, QueryState.DONE)
+        dals.loggingDal.setExecutionTime(uuid, executionTime)
       }
       case _ => {
         val message = s"The query failed because it was canceled!"
         Configuration.log4j.warn(message)
         HiveUtils.logMessage(uuid, message, "hql", dals.loggingDal)
         dals.loggingDal.setState(uuid, QueryState.FAILED)
+        dals.loggingDal.setExecutionTime(uuid, executionTime)
       }
     }
   }
