@@ -27,6 +27,7 @@ class GetQueryInfoApiActor(dals: DAL) extends Actor {
       val getQueryInfoFuture = future {
         new Query(dals.loggingDal.getState(message.queryID).toString,
           message.queryID, dals.loggingDal.getScriptDetails(message.queryID),
+          dals.loggingDal.getExecutionTime(message.queryID),
           dals.loggingDal.getMetaInfo(message.queryID))
       }
       
