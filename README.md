@@ -14,6 +14,16 @@ We are using this service for building a warehouse explorer GUI component, that 
 For Spark 0.9.x Jaws uses Shark against tables created through Hive, Shark or Tachyon.
 For Spark 1.0 and 1.1 it uses SparkSQL against Hive tables and Parquet files stored in hdfs or tachyon and it is not backward compatible with Shark tables created in 0.9.x.
 
+Jaws offers the possibility to plug a UI. There is a open sourced UI available at: 
+
+    https://github.com/iLiviu/JawsUI
+
+Also, for the parquet table creation feature to be available in UI, the service that lists the files on hdfs and tachyon has to be deployed. This service is available at :
+
+    https://github.com/emaorhian/hdfs-tachyon-file-browser
+    
+     
+
 ## Building Jaws
 
 You need to have Maven installed.
@@ -44,6 +54,15 @@ For Spark 1.* don't forget to set the following property on false in hive-site.x
 If you are running on top of mesos, don't forget to add in the jaws-env.sh file the path to the native mesos library.
 
 If your tables are snappy compressed, don't forget to add in the jaws-env.sh the path to the hadoop native libs.
+
+### Plugin a UI for Jaws
+
+To plugin your UI in jaws you just have to copy your app in the jaws-spark-sql-rest/src/main/webapp folder.
+
+The Jaws UI will be available at the following url:
+    
+    http://devbox.local:9080/jaws/ui/
+
 
 ## Run jaws
 
