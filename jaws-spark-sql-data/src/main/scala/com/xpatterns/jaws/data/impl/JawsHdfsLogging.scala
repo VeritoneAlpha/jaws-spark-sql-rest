@@ -29,6 +29,7 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
   Utils.createFolderIfDoesntExist(configuration, configuration.get(Utils.STATUS_FOLDER), forcedMode)
   Utils.createFolderIfDoesntExist(configuration, configuration.get(Utils.DETAILS_FOLDER), forcedMode)
   Utils.createFolderIfDoesntExist(configuration, configuration.get(Utils.METAINFO_FOLDER), forcedMode)
+  Utils.createFolderIfDoesntExist(configuration, configuration.get(Utils.EXECUTION_TIME_FOLDER), forcedMode)
 
   override def setState(uuid: String, queryState: QueryState.QueryState) {
 
@@ -149,7 +150,7 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
 
     filesToBeRead.foreach(file => {
       val currentUuid = Utils.getNameFromPath(file)
-      stateList = stateList ++ Array(new Query(Utils.readFile(configuration, folderName + "/" + file), currentUuid, getScriptDetails(currentUuid), getMetaInfo(queryId)))
+      stateList = stateList ++ Array(new Query(Utils.readFile(configuration, folderName + "/" + file), currentUuid, getScriptDetails(currentUuid), getExecutionTime(currentUuid), getMetaInfo(queryId)))
     })
 
     return new Queries(stateList)
@@ -177,6 +178,27 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
     }
   }
 
+  override def setExecutionTime(queryId: String, executionTime: Long): Unit = {
+    logger.debug(s"Writing execution time $executionTime to query $queryId")
+    Utils.rewriteFile(executionTime.toString, configuration, getExecutionTimeFilePath(queryId))
+  }
+
+  override def getExecutionTime(queryId: String): Long = {
+    logger.debug(s"Reading execution time for for query: $queryId")
+    val filePath = getExecutionTimeFilePath(queryId)
+    if (Utils.checkFileExistence(filePath, configuration)) {
+      val value = Utils.readFile(configuration, getExecutionTimeFilePath(queryId))
+
+      try {
+        value.toLong
+      } catch {
+        case _: Exception => 0
+      }
+    } else {
+      0
+    }
+  }
+
   def deleteQuery(queryId: String) {
     logger.debug(s"Deleting query: $queryId")
 
@@ -186,6 +208,10 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
 
     logger.debug(s"Deleting query details for: $queryId")
     filePath = getQueryDetailsFilePath(queryId)
+    Utils.deleteFile(configuration, filePath)
+
+    logger.debug(s"Deleting execution time for: $queryId")
+    filePath = getExecutionTimeFilePath(queryId)
     Utils.deleteFile(configuration, filePath)
 
     logger.debug(s"Deleting meta info for: $queryId")
@@ -207,6 +233,10 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
 
   def getQueryMetaInfoFilePath(queryId: String): String = {
     configuration.get(Utils.METAINFO_FOLDER) + "/" + queryId
+  }
+
+  def getExecutionTimeFilePath(queryId: String): String = {
+    configuration.get(Utils.EXECUTION_TIME_FOLDER) + "/" + queryId
   }
 
   def getQueryLogsFolderPath(queryId: String): String = {
