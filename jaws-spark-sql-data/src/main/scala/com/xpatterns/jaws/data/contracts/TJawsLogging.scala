@@ -16,11 +16,13 @@ trait TJawsLogging {
   def setScriptDetails(queryId: String, scriptDetails: String)
   def addLog(queryId: String, jobId: String, time: Long, log: String)
   def setMetaInfo(queryId: String, metainfo: QueryMetaInfo)
+  def setExecutionTime(queryId:String, executionTime:Long)
 
   def getState(queryId: String): QueryState.QueryState
   def getScriptDetails(queryId: String): String
   def getLogs(queryId: String, time: Long, limit: Int): Logs
   def getMetaInfo(queryId: String): QueryMetaInfo
+  def getExecutionTime(queryId:String):Long
 
   def getQueriesStates(queryId: String, limit: Int): Queries
   

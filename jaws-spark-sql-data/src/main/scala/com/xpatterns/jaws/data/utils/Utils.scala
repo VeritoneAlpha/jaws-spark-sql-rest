@@ -22,6 +22,7 @@ object Utils {
   val FORCED_MODE = "forcedMode"
   val LOGGING_FOLDER = "loggingFolder"
   val STATUS_FOLDER = "stateFolder"
+  val EXECUTION_TIME_FOLDER = "executionTimeFolder"
   val METAINFO_FOLDER = "metaInfoFolder"
   val DETAILS_FOLDER = "detailsFolder"
   val RESULTS_FOLDER = "resultsFolder"
