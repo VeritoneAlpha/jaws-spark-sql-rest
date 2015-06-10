@@ -188,10 +188,10 @@ object HiveUtils {
     // change the shark Row into String[] -> for serialization purpose 
     val transformedSelectRdd = selectRdd.map(row => {
 
-      var result = row.map(value => {
+      val result = row.map(value => {
         Option(value) match {
           case None => "Null"
-          case _ => value.toString()
+          case _ => value
         }
       })
       result.toArray

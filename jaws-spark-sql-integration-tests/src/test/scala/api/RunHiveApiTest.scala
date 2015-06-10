@@ -34,22 +34,22 @@ class RunHiveApiTest extends TestBase {
     val queryStatus = waitforCompletion(queryId, 100)
     assert(queryStatus === "DONE", "Query is not DONE!")
     val results = getResults(queryId, 0, 200)
-    assert(1 === results.results.length, "Different number of rows")
-    assert(1 === results.results(0).length, "Different number of rows2")
-    assert("6" === results.results(0)(0), "Different count")
+    assert(1 === results.result.length, "Different number of rows")
+    assert(1 === results.result(0).length, "Different number of rows2")
+    assert("6" === results.result(0)(0), "Different count")
   }
 
   test(" select * limited") {
 
     val url = s"${jawsHiveUrl}run?"
     val queryID = selectAllFromTable(url, table)
-    validataAllResultsFromNormalTable(queryID)
+    validataAllResultsFromNormalTable(queryID, true)
   }
 
   test(" select * unlimited") {
 
     val url = s"${jawsHiveUrl}run"
     val queryID = selectAllFromTable(url, table)
-    validataAllResultsFromNormalTable(queryID)
+    validataAllResultsFromNormalTable(queryID, true)
   }
 }

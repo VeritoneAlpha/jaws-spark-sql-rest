@@ -55,15 +55,15 @@ class RunApiTest extends TestBase {
     val queryStatus = waitforCompletion(queryId, 100)
     assert(queryStatus === "DONE", "Query is not DONE!")
     val results = getResults(queryId, 0, 200)
-    assert(1 === results.results.length, "Different number of rows")
-    assert(1 === results.results(0).length, "Different number of rows2")
-    assert("6" === results.results(0)(0), "Different count")
+    assert(1 === results.result.length, "Different number of rows")
+    assert(1 === results.result(0).length, "Different number of rows2")
+    assert(6.0 === results.result(0)(0), "Different count")
   }
 
   test(" select * limited") {
     val url = s"${jawsUrl}run?limited=true"
     val queryID= selectAllFromTable(url, table)
-    validataAllResultsFromNormalTable(queryID)
+    validataAllResultsFromNormalTable(queryID, false)
 
   }
 
@@ -71,14 +71,14 @@ class RunApiTest extends TestBase {
 
     val url = s"${jawsUrl}run?limited=false&destination=hdfs"
     val queryID= selectAllFromTable(url, table)
-    validataAllResultsFromNormalTable(queryID)
+    validataAllResultsFromNormalTable(queryID, false)
   }
 
   test(" select * unlimited tachyon") {
     if (runTachyon) {
       val url = s"${jawsUrl}run?limited=false&destination=tachyon"
       val queryID = selectAllFromTable(url, table)
-      validataAllResultsFromNormalTable(queryID)
+      validataAllResultsFromNormalTable(queryID, false)
     } else println("Tachyon tests are ignored")
   }
 
@@ -91,8 +91,8 @@ class RunApiTest extends TestBase {
     assert(queryStatus === "DONE", "Query is not DONE!")
     val results = getResults(queryId, 0, 200)
 
-    assert(2 === results.results.length, "Different number of rows")
-    assert(3 === results.results(0).length, "Different number of rows2")
+    assert(2 === results.result.length, "Different number of rows")
+    assert(3 === results.result(0).length, "Different number of rows2")
   }
 
   test(" select * limited with limit in query") {
@@ -103,8 +103,8 @@ class RunApiTest extends TestBase {
     val queryStatus = waitforCompletion(queryId, 100)
     assert(queryStatus === "DONE", "Query is not DONE!")
     val results = getResults(queryId, 0, 200)
-    assert(3 === results.results.length, "Different number of rows")
-    assert(3 === results.results(0).length, "Different number of rows2")
+    assert(3 === results.result.length, "Different number of rows")
+    assert(3 === results.result(0).length, "Different number of rows2")
   }
 
   test(" select distinct") {
@@ -115,9 +115,9 @@ class RunApiTest extends TestBase {
     val queryStatus = waitforCompletion(queryId, 100)
     assert(queryStatus === "DONE", "Query is not DONE!")
     val results = getResults(queryId, 0, 200)
-    val flatResults = results.results.flatMap(x => x)
-    assert(6 === results.results.length, "Different number of rows")
-    assert(1 === results.results(0).length, "Different number of columns")
+    val flatResults = results.result.flatMap(x => x)
+    assert(6 === results.result.length, "Different number of rows")
+    assert(1 === results.result(0).length, "Different number of columns")
     assert(flatResults.contains("Ana"), "Ana is missing")
     assert(flatResults.contains("George"), "George is missing")
     assert(flatResults.contains("Alina"), "Alina is missing")
@@ -135,11 +135,11 @@ class RunApiTest extends TestBase {
     val queryStatus = waitforCompletion(queryId, 100)
     assert(queryStatus === "DONE", "Query is not DONE!")
     val results = getResults(queryId, 0, 200)
-    val flatResults = results.results.flatMap(x => x)
-    assert(2 === results.results.length, "Different number of rows")
-    assert(2 === results.results(0).length, "Different number of columns")
-    assert(flatResults.containsSlice(GenSeq("3", "m")), "Different nb of men")
-    assert(flatResults.containsSlice(GenSeq("3", "f")), "Different nb of women")
+    val flatResults = results.result.flatMap(x => x)
+    assert(2 === results.result.length, "Different number of rows")
+    assert(2 === results.result(0).length, "Different number of columns")
+    assert(flatResults.containsSlice(GenSeq(3, "m")), "Different nb of men")
+    assert(flatResults.containsSlice(GenSeq(3, "f")), "Different nb of women")
 
   }
 }

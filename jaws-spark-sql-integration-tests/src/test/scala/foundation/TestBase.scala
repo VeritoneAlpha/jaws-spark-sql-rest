@@ -1,7 +1,5 @@
 package foundation
 
-import com.xpatterns.jaws.data.DTO.Result
-
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import com.xpatterns.jaws.data.utils.Utils
@@ -26,11 +24,15 @@ import org.scalatest.BeforeAndAfterAll
 import com.typesafe.config.ConfigFactory
 import com.xpatterns.jaws.data.DTO.Logs
 import spray.httpx.encoding.Deflate
-
 import spray.http._
 import spray.httpx.encoding.{ Gzip, Deflate }
 import spray.httpx.SprayJsonSupport._
 import scala.collection.GenSeq
+import com.xpatterns.jaws.data.DTO.CustomResult
+import spray.httpx.unmarshalling._
+import spray.util._
+import spray.http._
+import com.google.gson.Gson
 
 class TestBase extends FunSuite with BeforeAndAfterAll {
   implicit val system = ActorSystem()
@@ -119,20 +121,16 @@ class TestBase extends FunSuite with BeforeAndAfterAll {
   }
 
   def getResults(queryId: String, offset: Long, limit: Int) = {
-    val pipeline: HttpRequest => Future[Result] = (
-      addHeader("X-My-Special-Header", "fancy-value")
-      ~> addCredentials(BasicHttpCredentials("bob", "secret"))
-      ~> encode(Gzip)
-      ~> sendReceive
-      ~> decode(Deflate)
-      ~> unmarshal[Result])
-    var result: Result = null
+    val pipeline: HttpRequest => Future[HttpResponse] = sendReceive
+    var result: CustomResult = null
     val url = s"${jawsUrl}results?queryID=$queryId&offset=$offset&limit=$limit"
-    val response: Future[Result] = pipeline(Get(url))
+    val response: Future[HttpResponse] = pipeline(Get(url))
+    val gson = new Gson()
     Await.ready(response, Inf).value.get match {
-      case Success(r: Result) => {
-        assert(r != null)
-        result = r
+      case Success(r: HttpResponse) => {
+        assert(r.status.isSuccess)
+        val data = r.entity.data.asString
+        result = gson.fromJson(data, classOf[CustomResult])
       }
       case Failure(e) => {
         println(e.getMessage)
@@ -151,27 +149,27 @@ class TestBase extends FunSuite with BeforeAndAfterAll {
     queryId
   }
 
-  def validataAllResultsFromNormalTable(queryId: String) {
+  def validataAllResultsFromNormalTable(queryId: String, strings : Boolean) {
 
     val results = getResults(queryId, 0, 200)
-    val flatResults = results.results.flatMap(x => x)
-    assert(6 === results.results.length, "Different number of rows")
-    assert(3 === results.results(0).length, "Different number of columns")
-    assert(flatResults.containsSlice(GenSeq("Ana", "5", "f")), "Ana is missing")
-    assert(flatResults.containsSlice(GenSeq("George", "10", "m")), "George is missing")
-    assert(flatResults.containsSlice(GenSeq("Alina", "20", "f")), "Alina is missing")
-    assert(flatResults.containsSlice(GenSeq("Paul", "12", "m")), "Paul is missing")
-    assert(flatResults.containsSlice(GenSeq("Pavel", "16", "m")), "Pavel is missing")
-    assert(flatResults.containsSlice(GenSeq("Ioana", "30", "f")), "Ioana is missing")
+    val flatResults = results.result.flatMap(x => x)
+    assert(6 === results.result.length, "Different number of rows")
+    assert(3 === results.result(0).length, "Different number of columns")
+    assert(flatResults.containsSlice(GenSeq("Ana", if (strings == true) "5" else 5, "f")), "Ana is missing")
+    assert(flatResults.containsSlice(GenSeq("George",  if (strings == true) "10" else 10, "m")), "George is missing")
+    assert(flatResults.containsSlice(GenSeq("Alina",  if (strings == true) "20" else 20, "f")), "Alina is missing")
+    assert(flatResults.containsSlice(GenSeq("Paul",  if (strings == true) "12" else 12, "m")), "Paul is missing")
+    assert(flatResults.containsSlice(GenSeq("Pavel",  if (strings == true) "16" else 16, "m")), "Pavel is missing")
+    assert(flatResults.containsSlice(GenSeq("Ioana",  if (strings == true) "30" else 30, "f")), "Ioana is missing")
   }
 
   def validataAllResultsFromParquetTable(queryId: String) {
 
     val results = getResults(queryId, 0, 200)
-    val flatResults = results.results.flatMap(x => x)
-    assert(9 === results.results.length, "Different number of rows")
-    assert(1 === results.results(0).length, "Different number of columns")
-    for (i <- 1 to 9) assert(flatResults.containsSlice(GenSeq(i.toString())), s"Value $i does not exist")
+    val flatResults = results.result.flatMap(x => x)
+    assert(9 === results.result.length, "Different number of rows")
+    assert(1 === results.result(0).length, "Different number of columns")
+    for (i <- 1 to 9) assert(flatResults.containsSlice(GenSeq(i)), s"Value $i does not exist")
 
   }
 }

@@ -9,7 +9,7 @@ import server.Configuration
  */
 class CustomIndexer {
 
-  def indexRdd(rdd: RDD[Array[String]]): RDD[Tuple2[Long, Array[String]]] = {
+  def indexRdd(rdd: RDD[Array[Any]]): RDD[Tuple2[Long, Array[Any]]] = {
     val partitionCount = rdd.mapPartitionsWithIndex { (pid, iter) => Iterator((pid, iter.size)) }.collect
 
     var indexes = Array[Int](0)
@@ -26,7 +26,7 @@ class CustomIndexer {
 
     //index each row
     val indexedRdd = rdd.mapPartitionsWithIndex { (index, iterator) =>
-      var z = Array[Tuple2[Long, Array[String]]]()
+      var z = Array[Tuple2[Long, Array[Any]]]()
       var startIndex: Long = broadcastedIndexes.value(index)
       for (element <- iterator) {
         z = z ++ Array((startIndex, element))
