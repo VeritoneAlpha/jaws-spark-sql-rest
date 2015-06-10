@@ -103,7 +103,7 @@ class RunScriptApiActor(hdfsConf: HadoopConfiguration, hiveContext: HiveContextW
   }
 
   private def writeLaunchStatus(uuid: String, script: String) {
-    HiveUtils.logMessage(uuid, s"Launching task for $uuid", "hql", dals.loggingDal)
+    HiveUtils.logMessage(uuid, s"Launching task for $uuid", "sparksql", dals.loggingDal)
     dals.loggingDal.setState(uuid, QueryState.IN_PROGRESS)
     dals.loggingDal.setScriptDetails(uuid, script)
   }

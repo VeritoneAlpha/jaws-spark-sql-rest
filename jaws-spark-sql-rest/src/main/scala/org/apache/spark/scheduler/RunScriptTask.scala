@@ -37,7 +37,7 @@ class RunScriptTask(dals: DAL, hiveContext: HiveContextWrapper,
       // parse the hql into independent commands
       val commands = HiveUtils.parseHql(runMessage.script)
      
-      HiveUtils.logInfoMessage(uuid, s"There are ${commands.length} commands that need to be executed", "hql", dals.loggingDal)
+      HiveUtils.logInfoMessage(uuid, s"There are ${commands.length} commands that need to be executed", "sparksql", dals.loggingDal)
 
       val startTime = System.currentTimeMillis()
 
@@ -49,13 +49,13 @@ class RunScriptTask(dals: DAL, hiveContext: HiveContextWrapper,
       val executionTime = System.currentTimeMillis() - startTime
       val formattedDuration = DurationFormatUtils.formatDurationHMS(executionTime)
 
-      HiveUtils.logInfoMessage(uuid, s"The total execution time was: $formattedDuration!", "hql", dals.loggingDal)
+      HiveUtils.logInfoMessage(uuid, s"The total execution time was: $formattedDuration!", "sparksql", dals.loggingDal)
       writeResults(result, executionTime)
     } catch {
       case e: Exception => {
         val message = getCompleteStackTrace(e)
         Configuration.log4j.error(message)
-        HiveUtils.logMessage(uuid, message, "hql", dals.loggingDal)
+        HiveUtils.logMessage(uuid, message, "sparksql", dals.loggingDal)
         dals.loggingDal.setState(uuid, QueryState.FAILED)
         dals.loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, runMessage.maxNumberOfResults, 0, runMessage.limited))
 
@@ -76,12 +76,12 @@ class RunScriptTask(dals: DAL, hiveContext: HiveContextWrapper,
         case false => {
           result = HiveUtils.runCmdRdd(cmd, hiveContext, Configuration.numberOfResults.getOrElse("100").toInt,
             uuid, runMessage.limited, runMessage.maxNumberOfResults, isLastCmd, Configuration.rddDestinationIp.get, dals.loggingDal, hdfsConf, runMessage.rddDestination)
-          HiveUtils.logInfoMessage(uuid, s"Command progress : There were executed $commandIndex commands out of $nrOfCommands", "hql", dals.loggingDal)
+          HiveUtils.logInfoMessage(uuid, s"Command progress : There were executed $commandIndex commands out of $nrOfCommands", "sparksql", dals.loggingDal)
         }
         case _ => {
           val message = s"The command $cmd was canceled!"
           Configuration.log4j.warn(message)
-          HiveUtils.logMessage(uuid, message, "hql", dals.loggingDal)
+          HiveUtils.logMessage(uuid, message, "sparksql", dals.loggingDal)
         }
       }
     }
@@ -102,7 +102,7 @@ class RunScriptTask(dals: DAL, hiveContext: HiveContextWrapper,
       case _ => {
         val message = s"The query failed because it was canceled!"
         Configuration.log4j.warn(message)
-        HiveUtils.logMessage(uuid, message, "hql", dals.loggingDal)
+        HiveUtils.logMessage(uuid, message, "sparksql", dals.loggingDal)
         dals.loggingDal.setState(uuid, QueryState.FAILED)
         dals.loggingDal.setExecutionTime(uuid, executionTime)
       }
@@ -127,7 +127,7 @@ class RunParquetScriptTask(dals: DAL, hiveContext: HiveContextWrapper,
     future onComplete {
       case Success(x) => x match {
         case e: ErrorMessage => {
-          HiveUtils.logMessage(uuid, e.message, "hql", dals.loggingDal)
+          HiveUtils.logMessage(uuid, e.message, "sparksql", dals.loggingDal)
           dals.loggingDal.setState(uuid, QueryState.FAILED)
         }
         case result: String => {
@@ -136,7 +136,7 @@ class RunParquetScriptTask(dals: DAL, hiveContext: HiveContextWrapper,
         }
       }
       case Failure(ex) => {
-        HiveUtils.logMessage(uuid, getCompleteStackTrace(ex), "hql", dals.loggingDal)
+        HiveUtils.logMessage(uuid, getCompleteStackTrace(ex), "sparksql", dals.loggingDal)
         dals.loggingDal.setState(uuid, QueryState.FAILED)
       }
     }
