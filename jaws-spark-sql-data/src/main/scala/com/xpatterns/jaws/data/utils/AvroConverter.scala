@@ -2,18 +2,17 @@ package com.xpatterns.jaws.data.utils
 
 import org.apache.avro.SchemaBuilder.{ BaseFieldTypeBuilder, BaseTypeBuilder, FieldAssembler, RecordDefault }
 import org.apache.avro.{ Schema, SchemaBuilder }
-import org.apache.spark.sql.catalyst.types._
 import org.apache.avro.SchemaBuilder.ArrayDefault
 import org.apache.avro.SchemaBuilder.FieldDefault
 import org.apache.spark.sql.catalyst.expressions.Row
 import org.apache.avro.generic.GenericRecord
 import org.apache.avro.generic.GenericData
-import org.apache.spark.sql.catalyst.types.DecimalType
 import java.sql.Timestamp
 import java.util.HashMap
 import org.apache.avro.generic.GenericData.Record
 import collection.JavaConversions._
 import java.nio.ByteBuffer
+import org.apache.spark.sql.types._
 
 object AvroConverter {
 
@@ -30,7 +29,7 @@ object AvroConverter {
     dataType match {
       case ByteType | ShortType | IntegerType => callMethodWithNoDefaults(typeBuilder, "intType")
       case BinaryType                         => callMethodWithNoDefaults(typeBuilder, "bytesType")
-      case StringType | DecimalType           => callMethodWithNoDefaults(typeBuilder, "stringType")
+      case StringType | DecimalType ()          => callMethodWithNoDefaults(typeBuilder, "stringType")
       case LongType | TimestampType           => callMethodWithNoDefaults(typeBuilder, "longType")
       case FloatType                          => callMethodWithNoDefaults(typeBuilder, "floatType")
       case DoubleType                         => callMethodWithNoDefaults(typeBuilder, "doubleType")
@@ -113,7 +112,7 @@ object AvroConverter {
         case BinaryType =>
         (item: Any) => if (item == null) null else ByteBuffer.wrap(item.asInstanceOf[Array[Byte]])
 
-        case DecimalType =>
+        case DecimalType() =>
         (item: Any) => if (item == null) null else item.toString
 
         case TimestampType =>
@@ -128,7 +127,7 @@ object AvroConverter {
             null
           } else {
 
-            val schema = getAvroSchema(new StructType(Seq(new StructField("array", dataType, false))), "arrayStruct")
+            val schema = getAvroSchema(new StructType(Array(new StructField("array", dataType, false))), "arrayStruct")
             val sourceArray = item.asInstanceOf[Seq[Any]]
 
             val destination = sourceArray map { element => elementConverter(element) }

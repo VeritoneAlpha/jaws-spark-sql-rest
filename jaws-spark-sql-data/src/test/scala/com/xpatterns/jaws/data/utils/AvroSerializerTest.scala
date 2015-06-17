@@ -1,9 +1,7 @@
 package com.xpatterns.jaws.data.utils
 
-import org.apache.spark.sql.catalyst.types.{ DataType, StructField, StructType }
 import org.junit.runner.RunWith
 import org.scalatest.FunSuite
-import org.apache.spark.sql.catalyst.types.StructField
 import scala.util.Try
 import org.scalatest.junit.JUnitRunner
 import org.apache.spark.sql.catalyst.expressions.Row
@@ -15,10 +13,9 @@ import scala.collection.convert.Wrappers
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import com.xpatterns.jaws.data.DTO.AvroResult
-import org.apache.spark.sql.catalyst.types.ShortType
-import org.apache.spark.sql.catalyst.types._
 import java.sql.Timestamp
 import java.util.Date
+import org.apache.spark.sql.types._
 
 @RunWith(classOf[JUnitRunner])
 class AvroSerializerTest extends FunSuite {
@@ -43,32 +40,32 @@ class AvroSerializerTest extends FunSuite {
   val booleanField = new StructField("boolean", BooleanType, true)
   val booleanFieldRow = Array(Row.fromSeq(Seq(true)), Row.fromSeq(Seq(false)))
 
-  val strField = new StructField("str", DataType("StringType"), true)
-  val arrOfStrField = new StructField("arr", DataType("ArrayType(StringType,false)"), true)
-  val arrOfStrFieldNotNullable = new StructField("arr", DataType("ArrayType(StringType,false)"), false)
-  val arrOfRecField = new StructField("arr", DataType("ArrayType(StructType(List(StructField(str,StringType,true))),true)"), true)
-  val mapOfStrField = new StructField("map", DataType("MapType(StringType,StringType,true)"), true)
-  val mapOfRecField = new StructField("mapOfRec", DataType("MapType(StringType,StructType(List(StructField(str,StringType,true))),true)"), true)
+  val strField = new StructField("str", StringType, true)
+  val arrOfStrField = new StructField("arr", ArrayType(StringType,false), true)
+  val arrOfStrFieldNotNullable = new StructField("arr", ArrayType(StringType,false), false)
+  val arrOfRecField = new StructField("arr", ArrayType(StructType(List(StructField("str",StringType,true))),true), true)
+  val mapOfStrField = new StructField("map", MapType(StringType,StringType,true), true)
+  val mapOfRecField = new StructField("mapOfRec", MapType(StringType,StructType(List(StructField("str",StringType,true))),true), true)
 
-  val structType = new StructType(Seq(intField, strField))
+  val structType = new StructType(Array(intField, strField))
   val structTypeRow = Array(Row.fromSeq(Seq(1, "a")), Row.fromSeq(Seq(2, "b")))
 
   val recordType = new StructField("rrecord", structType, true)
-  val binaryField = new StructField("binary", DataType("BinaryType"), true)
+  val binaryField = new StructField("binary", BinaryType, true)
   val binaryFieldRow = Array(Row.fromSeq(Seq(Array(192, 168, 1, 1).map(_.toByte))), Row.fromSeq(Seq(Array(123, 54, 3, 1).map(_.toByte))))
 
-  val byteField = new StructField("byte", DataType("ByteType"), true)
+  val byteField = new StructField("byte", ByteType, true)
   val byteFieldRow = Array(Row.fromSeq(Seq(123.toByte, 45.toByte)), Row.fromSeq(Seq(123.toByte, 45.toByte)))
 
-  val arrOfArrString = new StructField("arrOfArrayString", DataType("ArrayType(ArrayType(StringType,false),false)"), true)
-  val mapOfMap = new StructField("mapOfMap", DataType("MapType(StringType, MapType(StringType,StringType,true),true)"), false)
-  val arrOfMapofArr = new StructField("arrOfMapOfArr", DataType("ArrayType(MapType(StringType, ArrayType(ArrayType(StringType,false),false),true),false)"), true)
-  val decimalField = new StructField("decimal", DataType("DecimalType"), true)
+  val arrOfArrString = new StructField("arrOfArrayString", ArrayType(ArrayType(StringType,false),false), true)
+  val mapOfMap = new StructField("mapOfMap", MapType(StringType, MapType(StringType,StringType,true),true), false)
+  val arrOfMapofArr = new StructField("arrOfMapOfArr", ArrayType(MapType(StringType, ArrayType(ArrayType(StringType,false),false),true),false), true)
+  val decimalField = new StructField("decimal", DecimalType(), true)
 
   // *************** results *************
 
   test("simple byte results") {
-    val conv = new ResultsConverter(new StructType(Seq(byteField)), byteFieldRow)
+    val conv = new ResultsConverter(new StructType(Array(byteField)), byteFieldRow)
     val avro = conv.toAvroResults()
     val seri = avro.serializeResult()
     val des = AvroResult.deserializeResult(seri, avro.schema)
@@ -76,7 +73,7 @@ class AvroSerializerTest extends FunSuite {
   }
 
   test("simple timestamp results") {
-    val conv = new ResultsConverter(new StructType(Seq(timestampField)), timestampFieldRow)
+    val conv = new ResultsConverter(new StructType(Array(timestampField)), timestampFieldRow)
     val avro = conv.toAvroResults()
     val seri = avro.serializeResult()
     val des = AvroResult.deserializeResult(seri, avro.schema)
@@ -84,7 +81,7 @@ class AvroSerializerTest extends FunSuite {
   }
 
   test("simple binary results") {
-    val conv = new ResultsConverter(new StructType(Seq(binaryField)), binaryFieldRow)
+    val conv = new ResultsConverter(new StructType(Array(binaryField)), binaryFieldRow)
     val avro = conv.toAvroResults()
     val seri = avro.serializeResult()
     val des = AvroResult.deserializeResult(seri, avro.schema)
@@ -92,7 +89,7 @@ class AvroSerializerTest extends FunSuite {
   }
 
   test("simple short results") {
-    val conv = new ResultsConverter(new StructType(Seq(shortField)), shortFieldRow)
+    val conv = new ResultsConverter(new StructType(Array(shortField)), shortFieldRow)
     val avro = conv.toAvroResults()
     val seri = avro.serializeResult()
     val des = AvroResult.deserializeResult(seri, avro.schema)
@@ -100,7 +97,7 @@ class AvroSerializerTest extends FunSuite {
   }
 
   test("simple int results") {
-    val conv = new ResultsConverter(new StructType(Seq(intField)), intFieldRow)
+    val conv = new ResultsConverter(new StructType(Array(intField)), intFieldRow)
     val avro = conv.toAvroResults()
     val seri = avro.serializeResult()
     val des = AvroResult.deserializeResult(seri, avro.schema)
@@ -108,7 +105,7 @@ class AvroSerializerTest extends FunSuite {
   }
 
   test("simple long results") {
-    val conv = new ResultsConverter(new StructType(Seq(longField)), longFieldRow)
+    val conv = new ResultsConverter(new StructType(Array(longField)), longFieldRow)
     val avro = conv.toAvroResults()
     val seri = avro.serializeResult()
     val des = AvroResult.deserializeResult(seri, avro.schema)
@@ -116,7 +113,7 @@ class AvroSerializerTest extends FunSuite {
   }
 
   test("simple float results") {
-    val conv = new ResultsConverter(new StructType(Seq(floatField)), floatFieldRow)
+    val conv = new ResultsConverter(new StructType(Array(floatField)), floatFieldRow)
     val avro = conv.toAvroResults()
     val seri = avro.serializeResult()
     val des = AvroResult.deserializeResult(seri, avro.schema)
@@ -124,7 +121,7 @@ class AvroSerializerTest extends FunSuite {
   }
 
   test("simple double results") {
-    val conv = new ResultsConverter(new StructType(Seq(doubleField)), doubleFieldRow)
+    val conv = new ResultsConverter(new StructType(Array(doubleField)), doubleFieldRow)
     val avro = conv.toAvroResults()
     val seri = avro.serializeResult()
     val des = AvroResult.deserializeResult(seri, avro.schema)
@@ -132,7 +129,7 @@ class AvroSerializerTest extends FunSuite {
   }
 
   test("simple boolean results") {
-    val conv = new ResultsConverter(new StructType(Seq(booleanField)), booleanFieldRow)
+    val conv = new ResultsConverter(new StructType(Array(booleanField)), booleanFieldRow)
     val avro = conv.toAvroResults()
     val seri = avro.serializeResult()
     val des = AvroResult.deserializeResult(seri, avro.schema)
@@ -140,7 +137,7 @@ class AvroSerializerTest extends FunSuite {
   }
 
   test("results with list of strings") {
-    val arrStructType = new StructType(Seq(intField, arrOfStrField))
+    val arrStructType = new StructType(Array(intField, arrOfStrField))
     val arrStructTypeRow = Array(Row.fromSeq(Seq(1, Row.fromSeq(Seq("a", "b", "c")))), Row.fromSeq(Seq(2, Row.fromSeq(Seq("d", "e", "f")))))
 
     val conv = new ResultsConverter(arrStructType, arrStructTypeRow)
@@ -151,7 +148,7 @@ class AvroSerializerTest extends FunSuite {
   }
 
   test("results with list of strings not nullable") {
-    val arrStructType = new StructType(Seq(intField, arrOfStrFieldNotNullable))
+    val arrStructType = new StructType(Array(intField, arrOfStrFieldNotNullable))
     val arrStructTypeRow = Array(Row.fromSeq(Seq(1, Row.fromSeq(Seq("a", "b", "c")))), Row.fromSeq(Seq(2, Row.fromSeq(Seq("d", "e", "f")))))
     val conv = new ResultsConverter(arrStructType, arrStructTypeRow)
     val avro = conv.toAvroResults()
@@ -161,7 +158,7 @@ class AvroSerializerTest extends FunSuite {
   }
 
   test("result with map of strings") {
-    val mapStructType = new StructType(Seq(intField, mapOfStrField))
+    val mapStructType = new StructType(Array(intField, mapOfStrField))
 
     val mapStructTypeRow = Array(Row.fromSeq(
       Seq(1, Map("a" -> "b", "c" -> "d"))),

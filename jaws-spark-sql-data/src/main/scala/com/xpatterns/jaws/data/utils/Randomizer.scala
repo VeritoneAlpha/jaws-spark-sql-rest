@@ -8,10 +8,8 @@ import com.xpatterns.jaws.data.DTO.Log
 import com.xpatterns.jaws.data.DTO.QueryMetaInfo
 import com.xpatterns.jaws.data.DTO.ParquetTable
 import com.xpatterns.jaws.data.DTO.AvroResult
-import org.apache.spark.sql.catalyst.types.StructField
-import org.apache.spark.sql.catalyst.types.DataType
-import org.apache.spark.sql.catalyst.types.StructType
 import org.apache.spark.sql.catalyst.expressions.Row
+import org.apache.spark.sql.types._
 
 
 
@@ -40,9 +38,9 @@ object Randomizer {
 	
   def getResultsConverter : ResultsConverter = {
     
-  val intField = new StructField("int", DataType("IntegerType"), false)
-  val strField = new StructField("str", DataType("StringType"), true)
-  val structType = new StructType(Seq(intField, strField))
+  val intField = new StructField("int", IntegerType, false)
+  val strField = new StructField("str", StringType, true)
+  val structType = new StructType(Array(intField, strField))
 
   val structTypeRow = Array(Row.fromSeq(Seq(1, "a")), Row.fromSeq(Seq(2, "b")))
   new ResultsConverter(structType, structTypeRow)

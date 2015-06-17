@@ -1,6 +1,5 @@
 package com.xpatterns.jaws.data.utils
 
-import org.apache.spark.sql.catalyst.types._
 import org.apache.spark.sql.catalyst.expressions.Row
 import org.apache.avro.generic.GenericDatumWriter
 import org.apache.avro.generic.GenericRecord
@@ -15,6 +14,7 @@ import com.google.gson.GsonBuilder
 import java.sql.Timestamp
 import collection.JavaConversions._
 import com.xpatterns.jaws.data.DTO.AvroBinaryResult
+import org.apache.spark.sql.types.StructType
 
 class ResultsConverter(val schema: StructType, val result: Array[Row]) {
 

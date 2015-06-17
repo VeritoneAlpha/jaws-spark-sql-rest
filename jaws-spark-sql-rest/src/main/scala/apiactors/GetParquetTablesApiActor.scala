@@ -18,9 +18,6 @@ import akka.actor.Actor
 import com.xpatterns.jaws.data.DTO.Tables
 import scala.util.{ Try, Success, Failure }
 import apiactors.ActorOperations._
-import org.apache.spark.sql.catalyst.types.StructType
-import org.apache.spark.sql.catalyst.types.StructField
-import org.apache.spark.sql.catalyst.types.DataType
 import com.xpatterns.jaws.data.DTO.Column
 import com.xpatterns.jaws.data.DTO.Table
 import com.xpatterns.jaws.data.utils.CustomConverter

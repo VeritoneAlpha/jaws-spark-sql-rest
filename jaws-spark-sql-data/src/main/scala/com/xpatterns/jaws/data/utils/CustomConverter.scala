@@ -1,5 +1,5 @@
 package com.xpatterns.jaws.data.utils
-import org.apache.spark.sql.catalyst.types._
+
 import org.apache.spark.sql.catalyst.expressions.Row
 import spray.json.DefaultJsonProtocol._
 import com.xpatterns.jaws.data.DTO.CustomResult
@@ -7,6 +7,7 @@ import com.xpatterns.jaws.data.DTO.Column
 import com.google.gson.GsonBuilder
 import java.sql.Timestamp
 import collection.JavaConversions._
+import org.apache.spark.sql.types._
 
 object CustomConverter {
 
@@ -35,7 +36,7 @@ object CustomConverter {
         BinaryType | BooleanType =>
         (item: Any) => item
 
-        case DecimalType =>
+        case DecimalType() =>
         (item: Any) => if (item == null) null else item.toString
 
         case TimestampType =>

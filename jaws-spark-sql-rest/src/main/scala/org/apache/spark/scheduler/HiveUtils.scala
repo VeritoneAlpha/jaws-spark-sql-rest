@@ -14,7 +14,6 @@ import spray.json._
 import spray.json.DefaultJsonProtocol._
 import com.xpatterns.jaws.data.DTO.Column
 import implementation.HiveContextWrapper
-import org.apache.spark.sql.catalyst.types.StructType
 import server.MainActors
 import server.LogsActor.PushLogs
 import com.xpatterns.jaws.data.contracts.DAL
@@ -23,13 +22,12 @@ import java.util.regex.Pattern
 import java.util.regex.Matcher
 import org.apache.hadoop.conf.{ Configuration => HadoopConfiguration }
 import com.xpatterns.jaws.data.utils.ResultsConverter
-import org.apache.spark.sql.catalyst.types.StructField
 import org.apache.spark.sql.catalyst.expressions.Row
-import org.apache.spark.sql.catalyst.types.StringType
 import java.io.ByteArrayOutputStream
 import java.io.ObjectOutputStream
 import java.io.ObjectInputStream
 import java.io.ByteArrayInputStream
+import org.apache.spark.sql.types._
 
 /**
  * Created by emaorhian
@@ -113,14 +111,14 @@ object HiveUtils {
         val resultSet = hiveContext.getSparkContext.addFile(filePath)
 
         loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, 0, isLimited))
-       null
+        null
       }
 
       case ("drop", _) | ("show", _) | ("describe", _) => {
         Configuration.log4j.info("[HiveUtils]: the command is a metadata query : " + tokens(0))
         val metadataResults = runMetadataCmd(hiveContext, cmd_trimmed)
         val rows = metadataResults map (arr => Row.fromSeq(arr))
-        val result = new ResultsConverter(new StructType(Seq(new StructField("result", StringType, true))), rows)
+        val result = new ResultsConverter(new StructType(Array(new StructField("result", StringType, true))), rows)
         loggingDal.setMetaInfo(uuid, new QueryMetaInfo(result.result.size, maxNumberOfResults, 0, isLimited))
         result
       }
@@ -169,7 +167,7 @@ object HiveUtils {
         element.split("\t")
       } else Array(element)
     }).toArray
-    result map (row => row map (_ trim()))
+    result map (row => row map (_ trim ()))
   }
 
   def runRdd(
@@ -188,7 +186,7 @@ object HiveUtils {
     // change the shark Row into String[] -> for serialization purpose 
     val transformedSelectRdd = selectRdd.map(row => {
 
-      val result = row.map(value => {
+      var result = row.toSeq.map(value => {
         Option(value) match {
           case None => "Null"
           case _ => value
@@ -213,23 +211,23 @@ object HiveUtils {
       }
       case _ => loggingDal.setMetaInfo(uuid, new QueryMetaInfo(nbOfResults, maxNumberOfResults, 1, isLimited))
     }
-    
+
     // save rdd on hdfs
     indexedRdd.saveAsObjectFile(getRddDestinationPath(uuid, destination))
     null
   }
 
   def serializaSchema(schema: StructType): Array[Byte] = {
- 
+
     val baos = new ByteArrayOutputStream
     val oos = new ObjectOutputStream(baos)
     oos.writeObject(schema)
     oos.close
     baos.toByteArray()
   }
-  
-   def deserializaSchema(schemaByteArray: Array[Byte]): StructType = {
- 
+
+  def deserializaSchema(schemaByteArray: Array[Byte]): StructType = {
+
     val ois = new ObjectInputStream(new ByteArrayInputStream(schemaByteArray))
     val schema = ois.readObject().asInstanceOf[StructType]
     ois.close()
