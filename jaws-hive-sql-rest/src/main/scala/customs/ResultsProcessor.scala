@@ -6,9 +6,7 @@ import customs.CommandsProcessor._
 import com.xpatterns.jaws.data.DTO.Column
 import org.apache.spark.sql.catalyst.expressions.Row
 import com.xpatterns.jaws.data.utils.ResultsConverter
-import org.apache.spark.sql.catalyst.types._
-import org.apache.spark.sql.api.java.DataType
-
+import org.apache.spark.sql.types._
 
 class ResultsProcessor
 object ResultsProcessor {

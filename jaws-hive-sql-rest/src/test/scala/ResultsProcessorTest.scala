@@ -11,10 +11,8 @@ import java.io.ByteArrayInputStream
 import com.xpatterns.jaws.data.DTO.Column
 import org.apache.spark.sql.catalyst.expressions.Row
 import com.xpatterns.jaws.data.utils.ResultsConverter
-import org.apache.spark.sql.catalyst.types.StructType
-import org.apache.spark.sql.catalyst.types.StructField
-import org.apache.spark.sql.catalyst.types.StringType
 import scala.collection.mutable.WrappedArray
+import org.apache.spark.sql.types._
 
 @RunWith(classOf[JUnitRunner])
 class ResultsProcessorTest extends FunSuite {
