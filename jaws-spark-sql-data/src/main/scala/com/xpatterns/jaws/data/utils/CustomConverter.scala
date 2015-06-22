@@ -8,6 +8,7 @@ import com.google.gson.GsonBuilder
 import java.sql.Timestamp
 import collection.JavaConversions._
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.catalyst.expressions.GenericRow
 
 object CustomConverter {
 
@@ -51,8 +52,7 @@ object CustomConverter {
             null
           } else {
 
-            val sourceArray = item.asInstanceOf[Seq[Any]]
-
+            val sourceArray = item.asInstanceOf[GenericRow].toSeq
             val destination = sourceArray map { element => elementConverter(element) }
             destination.toArray
           }

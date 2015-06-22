@@ -13,6 +13,7 @@ import org.apache.avro.generic.GenericData.Record
 import collection.JavaConversions._
 import java.nio.ByteBuffer
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.catalyst.expressions.GenericRow
 
 object AvroConverter {
 
@@ -24,7 +25,7 @@ object AvroConverter {
     callMethod(result, "noDefault")
   }
 
-  private def addFields[R](dataType: DataType, fieldName: String, typeBuilder: Object) {
+  private def addFields[R](dataType: DataType, fieldName: String, typeBuilder: Object, namespace : String) {
 
     dataType match {
       case ByteType | ShortType | IntegerType => callMethodWithNoDefaults(typeBuilder, "intType")
@@ -37,8 +38,8 @@ object AvroConverter {
       case NullType                           => callMethodWithNoDefaults(typeBuilder, "nullType")
       case fieldType: StructType => {
         val recordBuilder = typeBuilder.getClass.getMethod("record", classOf[String]).invoke(typeBuilder, fieldName)
-        val fieldAssembler = callMethod(recordBuilder, "fields")
-        addStructType(fieldType, fieldAssembler.asInstanceOf[FieldAssembler[R]])
+        val fieldAssembler = callMethod(recordBuilder.getClass.getMethod("namespace", classOf[String]).invoke(recordBuilder, namespace), "fields")
+        addStructType(fieldType, fieldAssembler.asInstanceOf[FieldAssembler[R]], fieldName)
         callMethodWithNoDefaults(fieldAssembler, "endRecord")
 
       }
@@ -47,7 +48,7 @@ object AvroConverter {
         var arrayItemsBuilder = callMethod(arrayBuilder, "items")
         if (arrayType.containsNull)
           arrayItemsBuilder = callMethod(arrayItemsBuilder, "nullable")
-        addFields(arrayType.elementType, "items", arrayItemsBuilder)
+        addFields(arrayType.elementType, fieldName, arrayItemsBuilder, fieldName)
       }
       case mapType: MapType => {
         val mapBuilder = callMethod(typeBuilder, "map")
@@ -59,7 +60,7 @@ object AvroConverter {
           case _          => throw new IllegalArgumentException("Avro schema map key has to be String")
         }
 
-        addFields(mapType.valueType, "values", mapValuesBuilder)
+        addFields(mapType.valueType, fieldName, mapValuesBuilder, fieldName)
 
       }
       case unsupportedType => throw new IllegalArgumentException(s"Unhandled Avro schema type $unsupportedType")
@@ -68,19 +69,19 @@ object AvroConverter {
 
   }
 
-  private def addStructType[R](structType: StructType, recordAssembler: FieldAssembler[R]) {
+  private def addStructType[R](structType: StructType, recordAssembler: FieldAssembler[R], namespace : String) {
     structType.fields foreach {
       field =>
         val fieldAssembler =
           if (field.nullable) recordAssembler.name(field.name).`type`().nullable()
           else recordAssembler.name(field.name).`type`()
-        addFields(field.dataType, field.name, fieldAssembler)
+        addFields(field.dataType, field.name, fieldAssembler, namespace)
     }
   }
 
   def getAvroSchema(structType: StructType, structName: String = "RECORD"): Schema = {
     var recordAssembler = SchemaBuilder.record(structName).fields()
-    addStructType(structType, recordAssembler)
+    addStructType(structType, recordAssembler, structName)
     recordAssembler.endRecord()
   }
 
@@ -128,7 +129,7 @@ object AvroConverter {
           } else {
 
             val schema = getAvroSchema(new StructType(Array(new StructField("array", dataType, false))), "arrayStruct")
-            val sourceArray = item.asInstanceOf[Seq[Any]]
+            val sourceArray = item.asInstanceOf[GenericRow].toSeq
 
             val destination = sourceArray map { element => elementConverter(element) }
             val arrayRecord = new GenericData.Array(schema.getField("array").schema(), destination)
@@ -175,5 +176,7 @@ object AvroConverter {
         }
     }
   }
+    
+    
 
 }

@@ -44,7 +44,7 @@ class AvroConverterTest extends FunSuite {
     val complexStructType = new StructType(Array(strField, recordType))
     val result = AvroConverter.getAvroSchema(complexStructType)
     assert(result.toString == "{\"type\":\"record\",\"name\":\"RECORD\",\"fields\":[{\"name\":\"str\",\"type\":[\"string\",\"null\"]}," +
-      "{\"name\":\"record\",\"type\":{\"type\":\"record\",\"name\":\"record\",\"fields\":[{\"name\":\"int\",\"type\":\"int\"}," +
+      "{\"name\":\"record\",\"type\":{\"type\":\"record\",\"name\":\"record\",\"namespace\":\"RECORD\",\"fields\":[{\"name\":\"int\",\"type\":\"int\"}," +
       "{\"name\":\"str\",\"type\":[\"string\",\"null\"]}]}}]}")
   }
 
@@ -74,7 +74,7 @@ class AvroConverterTest extends FunSuite {
     val result = AvroConverter.getAvroSchema(arrStructType)
     assert(result.toString == "{\"type\":\"record\",\"name\":\"RECORD\",\"fields\":[{\"name\":\"int\",\"type\":\"int\"}," +
       "{\"name\":\"arrOfRec\",\"type\":[{\"type\":\"array\",\"items\":{\"type\":\"record\"," +
-      "\"name\":\"items\",\"fields\":[{\"name\":\"str\",\"type\":[\"string\",\"null\"]}]}},\"null\"]}]}")
+      "\"name\":\"arrOfRec\",\"namespace\":\"arrOfRec\",\"fields\":[{\"name\":\"str\",\"type\":[\"string\",\"null\"]}]}},\"null\"]}]}")
   }
 
   test("schema with map of strings") {
@@ -89,7 +89,7 @@ class AvroConverterTest extends FunSuite {
     val result = AvroConverter.getAvroSchema(mapStructType)
     assert(result.toString == "{\"type\":\"record\",\"name\":\"RECORD\",\"fields\":[{\"name\":\"int\",\"type\":\"int\"}," +
       "{\"name\":\"mapOfRec\",\"type\":{\"type\":\"map\",\"values\":[{\"type\":\"record\"," +
-      "\"name\":\"values\",\"fields\":[{\"name\":\"str\",\"type\":[\"string\",\"null\"]}]},\"null\"]}}]}")
+      "\"name\":\"mapOfRec\",\"namespace\":\"mapOfRec\",\"fields\":[{\"name\":\"str\",\"type\":[\"string\",\"null\"]}]},\"null\"]}}]}")
   }
 
   test("schema with byte type") {
