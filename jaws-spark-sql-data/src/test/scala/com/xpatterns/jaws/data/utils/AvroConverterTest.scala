@@ -12,15 +12,18 @@ import collection.JavaConversions._
 import scala.collection.convert.Wrappers
 import org.apache.spark.sql.types._
 
+
 @RunWith(classOf[JUnitRunner])
 class AvroConverterTest extends FunSuite {
+
+ 
   val intField = new StructField("int", IntegerType, false)
   val strField = new StructField("str", StringType, true)
-  val arrOfStrField = new StructField("arr", ArrayType(StringType,false), true)
-  val arrOfStrFieldNotNullable = new StructField("arr", ArrayType(StringType,false), false)
-  val arrOfRecField = new StructField("arrOfRec", ArrayType(StructType(List(StructField("str",StringType,true))),false), true)
-  val mapOfStrField = new StructField("map", MapType(StringType,StringType,true), false)
-  val mapOfRecField = new StructField("mapOfRec", MapType(StringType,StructType(List(StructField("str",StringType,true))),true), false)
+  val arrOfStrField = new StructField("arr", ArrayType(StringType, false), true)
+  val arrOfStrFieldNotNullable = new StructField("arr", ArrayType(StringType, false), false)
+  val arrOfRecField = new StructField("arrOfRec", ArrayType(StructType(List(StructField("str", StringType, true))), false), true)
+  val mapOfStrField = new StructField("map", MapType(StringType, StringType, true), false)
+  val mapOfRecField = new StructField("mapOfRec", MapType(StringType, StructType(List(StructField("str", StringType, true))), true), false)
 
   val structType = new StructType(Array(intField, strField))
   val structTypeRow = Array(Row.fromSeq(Seq(1, "a")), Row.fromSeq(Seq(2, "b")))
@@ -28,9 +31,9 @@ class AvroConverterTest extends FunSuite {
   val recordType = new StructField("record", structType, false)
   val byteField = new StructField("byte", ByteType, false)
   val binaryField = new StructField("binary", BinaryType, true)
-  val arrOfArrString = new StructField("arrOfArrayString", ArrayType(ArrayType(StringType,false),false), true)
-  val mapOfMap = new StructField("mapOfMap", MapType(StringType, MapType(StringType,StringType,true),true), false)
-  val arrOfMapofArr = new StructField("arrOfMapOfArr", ArrayType(MapType(StringType, ArrayType(ArrayType(StringType,false),false),true),false), true)
+  val arrOfArrString = new StructField("arrOfArrayString", ArrayType(ArrayType(StringType, false), false), true)
+  val mapOfMap = new StructField("mapOfMap", MapType(StringType, MapType(StringType, StringType, true), true), false)
+  val arrOfMapofArr = new StructField("arrOfMapOfArr", ArrayType(MapType(StringType, ArrayType(ArrayType(StringType, false), false), true), false), true)
   val decimalField = new StructField("decimal", DecimalType(), true)
 
   test("simple schema") {
@@ -336,15 +339,14 @@ class AvroConverterTest extends FunSuite {
     assert(result(0).get(0) == 1, "different integer on row1")
     assert(actualMap1.keys.sameElements(expectedMap1.keys), "different keys in expected map on row1")
     val actualMapIterator1 = actualMap1.values().iterator()
-     assert(actualMapIterator1.next().get("str") === "b", "different first record value 1 in expected map on row1")
-     assert(actualMapIterator1.next().get("str") === "d", "different first record value 2 in expected map on row1")
-    
-    
+    assert(actualMapIterator1.next().get("str") === "b", "different first record value 1 in expected map on row1")
+    assert(actualMapIterator1.next().get("str") === "d", "different first record value 2 in expected map on row1")
+
     assert(result(1).get(0) == 2, "different integer on row2")
     assert(actualMap2.keys.sameElements(expectedMap2.keys), "different keys in expected map on row2")
     val actualMapIterator2 = actualMap2.values().iterator()
-     assert(actualMapIterator2.next().get("str") === "e", "different second record value 1 in expected map on row2")
-     assert(actualMapIterator2.next().get("str") === "g", "different second record value 2 in expected map on row2")
+    assert(actualMapIterator2.next().get("str") === "e", "different second record value 1 in expected map on row2")
+    assert(actualMapIterator2.next().get("str") === "g", "different second record value 2 in expected map on row2")
 
   }
 }

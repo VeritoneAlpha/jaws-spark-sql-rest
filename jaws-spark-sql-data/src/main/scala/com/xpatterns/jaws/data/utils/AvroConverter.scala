@@ -129,7 +129,7 @@ object AvroConverter {
           } else {
 
             val schema = getAvroSchema(new StructType(Array(new StructField("array", dataType, false))), "arrayStruct")
-            val sourceArray = item.asInstanceOf[GenericRow].toSeq
+            val sourceArray = if (item.isInstanceOf[Seq[Any]]) item.asInstanceOf[Seq[Any]] else item.asInstanceOf[GenericRow].toSeq
 
             val destination = sourceArray map { element => elementConverter(element) }
             val arrayRecord = new GenericData.Array(schema.getField("array").schema(), destination)

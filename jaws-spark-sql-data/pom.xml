@@ -41,11 +41,11 @@
 			<artifactId>scalamock-scalatest-support_2.10</artifactId>
 			<version>3.1.RC1</version>
 		</dependency>
-		<dependency>
+		<!-- <dependency>
 			<groupId>com.typesafe</groupId>
 			<artifactId>config</artifactId>
 			<version>1.0.2</version>
-		</dependency>
+		</dependency> -->
 		<dependency>
 			<groupId>net.liftweb</groupId>
 			<artifactId>lift-webkit_2.10</artifactId>
@@ -95,16 +95,16 @@
 			<artifactId>aspectjweaver</artifactId>
 			<version>1.6.10</version>
 		</dependency>
-		<dependency>
+		<!-- <dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
 			<version>1.5.5</version>
-		</dependency>
-		<dependency>
+		</dependency> -->
+		<!-- <dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-log4j12</artifactId>
 			<version>1.5.5</version>
-		</dependency>
+		</dependency> -->
 		<dependency>
 			<groupId>org.hectorclient</groupId>
 			<artifactId>hector-core</artifactId>
