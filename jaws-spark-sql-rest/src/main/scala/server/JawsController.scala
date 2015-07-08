@@ -192,17 +192,19 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
               (name, path, pathType, overwrite) =>
                 corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
                   validate(path != null && !path.trim.isEmpty, Configuration.FILE_EXCEPTION_MESSAGE) {
-                    validate(name != null && !name.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
-                      validate(overwrite || !dals.parquetTableDal.tableExists(name), Configuration.TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE) {
-                        respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
-                          Configuration.log4j.info(s"Registering table $name having the path $path on node $pathType")
+                    validate("hdfs".equals(pathType) || "tachyon".equals(pathType), Configuration.FILE_PATH_TYPE_EXCEPTION_MESSAGE) {
+                      validate(name != null && !name.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
+                        validate(overwrite || !dals.parquetTableDal.tableExists(name), Configuration.TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE) {
+                          respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
+                            Configuration.log4j.info(s"Registering table $name having the path $path on node $pathType")
 
-                          val future = ask(balancerActor, RegisterTableMessage(name, path, getNamenodeFromPathType(pathType)))
-                            .map(innerFuture => innerFuture.asInstanceOf[Future[Any]])
-                            .flatMap(identity)
-                          future.map {
-                            case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                            case result: String  => ctx.complete(StatusCodes.OK, result)
+                            val future = ask(balancerActor, RegisterTableMessage(name, path, getNamenodeFromPathType(pathType)))
+                              .map(innerFuture => innerFuture.asInstanceOf[Future[Any]])
+                              .flatMap(identity)
+                            future.map {
+                              case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                              case result: String => ctx.complete(StatusCodes.OK, result)
+                            }
                           }
                         }
                       }
