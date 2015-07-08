@@ -621,11 +621,12 @@ The following apis are used to register a parquet table, run queries against it,
 
 This api is deprecated. You should first register the parquet table(see register api detailed below), and then query it with the RUN api explained above. However, the run parquet api is still functional.
 
-    curl -d "select * from testTable" 'http://devbox.local:9080/jaws/parquet/run?tablePath=tachyon://devbox.local:19998/user/jaws/parquetFolder&table=testTable&limited=true&numberOfResults=99&overwrite=false' -X POST
+    curl -d "select * from testTable" 'http://devbox.local:9080/jaws/parquet/run?tablePath=/user/jaws/parquetFolder&pathType=tachyon&table=testTable&limited=true&numberOfResults=99&overwrite=false' -X POST
 
 Parameters:
 
   * tablePath [required] : the path to the parquet folder which you want to query
+  * pathType [not required, default hdfs]: the type of parquet folder path. It can be **tachyon** or **hdfs**. The values for namenodes are filled from the configuration.  
   * table : the table name you want to give to your parquet folder
   * limited [required]:  if set on true, the query will be limited to a fixed number of results. The number of results will be the one specified in the "numberOfResults" parameter, and they will be collected (in memory) and persisted in the configured backend database (cassandra or hdfs, no latency difference upon retrieval of small datasets). Otherwise, if not specified, the results number will be retrieved from the configuration file (nr.of.results field, default is 100).
   However, for large datasets that exceed the default number of results (100, configurable), results will not be persisted in memory and the configured database anymore, they will only be stored as an RDD on HDFS, and used for paginated retrieval (offset and limit parameters in the results api).
@@ -642,11 +643,12 @@ Example:
  1404998257416357bb29d-6801-41ca-82e4-7a265816b50c
 
 ####Register parquet table api:
-    curl 'http://devbox.local:9080/jaws/parquet/tables?path=tachyon://devbox.local:19998/user/jaws/parquetFolder&name=testTable&overwrite=false' -X POST
+    curl 'http://devbox.local:9080/jaws/parquet/registerTable?path=/user/jaws/parquetFolder&pathType=tachyon&name=testTable&overwrite=false' -X POST
 
 Parameters:
 
   * path [required] : the path to the parquet folder you want to register as table
+  * pathType [not required, default hdfs]: the type of parquet folder path. It can be **tachyon** or **hdfs**. The values for namenodes are filled from the configuration.
   * name [reqired] : the table name you want to give to your parquet folder
   * overwrite [not required, default false] : if set on false and the table already exists, an error message will be returned to the client saying that the table already exists. If set on true, the table will be overwritten
 

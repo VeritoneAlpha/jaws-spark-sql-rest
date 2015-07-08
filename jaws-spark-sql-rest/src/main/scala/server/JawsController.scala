@@ -136,24 +136,37 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
       }
   }
 
+  private def getNamenodeFromPathType(pathType:String):String = {
+    if ("hdfs".equals(pathType)) {
+      Configuration.hdfsNamenodePath
+    } else if ("tachyon".equals(pathType)) {
+      Configuration.tachyonNamenodePath
+    } else {
+      ""
+    }
+  }
+
   def parquetRoute: Route = pathPrefix("parquet") {
     path("run") {
       post {
-        parameters('tablePath.as[String], 'table.as[String], 'numberOfResults.as[Int] ? 100, 'limited.as[Boolean], 'destination.as[String] ? Configuration.rddDestinationLocation.getOrElse("hdfs"), 'overwrite.as[Boolean] ? false) { (tablePath, table, numberOfResults, limited, destination, overwrite) =>
-          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+        parameters('tablePath.as[String], 'pathType.as[String] ? "hdfs", 'table.as[String], 'numberOfResults.as[Int] ? 100, 'limited.as[Boolean], 'destination.as[String] ? Configuration.rddDestinationLocation.getOrElse("hdfs"), 'overwrite.as[Boolean] ? false) {
+          (tablePath, pathType, table, numberOfResults, limited, destination, overwrite) =>
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+              validate(tablePath != null && !tablePath.trim.isEmpty, Configuration.FILE_EXCEPTION_MESSAGE) {
+                validate("hdfs".equals(pathType) || "tachyon".equals(pathType), Configuration.FILE_PATH_TYPE_EXCEPTION_MESSAGE) {
+                  validate(table != null && !table.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
 
-            validate(tablePath != null && !tablePath.trim.isEmpty, Configuration.FILE_EXCEPTION_MESSAGE) {
-              validate(table != null && !table.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
-
-                entity(as[String]) { query: String =>
-                  validate(query != null && !query.trim.isEmpty(), Configuration.SCRIPT_EXCEPTION_MESSAGE) {
-                    validate(overwrite == true || dals.parquetTableDal.tableExists(table) == false, Configuration.TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE) {
-                      respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
-                        Configuration.log4j.info(s"The tablePath is $tablePath and the table name is $table")
-                        val future = ask(runScriptActor, RunParquetMessage(query, tablePath, table, limited, numberOfResults, destination))
-                        future.map {
-                          case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                          case result: String  => ctx.complete(StatusCodes.OK, result)
+                    entity(as[String]) { query: String =>
+                      validate(query != null && !query.trim.isEmpty(), Configuration.SCRIPT_EXCEPTION_MESSAGE) {
+                        validate(overwrite == true || dals.parquetTableDal.tableExists(table) == false, Configuration.TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE) {
+                          respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
+                            Configuration.log4j.info(s"The tablePath is $tablePath on namenode $pathType and the table name is $table")
+                            val future = ask(runScriptActor, RunParquetMessage(query, tablePath, getNamenodeFromPathType(pathType), table, limited, numberOfResults, destination))
+                            future.map {
+                              case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                              case result: String => ctx.complete(StatusCodes.OK, result)
+                            }
+                          }
                         }
                       }
                     }
@@ -161,7 +174,6 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
                 }
               }
             }
-          }
         }
       } ~
         options {
@@ -175,20 +187,21 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
       pathPrefix("tables") {
         pathEnd {
           post {
-            parameters('name.as[String], 'path.as[String], 'overwrite.as[Boolean] ? false) { (name, path, overwrite) =>
+            parameters('name.as[String], 'path.as[String], 'pathType.as[String] ? "hdfs", 'overwrite.as[Boolean] ? false) {
+              (name, path, pathType, overwrite) =>
               corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-                {
-                  validate(path != null && !path.trim.isEmpty, Configuration.FILE_EXCEPTION_MESSAGE) {
+                validate(path != null && !path.trim.isEmpty, Configuration.FILE_EXCEPTION_MESSAGE) {
+                  validate("hdfs".equals(pathType) || "tachyon".equals(pathType), Configuration.FILE_PATH_TYPE_EXCEPTION_MESSAGE) {
                     validate(name != null && !name.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
-                      validate(overwrite == true || dals.parquetTableDal.tableExists(name) == false, Configuration.TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE) {
+                      validate(overwrite || !dals.parquetTableDal.tableExists(name), Configuration.TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE) {
                         respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
-                          Configuration.log4j.info(s"Registering table $name having the path $path")
-                          val future = ask(balancerActor, RegisterTableMessage(name, path))
+                          Configuration.log4j.info(s"Registering table $name having the path $path on $pathType")
+                          val future = ask(balancerActor, RegisterTableMessage(name, path, getNamenodeFromPathType(pathType)))
                             .map(innerFuture => innerFuture.asInstanceOf[Future[Any]])
                             .flatMap(identity)
                           future.map {
                             case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                            case result: String  => ctx.complete(StatusCodes.OK, result)
+                            case result: String => ctx.complete(StatusCodes.OK, result)
                           }
                         }
                       }
@@ -741,12 +754,15 @@ object Configuration {
   val numberOfResults = getStringConfiguration(appConf, "nr.of.results")
   val corsFilterAllowedHosts = getStringConfiguration(appConf, "cors-filter-allowed-hosts")
   val jarPath = getStringConfiguration(appConf, "jar-path")
+  val hdfsNamenodePath = getStringConfiguration(appConf, "hdfs-namenode-path").getOrElse("")
+  val tachyonNamenodePath = getStringConfiguration(appConf, "tachyon-namenode-path").getOrElse("")
 
   val LIMIT_EXCEPTION_MESSAGE = "The limit is null!"
   val SCRIPT_EXCEPTION_MESSAGE = "The script is empty or null!"
   val UUID_EXCEPTION_MESSAGE = "The uuid is empty or null!"
   val LIMITED_EXCEPTION_MESSAGE = "The limited flag is null!"
   val RESULTS_NUMBER_EXCEPTION_MESSAGE = "The results number is null!"
+  val FILE_PATH_TYPE_EXCEPTION_MESSAGE = "The file path must be hdfs or tachyon"
   val FILE_EXCEPTION_MESSAGE = "The file is null or empty!"
   val DATABASE_EXCEPTION_MESSAGE = "The database is null or empty!"
   val TABLE_EXCEPTION_MESSAGE = "The table name is null or empty!"

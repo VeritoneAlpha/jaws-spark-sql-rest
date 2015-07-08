@@ -22,7 +22,7 @@ class RegisterParquetTableApiActor(hiveContext: HiveContextWrapper, dals: DAL) e
       val currentSender = sender
 
       val registerTableFuture = future {
-        val (namenode, folderPath) = if (message.namenode.isEmpty()) HiveUtils.splitPath(message.path) else (message.namenode, message.path)
+        val (namenode, folderPath) = if (message.namenode.isEmpty) HiveUtils.splitPath(message.path) else (message.namenode, message.path)
         HiveUtils.registerParquetTable(hiveContext, message.name, namenode, folderPath, dals)
       }
 

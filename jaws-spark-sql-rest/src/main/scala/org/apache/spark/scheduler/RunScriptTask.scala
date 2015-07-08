@@ -120,7 +120,7 @@ class RunParquetScriptTask(dals: DAL, hiveContext: HiveContextWrapper,
   extends RunScriptTask(dals, hiveContext, uuid, hdfsConf, new RunScriptMessage(runMessage.script, runMessage.limited, runMessage.maxNumberOfResults, runMessage.rddDestination), isCanceled) {
   override def run() {
     implicit val timeout = Timeout(Configuration.timeout.toInt)
-    val future = ask(JawsController.balancerActor, RegisterTableMessage(runMessage.table, runMessage.tablePath))
+    val future = ask(JawsController.balancerActor, RegisterTableMessage(runMessage.table, runMessage.tablePath, runMessage.namenode))
       .map(innerFuture => innerFuture.asInstanceOf[Future[Any]])
       .flatMap(identity)
 
