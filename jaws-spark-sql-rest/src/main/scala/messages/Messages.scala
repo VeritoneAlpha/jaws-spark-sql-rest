@@ -15,11 +15,11 @@ case class GetTablesMessage(database: String, describe: Boolean, tables: Array[S
 case class GetExtendedTablesMessage(database: String, tables: Array[String])
 case class GetFormattedTablesMessage(database: String, tables: Array[String])
 case class RunScriptMessage(script: String, limited: Boolean, maxNumberOfResults: Long, rddDestination: String)
-case class RunParquetMessage(script: String, tablePath: String, table: String, limited: Boolean, maxNumberOfResults: Long, rddDestination: String)
+case class RunParquetMessage(script: String, tablePath: String, namenode:String, table: String, limited: Boolean, maxNumberOfResults: Long, rddDestination: String)
 case class GetDatasourceSchemaMessage(path: String, sourceType: SourceType, storageType: StorageType)
 case class ErrorMessage(message: String)
 case class DeleteQueryMessage(queryID: String)
-case class RegisterTableMessage(name: String, path: String, namenode: String = "") 
+case class RegisterTableMessage(name: String, path: String, namenode: String)
 case class UnregisterTableMessage(name: String)
 case class GetParquetTablesMessage(tables: Array[String], describe: Boolean)
 
