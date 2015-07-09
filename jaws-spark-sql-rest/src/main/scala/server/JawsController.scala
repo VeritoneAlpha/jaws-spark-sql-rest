@@ -58,6 +58,8 @@ import spray.json.PrettyPrinter
 import spray.httpx.marshalling.Marshaller
 import spray.http.ContentTypes
 import com.xpatterns.jaws.data.DTO.AvroBinaryResult
+import customs.CustomDirectives._
+
 
 /**
  * Created by emaorhian
@@ -142,12 +144,12 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
         parameters('tablePath.as[String], 'table.as[String], 'numberOfResults.as[Int] ? 100, 'limited.as[Boolean], 'destination.as[String] ? Configuration.rddDestinationLocation.getOrElse("hdfs"), 'overwrite.as[Boolean] ? false) { (tablePath, table, numberOfResults, limited, destination, overwrite) =>
           corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
 
-            validate(tablePath != null && !tablePath.trim.isEmpty, Configuration.FILE_EXCEPTION_MESSAGE) {
-              validate(table != null && !table.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
+            validateCondition(tablePath != null && !tablePath.trim.isEmpty, Configuration.FILE_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
+              validateCondition(table != null && !table.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
 
                 entity(as[String]) { query: String =>
-                  validate(query != null && !query.trim.isEmpty(), Configuration.SCRIPT_EXCEPTION_MESSAGE) {
-                    validate(overwrite == true || dals.parquetTableDal.tableExists(table) == false, Configuration.TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE) {
+                  validateCondition(query != null && !query.trim.isEmpty(), Configuration.SCRIPT_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
+                    validateCondition(overwrite == true || dals.parquetTableDal.tableExists(table) == false, Configuration.TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
                       respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
                         Configuration.log4j.info(s"The tablePath is $tablePath and the table name is $table")
                         val future = ask(runScriptActor, RunParquetMessage(query, tablePath, table, limited, numberOfResults, destination))
@@ -178,9 +180,9 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
             parameters('name.as[String], 'path.as[String], 'overwrite.as[Boolean] ? false) { (name, path, overwrite) =>
               corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
                 {
-                  validate(path != null && !path.trim.isEmpty, Configuration.FILE_EXCEPTION_MESSAGE) {
-                    validate(name != null && !name.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
-                      validate(overwrite == true || dals.parquetTableDal.tableExists(name) == false, Configuration.TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE) {
+                  validateCondition(path != null && !path.trim.isEmpty, Configuration.FILE_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
+                    validateCondition(name != null && !name.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
+                      validateCondition(overwrite == true || dals.parquetTableDal.tableExists(name) == false, Configuration.TABLE_ALREADY_EXISTS_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
                         respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
                           Configuration.log4j.info(s"Registering table $name having the path $path")
                           val future = ask(balancerActor, RegisterTableMessage(name, path))
@@ -227,7 +229,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
             path(Segment) { name =>
               corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
                 {
-                  validate(name != null && !name.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE) {
+                  validateCondition(name != null && !name.trim.isEmpty, Configuration.TABLE_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
                     respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
                       Configuration.log4j.info(s"Unregistering table $name ")
                       val future = ask(balancerActor, UnregisterTableMessage(name))
@@ -259,7 +261,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
         corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
 
           entity(as[String]) { query: String =>
-            validate(query != null && !query.trim.isEmpty(), Configuration.SCRIPT_EXCEPTION_MESSAGE) {
+            validateCondition(query != null && !query.trim.isEmpty(), Configuration.SCRIPT_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
               respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
                 Configuration.log4j.info(s"The query is limited=$limited and the destination is $destination")
                 val future = ask(runScriptActor, RunScriptMessage(query, limited, numberOfResults, destination.toLowerCase()))
@@ -285,7 +287,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
       get {
         parameters('queryID, 'startTimestamp.as[Long].?, 'limit.as[Int]) { (queryID, startTimestamp, limit) =>
           corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-            validate(queryID != null && !queryID.trim.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE) {
+            validateCondition(queryID != null && !queryID.trim.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
                 var timestamp: java.lang.Long = 0
                 if (startTimestamp.isDefined) {
@@ -313,7 +315,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
       get {
         parameters('queryID, 'offset.as[Int], 'limit.as[Int], 'format ? "default") { (queryID, offset, limit, format) =>
           corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-            validate(queryID != null && !queryID.trim.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE) {
+            validateCondition(queryID != null && !queryID.trim.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
 
                 implicit def customResultMarshaller[T] =
@@ -373,7 +375,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
         delete {
           path(Segment) { queryID =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              validate(queryID != null && !queryID.trim.isEmpty, Configuration.UUID_EXCEPTION_MESSAGE) {
+              validateCondition(queryID != null && !queryID.trim.isEmpty, Configuration.UUID_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
                 respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
                   val future = ask(deleteQueryActor, new DeleteQueryMessage(queryID))
                   future.map {
@@ -450,7 +452,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
           parameterSeq { params =>
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
               val (database, describe, tables) = getTablesParameters(params)
-              validate(database != null && !database.trim.isEmpty, Configuration.DATABASE_EXCEPTION_MESSAGE) {
+              validateCondition(database != null && !database.trim.isEmpty, Configuration.DATABASE_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
                 respondWithMediaType(MediaTypes.`application/json`) {
                   ctx =>
 
@@ -481,7 +483,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
             params =>
               corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
                 val (database, describe, tables) = getTablesParameters(params)
-                validate(database != null && !database.trim.isEmpty, Configuration.DATABASE_EXCEPTION_MESSAGE) {
+                validateCondition(database != null && !database.trim.isEmpty, Configuration.DATABASE_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
                   respondWithMediaType(MediaTypes.`application/json`) {
                     ctx =>
                       Configuration.log4j.info(s"Retrieving formatted table information for database=$database, tables= $tables")
@@ -532,7 +534,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
       get {
         parameters('path.as[String], 'sourceType.as[String], 'storageType.?) { (path, sourceType, storageType) =>
           corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-            validate(!path.trim.isEmpty, Configuration.PATH_IS_EMPTY) {
+            validateCondition(!path.trim.isEmpty, Configuration.PATH_IS_EMPTY, StatusCodes.BadRequest) {
               var validSourceType: SourceType = null
               var validStorageType: StorageType = null
               val validateParams = Try {
