@@ -521,27 +521,29 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
       }
   }
 
-  def metadataRoute: Route = tablesRoute ~ path("databases") {
+  def metadataRoute: Route = pathPrefix("hive") {
+    tablesRoute ~ path("databases") {
 
-    get {
-      corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+      get {
+        corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
 
-        respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-          val future = ask(getDatabasesActor, GetDatabasesMessage())
-          future.map {
-            case e: ErrorMessage   => ctx.complete(StatusCodes.InternalServerError, e.message)
-            case result: Databases => ctx.complete(StatusCodes.OK, result)
+          respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+            val future = ask(getDatabasesActor, GetDatabasesMessage())
+            future.map {
+              case e: ErrorMessage   => ctx.complete(StatusCodes.InternalServerError, e.message)
+              case result: Databases => ctx.complete(StatusCodes.OK, result)
+            }
           }
         }
-      }
-    } ~
-      options {
-        corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
-          complete {
-            "OK"
+      } ~
+        options {
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET))) {
+            complete {
+              "OK"
+            }
           }
         }
-      }
+    }
   } ~
     path("schema") {
       get {
