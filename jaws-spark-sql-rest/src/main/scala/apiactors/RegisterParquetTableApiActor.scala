@@ -5,8 +5,6 @@ import com.xpatterns.jaws.data.contracts.DAL
 import akka.actor.Actor
 import messages.RegisterTableMessage
 import server.Configuration
-import scala.util.Try
-import apiactors.ActorOperations._
 import org.apache.spark.scheduler.HiveUtils
 import messages.UnregisterTableMessage
 import scala.concurrent._
@@ -22,7 +20,7 @@ class RegisterParquetTableApiActor(hiveContext: HiveContextWrapper, dals: DAL) e
       val currentSender = sender
 
       val registerTableFuture = future {
-        val (namenode, folderPath) = if (message.namenode.isEmpty()) HiveUtils.splitPath(message.path) else (message.namenode, message.path)
+        val (namenode, folderPath) = if (message.namenode.isEmpty) HiveUtils.splitPath(message.path) else (message.namenode, message.path)
         HiveUtils.registerParquetTable(hiveContext, message.name, namenode, folderPath, dals)
       }
 
