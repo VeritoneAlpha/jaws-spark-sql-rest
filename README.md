@@ -1028,8 +1028,8 @@ Example:
 
 ### Tables formatted api:
 
-    curl 'http://devbox.local:9080/jaws/tables/formatted?database=default&table=test' -X GET
-    curl 'http://devbox.local:9080/jaws/tables/formatted?database=default' -X GET
+    curl 'http://devbox.local:9080/jaws/hive/tables/formatted?database=default&table=test' -X GET
+    curl 'http://devbox.local:9080/jaws/hive/tables/formatted?database=default' -X GET
 
 Parameters:
 
