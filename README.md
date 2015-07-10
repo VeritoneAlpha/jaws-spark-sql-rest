@@ -745,7 +745,7 @@ Results:
 
 The api returns message confirming that table was unregistered successfully, or an error message in case of failure
 
-Exemple:
+Example:
  Table testTable was unregistered
 
 
@@ -753,7 +753,7 @@ Exemple:
 The following apis are used to browse the warehouse: show databases, tables, describing tables.
 
 #### Databases api:
-    curl 'http://devbox.local:9080/jaws/databases' -X GET
+    curl 'http://devbox.local:9080/jaws/hive/databases' -X GET
 
 Results:
 
@@ -936,10 +936,10 @@ Example:
 
 ### Tables api:
 
-    curl 'http://devbox.local:9080/jaws/tables' -X GET
-    curl 'http://devbox.local:9080/jaws/tables?database=default' -X GET
-    curl 'http://devbox.local:9080/jaws/tables?database=default&describe=true' -X GET
-    curl 'http://devbox.local:9080/jaws/tables?database=default&table=table1&table=table2' -X GET
+    curl 'http://devbox.local:9080/jaws/hive/tables' -X GET
+    curl 'http://devbox.local:9080/jaws/hive/tables?database=default' -X GET
+    curl 'http://devbox.local:9080/jaws/hive/tables?database=default&describe=true' -X GET
+    curl 'http://devbox.local:9080/jaws/hive/tables?database=default&table=table1&table=table2' -X GET
 
 Parameters:
 
@@ -984,13 +984,13 @@ Example:
 
 #### Tables extended api:
 
-    curl 'http://devbox.local:9080/jaws/tables/extended?database=default&table=test' -X GET
-    curl 'http://devbox.local:9080/jaws/tables/extended?database=default' -X GET
+    curl 'http://devbox.local:9080/jaws/hive/tables/extended?database=default&table=test' -X GET
+    curl 'http://devbox.local:9080/jaws/hive/tables/extended?database=default' -X GET
 
 Parameters:
 
   * database [required] : is the database for which you want to retrieve extended information about tables
-  *  table [not required]: is the table for which you want to retrieve extended information
+  * table [not required]: is the table for which you want to retrieve extended information
 
 
 Results:
@@ -1028,13 +1028,13 @@ Example:
 
 ### Tables formatted api:
 
-    curl 'http://devbox.local:9080/jaws/tables/formatted?database=default&table=test' -X GET
-    curl 'http://devbox.local:9080/jaws/tables/formatted?database=default' -X GET
+    curl 'http://devbox.local:9080/jaws/hive/tables/formatted?database=default&table=test' -X GET
+    curl 'http://devbox.local:9080/jaws/hive/tables/formatted?database=default' -X GET
 
 Parameters:
 
   * database [required] : is the database for which you want to retrieve formatted information about tables
-  *  table [not required]: is the table for which you want to retrieve formatted information
+  * table [not required]: is the table for which you want to retrieve formatted information
 
 
 Results:
