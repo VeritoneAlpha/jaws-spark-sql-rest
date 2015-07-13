@@ -8,22 +8,11 @@ import org.apache.hadoop.fs.FileUtil
 import org.apache.hadoop.fs.FileSystem
 import java.io.File
 import org.apache.hadoop.fs.Path
-import akka.io.IO
-import akka.pattern.ask
-import spray.can.Http
 import spray.http._
-import spray.client.pipelining._
-import akka.actor.ActorSystem
-import scala.concurrent.Future
 import scala.concurrent.Await
-import scala.concurrent.duration._
 import scala.concurrent.duration.Duration._
 import scala.util.Success
 import scala.util.Failure
-import scala.collection.GenSeq
-import scala.concurrent._
-import ExecutionContext.Implicits.global
-
 @RunWith(classOf[JUnitRunner])
 class ParquetManagementApiTest extends TestBase {
 
@@ -40,7 +29,7 @@ class ParquetManagementApiTest extends TestBase {
   test(" register test table ") {
 
     val username = System.getProperties().get("user.name")
-    val url = s"${jawsUrl}parquet/tables?path=hdfs://$namenodeIp:8020/user/$username/$parquetFolder/&name=$parquetTable&overwrite=true"
+    val url = s"${jawsUrl}parquet/tables?path=/user/$username/$parquetFolder/&pathType=hdfs&name=$parquetTable&overwrite=true"
 
     val postResult = post(url, "")
 
@@ -60,7 +49,7 @@ class ParquetManagementApiTest extends TestBase {
   test(" register test table overwrite false ") {
 
     val username = System.getProperties().get("user.name")
-    val url = s"${jawsUrl}parquet/tables?path=hdfs://$namenodeIp:8020/user/$username/$parquetFolder/&name=$parquetTable&overwrite=false"
+    val url = s"${jawsUrl}parquet/tables?path=/user/$username/$parquetFolder/&pathType=hdfs&name=$parquetTable&overwrite=false"
 
     val postResult = post(url, "")
 
@@ -80,8 +69,12 @@ class ParquetManagementApiTest extends TestBase {
   test(" select * from parquet table ") {
     
     val url = s"${jawsUrl}run?limited=true"
-    val queryID = selectAllFromTable(url, parquetTable)
-    validataAllResultsFromParquetTable(queryID)
+    val body = s"select * from $parquetTable"
+
+    val queryId = postRun(url, body)
+    val queryStatus = waitforCompletion(queryId, 100)
+    assert(queryStatus === "DONE", "Query is not DONE!")
+    validataAllResultsFromParquetTable(queryId)
 
   }
   
