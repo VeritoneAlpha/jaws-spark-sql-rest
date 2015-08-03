@@ -37,6 +37,7 @@ class JawsLoggingOnHdfsTest extends FunSuite with BeforeAndAfter {
       val detailsFolder = Option(hadoopConf.getString("detailsFolder"))
       val resultsFolder = Option(hadoopConf.getString("resultsFolder"))
       val executionTimeFolder = Option(hadoopConf.getString("executionTimeFolder"))
+      val timestampFolder = Option(hadoopConf.getString("timestampFolder"))
       val metaInfoFolder = Option(hadoopConf.getString("metaInfoFolder"))
       val namenode = Option(hadoopConf.getString("namenode"))
 
@@ -59,6 +60,7 @@ class JawsLoggingOnHdfsTest extends FunSuite with BeforeAndAfter {
       configuration.set(Utils.DETAILS_FOLDER, detailsFolder.getOrElse("jawsDetails"))
       configuration.set(Utils.METAINFO_FOLDER, metaInfoFolder.getOrElse("jawsMetainfoFolder"))
       configuration.set(Utils.EXECUTION_TIME_FOLDER, executionTimeFolder.getOrElse("jawsExecutionTimeFolder"))
+      configuration.set(Utils.TIMESTAMP_FOLDER, timestampFolder.getOrElse("jawsTimestampFolder"))
       configuration.set(Utils.RESULTS_FOLDER, resultsFolder.getOrElse("jawsResultsFolder"))
       logingDal = new JawsHdfsLogging(configuration)
     }

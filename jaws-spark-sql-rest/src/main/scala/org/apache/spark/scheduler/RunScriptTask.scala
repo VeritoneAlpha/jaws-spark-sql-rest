@@ -41,6 +41,9 @@ class RunScriptTask(dals: DAL, hiveContext: HiveContextWrapper,
 
       val startTime = System.currentTimeMillis()
 
+      // Set the start time for the query
+      dals.loggingDal.setTimestamp(uuid, startTime)
+
       // job group id used to identify these jobs when trying to cancel them.
       hiveContext.sparkContext.setJobGroup(uuid, "")
 

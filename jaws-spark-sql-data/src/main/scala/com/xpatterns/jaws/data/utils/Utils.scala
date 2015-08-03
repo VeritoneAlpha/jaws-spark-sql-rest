@@ -23,6 +23,7 @@ object Utils {
   val LOGGING_FOLDER = "loggingFolder"
   val STATUS_FOLDER = "stateFolder"
   val EXECUTION_TIME_FOLDER = "executionTimeFolder"
+  val TIMESTAMP_FOLDER = "timestampFolder"
   val METAINFO_FOLDER = "metaInfoFolder"
   val DETAILS_FOLDER = "detailsFolder"
   val RESULTS_FOLDER = "resultsFolder"

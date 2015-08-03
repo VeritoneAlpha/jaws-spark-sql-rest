@@ -58,7 +58,7 @@ class GetQueryInfoTest extends FunSuite with BeforeAndAfter with ScalaFutures {
     whenReady(f)(s => s match {
       case queries: Queries => {
     	assert(queries.queries.size === 1)
-        assert(queries.queries(0) === new Query("NOT_FOUND", queryId, "", 0, new QueryMetaInfo))
+        assert(queries.queries(0) === new Query("NOT_FOUND", queryId, "", 0, 0, new QueryMetaInfo))
       }
       case _ => fail
     })
@@ -69,17 +69,19 @@ class GetQueryInfoTest extends FunSuite with BeforeAndAfter with ScalaFutures {
     val tAct = TestActorRef(new GetQueriesApiActor(dals))
     val queryId = System.currentTimeMillis() + UUID.randomUUID().toString()
     val executionTime = 100L
+    val currentTimestamp = System.currentTimeMillis()
     val metaInfo = new QueryMetaInfo(100, 150, 1, true)
     dals.loggingDal.setState(queryId, QueryState.IN_PROGRESS)
     dals.loggingDal.setScriptDetails(queryId, "test script")
     dals.loggingDal.setExecutionTime(queryId, executionTime)
+    dals.loggingDal.setTimestamp(queryId, currentTimestamp)
     dals.loggingDal.setMetaInfo(queryId, metaInfo)
 
     val f = tAct ? GetQueriesMessage(Seq(queryId))
     whenReady(f)(s => s match {
       case queries: Queries => {
     	assert(queries.queries.size === 1)
-        assert(queries.queries(0) === new Query("IN_PROGRESS", queryId, "test script", executionTime, metaInfo))
+        assert(queries.queries(0) === new Query("IN_PROGRESS", queryId, "test script", executionTime, currentTimestamp, metaInfo))
       }
       case _ => fail
     })

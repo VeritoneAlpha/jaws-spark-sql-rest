@@ -53,6 +53,7 @@ class JawsResultsOnHdfsTest extends FunSuite with BeforeAndAfter {
       configuration.set(Utils.STATUS_FOLDER, stateFolder.getOrElse("jawsStates"))
       configuration.set(Utils.DETAILS_FOLDER, detailsFolder.getOrElse("jawsDetails"))
       configuration.set(Utils.EXECUTION_TIME_FOLDER, executionTimeFolder.getOrElse("jawsExecutionTimeFolder"))
+      configuration.set(Utils.TIMESTAMP_FOLDER, executionTimeFolder.getOrElse("jawsTimestampFolder"))
       configuration.set(Utils.METAINFO_FOLDER, metaInfoFolder.getOrElse("jawsMetainfoFolder"))
       configuration.set(Utils.RESULTS_FOLDER, resultsFolder.getOrElse("jawsResultsFolder"))
       resultsDal = new JawsHdfsResults(configuration)
