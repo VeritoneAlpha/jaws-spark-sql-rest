@@ -10,10 +10,8 @@ import me.prettyprint.cassandra.service.ThriftCluster
 import me.prettyprint.hector.api.factory.HFactory
 import me.prettyprint.cassandra.model.AllOneConsistencyLevelPolicy
 import org.joda.time.DateTime
-import org.junit.Assert
 import com.xpatterns.jaws.data.utils.QueryState
 import com.xpatterns.jaws.data.DTO.Log
-import java.util.Collection
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import com.xpatterns.jaws.data.DTO.QueryMetaInfo
@@ -61,7 +59,7 @@ class JawsLoggingTest extends FunSuite with BeforeAndAfter {
   test("testWriteReadMetaInfo") {
     val uuid = DateTime.now().getMillis.toString
     val metaInfo = Randomizer.createQueryMetainfo
-    logingDal.setMetaInfo(uuid, metaInfo)
+    logingDal.setRunMetaInfo(uuid, metaInfo)
     val result = logingDal.getMetaInfo(uuid)
 
     assert(metaInfo === result)
@@ -194,7 +192,7 @@ class JawsLoggingTest extends FunSuite with BeforeAndAfter {
 
     //meta info
     val metaInfo = Randomizer.createQueryMetainfo
-    logingDal.setMetaInfo(uuid, metaInfo)
+    logingDal.setRunMetaInfo(uuid, metaInfo)
 
     // read information about query
     val state1 = logingDal.getState(uuid)

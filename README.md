@@ -558,9 +558,9 @@ Example:
         "state": "DONE",
         "queryID": "1432051694672f716608c-49a1-4dfe-ab77-8f98810b317f",
         "query": "select * from test limit 1",
-        "executionTime": 100,
-        "timestamp": 1438604292241,
-        "runMetaInfo": {
+        "metaInfo": {
+          "executionTime": 100,
+          "timestamp": 1438604292241,                
           "nrOfResults": 1,
           "maxNrOfResults": 3,
           "resultsDestination": 0,
@@ -570,9 +570,9 @@ Example:
         "state": "DONE",
         "queryID": "143205136408871e22b82-e1b7-4b95-ac0f-1c798154628e",
         "query": "select * from x limit 1",
-        "executionTime": 100,
-        "timestamp": 1438604592241,
-        "runMetaInfo": {
+        "metaInfo": {
+          "executionTime": 100,
+          "timestamp": 1438604592241,
           "nrOfResults": 1,
           "maxNrOfResults": 3,
           "resultsDestination": 0,
