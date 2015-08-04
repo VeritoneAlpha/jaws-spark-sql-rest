@@ -22,7 +22,7 @@ import implementation.{ SchemaSettingsFactory }
 import com.xpatterns.jaws.data.impl.CassandraDal
 import com.xpatterns.jaws.data.impl.HdfsDal
 import messages._
-import com.xpatterns.jaws.data.DTO.Queries
+import com.xpatterns.jaws.data.DTO._
 import spray.http.{ StatusCodes, HttpHeaders, HttpMethods, MediaTypes }
 import spray.httpx.SprayJsonSupport._
 import spray.httpx.marshalling.ToResponseMarshallable.isMarshallable
@@ -32,8 +32,6 @@ import spray.routing.SimpleRoutingApp
 import spray.routing.directives.ParamDefMagnet.apply
 import com.xpatterns.jaws.data.contracts.DAL
 import messages.GetResultsMessage
-import com.xpatterns.jaws.data.DTO.Logs
-import com.xpatterns.jaws.data.DTO.Query
 import scala.util.{ Failure, Success, Try }
 import server.MainActors._
 import org.apache.spark.scheduler.HiveUtils
@@ -46,18 +44,13 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.concurrent.duration.Duration._
 import spray.routing.Route
-import com.xpatterns.jaws.data.DTO.Databases
 import scala.collection.mutable.ListBuffer
-import com.xpatterns.jaws.data.DTO.Tables
 import scala.collection.mutable.ArrayBuffer
-import com.xpatterns.jaws.data.DTO.AvroResult
-import com.xpatterns.jaws.data.DTO.CustomResult
 import spray.json.RootJsonWriter
 import spray.json.JsonPrinter
 import spray.json.PrettyPrinter
 import spray.httpx.marshalling.Marshaller
 import spray.http.ContentTypes
-import com.xpatterns.jaws.data.DTO.AvroBinaryResult
 import customs.CustomDirectives._
 /**
  * Created by emaorhian
@@ -79,6 +72,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
   val getDatasourceSchemaActor = createActor(Props(new GetDatasourceSchemaActor(hiveContext)), GET_DATASOURCE_SCHEMA_ACTOR_NAME, localSupervisor)
   val deleteQueryActor = createActor(Props(new DeleteQueryApiActor(dals)), DELETE_QUERY_ACTOR_NAME, localSupervisor)
   val getParquetTablesActor = createActor(Props(new GetParquetTablesApiActor(hiveContext, dals)), GET_PARQUET_TABLES_ACTOR_NAME, localSupervisor)
+  val queryNameApiActor = createActor(Props(new QueryNameApiActor(dals)), QUERY_NAME_ACTOR_NAME, localSupervisor)
 
   //remote actors
   val runScriptActor = createActor(Props(new RunScriptApiActor(hdfsConf, hiveContext, dals)), RUN_SCRIPT_ACTOR_NAME, remoteSupervisor)
@@ -302,7 +296,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
           corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
             validateCondition(queryID != null && !queryID.trim.isEmpty(), Configuration.UUID_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-                var timestamp: java.lang.Long = 0
+                var timestamp: java.lang.Long = 0L
                 if (startTimestamp.isDefined) {
                   timestamp = startTimestamp.get
                 }
@@ -361,20 +355,26 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
 
             corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
               respondWithMediaType(MediaTypes.`application/json`) { ctx =>
-
                 var limit: Int = 100
                 var startQueryID: String = null
                 val queries = ListBuffer[String]()
+                var queryName: String = null
 
-                params.foreach(touple => touple match {
+                params.foreach {
                   case ("limit", value)                         => limit = Try(value.toInt).getOrElse(100)
-                  case ("startQueryID", value)                  => startQueryID = Option(value).getOrElse(null)
-                  case ("queryID", value) if (!value.isEmpty()) => queries += value
+                  case ("startQueryID", value)                  => startQueryID = Option(value).orNull
+                  case ("queryID", value) if value.nonEmpty     => queries += value
+                  case ("name", value) if value.trim.nonEmpty   => queryName = value.trim()
                   case (key, value)                             => Configuration.log4j.warn(s"Unknown parameter $key!")
-                })
+                }
 
-                val future = if (queries isEmpty) ask(getQueriesActor, GetPaginatedQueriesMessage(startQueryID, limit))
-                else ask(getQueriesActor, GetQueriesMessage(queries))
+                val future = if (queryName != null && queryName.nonEmpty) {
+                    ask(getQueriesActor, GetQueriesByName(queryName))
+                  } else if (queries.isEmpty) {
+                    ask(getQueriesActor, GetPaginatedQueriesMessage(startQueryID, limit))
+                  } else {
+                    ask(getQueriesActor, GetQueriesMessage(queries))
+                  }
 
                 future.map {
                   case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
@@ -385,29 +385,46 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
           }
         }
       } ~
-        delete {
-          path(Segment) { queryID =>
-            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
-              validateCondition(queryID != null && !queryID.trim.isEmpty, Configuration.UUID_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
-                respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
-                  val future = ask(deleteQueryActor, new DeleteQueryMessage(queryID))
-                  future.map {
-                    case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
-                    case message: String => ctx.complete(StatusCodes.OK, message)
+        put {
+          (path(Segment) & entity(as[QueryMetaInfo]) & parameter("overwrite".as[Boolean] ? false)) {
+            (queryID, metaInfo, overwrite) =>
+              corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+                validateCondition(queryID != null && !queryID.trim.isEmpty, Configuration.UUID_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
+                  validateCondition(metaInfo != null, Configuration.META_INFO_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
+                    respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
+                      val future = ask(queryNameApiActor, new UpdateQueryNameMessage(queryID, metaInfo.name, metaInfo.description, overwrite))
+                      future.map {
+                        case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                        case message: String => ctx.complete(StatusCodes.OK, message)
+                      }
+                    }
+                  }
+                }
+              }
+          }
+        } ~
+          delete {
+            path(Segment) { queryID =>
+              corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+                validateCondition(queryID != null && !queryID.trim.isEmpty, Configuration.UUID_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
+                  respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
+                    val future = ask(deleteQueryActor, new DeleteQueryMessage(queryID))
+                    future.map {
+                      case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                      case message: String => ctx.complete(StatusCodes.OK, message)
+                    }
                   }
                 }
               }
             }
-          }
-        } ~
-        options {
-          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET, HttpMethods.DELETE))) {
-            complete {
-              "OK"
+          } ~
+          options {
+            corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.GET, HttpMethods.DELETE))) {
+              complete {
+                "OK"
+              }
             }
           }
-        }
-
     } ~
     path("cancel") {
       post {
@@ -762,6 +779,7 @@ object Configuration {
   val LIMIT_EXCEPTION_MESSAGE = "The limit is null!"
   val SCRIPT_EXCEPTION_MESSAGE = "The script is empty or null!"
   val UUID_EXCEPTION_MESSAGE = "The uuid is empty or null!"
+  val META_INFO_EXCEPTION_MESSAGE = "The metainfo is null!"
   val LIMITED_EXCEPTION_MESSAGE = "The limited flag is null!"
   val RESULTS_NUMBER_EXCEPTION_MESSAGE = "The results number is null!"
   val FILE_EXCEPTION_MESSAGE = "The file is null or empty!"

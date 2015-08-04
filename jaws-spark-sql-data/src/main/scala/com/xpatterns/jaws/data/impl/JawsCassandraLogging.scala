@@ -43,6 +43,7 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
   val TYPE_SCRIPT_DETAILS = 0
   val TYPE_LOG = 1
   val TYPE_META = 2
+  val TYPE_QUERY_NAME = 3
 
   val logger = Logger.getLogger("JawsCassandraLogging")
 
@@ -316,7 +317,7 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
     var skipFirstMutable = skipFirst
     var limitMutable = limit
 
-    while (iterator.hasNext() && limitMutable > 0) {
+    while (iterator.hasNext && limitMutable > 0) {
       if (skipFirstMutable) {
         skipFirstMutable = false
         iterator.next()
@@ -326,12 +327,40 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
       }
     }
 
-    return collection
+    collection
+  }
+
+  override def getQueriesByName(name:String):Queries = {
+    Utils.TryWithRetry {
+      logger.debug(s"Reading queries states for queries with name $name")
+
+      val stateList = Array[Query]()
+
+      val key = computeRowKey(name)
+
+      val column = new Composite()
+      column.addComponent(LEVEL_TYPE, TYPE_QUERY_NAME, ComponentEquality.EQUAL)
+      column.addComponent(LEVEL_UUID, name, ComponentEquality.EQUAL)
+
+      val columnQuery = HFactory.createColumnQuery(keyspace, is, cs, ss)
+      columnQuery.setColumnFamily(CF_SPARK_LOGS).setKey(key).setName(column)
+
+      val result = columnQuery.execute()
+      if (result != null) {
+        val col = result.get()
+        if (col != null) {
+          val queryID = col.getValue
+          if (queryID != null) {
+            return getQueries(List(queryID))
+          }
+        }
+      }
+      new Queries(stateList)
+    }
   }
 
   override def setMetaInfo(queryId: String, metainfo: QueryMetaInfo) {
     Utils.TryWithRetry {
-
       logger.debug("Writing script meta info " + metainfo.toJson + " to query " + queryId)
 
       val key = computeRowKey(queryId)
@@ -379,6 +408,42 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
     }
   }
 
+  override def saveQueryName(name: String, queryId: String): Unit = {
+    Utils.TryWithRetry {
+      logger.debug("Saving query name " + name + " to query " + queryId)
+
+      val key = computeRowKey(name)
+
+      val column = new Composite()
+      column.setComponent(LEVEL_TYPE, TYPE_QUERY_NAME, is)
+      column.setComponent(LEVEL_UUID, name, ss)
+
+      val value = queryId
+
+      val mutator = HFactory.createMutator(keyspace, is)
+
+      mutator.addInsertion(key, CF_SPARK_LOGS, HFactory.createColumn(column, value, cs, ss))
+      mutator.execute()
+    }
+  }
+
+  override def deleteQueryName(name: String): Unit = {
+    Utils.TryWithRetry {
+      logger.debug("Deleting query name " + name)
+
+      val key = computeRowKey(name)
+
+      val column = new Composite()
+      column.setComponent(LEVEL_TYPE, TYPE_QUERY_NAME, is)
+      column.setComponent(LEVEL_UUID, name, ss)
+
+      val mutator = HFactory.createMutator(keyspace, is)
+      mutator.addDeletion(key, CF_SPARK_LOGS, column, cs)
+
+      mutator.execute()
+    }
+  }
+
   def deleteQuery(queryId: String) {
     Utils.TryWithRetry {
       logger.debug(s"Deleting query: $queryId")
@@ -396,6 +461,12 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
       columnScriptDetails.setComponent(LEVEL_TYPE, TYPE_SCRIPT_DETAILS, is)
       columnScriptDetails.setComponent(LEVEL_UUID, queryId, ss)
       mutator.addDeletion(key, CF_SPARK_LOGS, columnScriptDetails, cs)
+
+      val metaInfo = getMetaInfo(queryId)
+      if (metaInfo.name != null) {
+        // The query has a name. It must be deleted to not appear in search.
+        deleteQueryName(metaInfo.name)
+      }
 
       logger.debug(s"Deleting meta info for: $queryId")
       val columnMetaInfo = new Composite()
@@ -418,7 +489,6 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
       }
 
       mutator.execute()
-
     }
   }
 }

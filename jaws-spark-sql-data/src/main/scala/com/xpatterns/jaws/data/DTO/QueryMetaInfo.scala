@@ -27,7 +27,7 @@ object QueryMetaInfo {
   val logger = Logger.getLogger("QueryMetaInfo")
 
   // A custom json format is defined because some fields might be missing.
-  implicit val logJson = new JsonFormat[QueryMetaInfo] {
+  implicit val logJson = new RootJsonFormat[QueryMetaInfo] {
     def write(metaInfo: QueryMetaInfo):JsValue = {
       val fields:mutable.Map[String, JsValue] = mutable.Map.empty[String, JsValue]
 
@@ -72,7 +72,6 @@ object QueryMetaInfo {
           resultsDestination, isLimited)
 
       case _ => deserializationError("Error while trying to parse a QueryMetaInfo")
-
     }
   }
 }

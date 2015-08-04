@@ -173,6 +173,27 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
     }
   }
 
+  override def getQueriesByName(name:String):Queries = {
+    Utils.TryWithRetry {
+      logger.debug(s"Reading queries states for queries with name $name")
+
+      val stateList = Array[Query]()
+      return new Queries(stateList)
+    }
+  }
+
+  override def saveQueryName(name: String, queryId: String): Unit = {
+    Utils.TryWithRetry {
+      logger.debug("Saving query name " + name + " to query " + queryId)
+    }
+  }
+
+  override def deleteQueryName(name: String): Unit = {
+    Utils.TryWithRetry {
+      logger.debug("Deleting query name " + name)
+    }
+  }
+
   def deleteQuery(queryId: String) {
     logger.debug(s"Deleting query: $queryId")
 
