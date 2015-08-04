@@ -15,6 +15,7 @@ case class GetResultsMessage(queryID: String, offset: Int, limit: Int, format : 
 case class GetTablesMessage(database: String, describe: Boolean, tables: Array[String])
 case class GetExtendedTablesMessage(database: String, tables: Array[String])
 case class GetFormattedTablesMessage(database: String, tables: Array[String])
+case class RunQueryMessage(name: String)
 case class RunScriptMessage(script: String, limited: Boolean, maxNumberOfResults: Long, rddDestination: String)
 case class RunParquetMessage(script: String, tablePath: String, namenode:String, table: String, limited: Boolean, maxNumberOfResults: Long, rddDestination: String)
 case class GetDatasourceSchemaMessage(path: String, sourceType: SourceType, storageType: StorageType)

@@ -280,7 +280,21 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
             }
           }
         }
-      }
+      } ~
+        parameters('name.as[String]) { (queryName) =>
+          corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+            validateCondition(queryName != null && !queryName.trim.isEmpty, Configuration.QUERY_NAME_MESSAGE, StatusCodes.BadRequest) {
+              respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
+                Configuration.log4j.info(s"Running the query with name $queryName")
+                val future = ask(runScriptActor, RunQueryMessage(queryName.trim))
+                future.map {
+                  case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+                  case result: String => ctx.complete(StatusCodes.OK, result)
+                }
+              }
+            }
+          }
+        }
     } ~
       options {
         corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*")), HttpHeaders.`Access-Control-Allow-Methods`(Seq(HttpMethods.OPTIONS, HttpMethods.POST))) {
@@ -783,6 +797,7 @@ object Configuration {
   val LIMITED_EXCEPTION_MESSAGE = "The limited flag is null!"
   val RESULTS_NUMBER_EXCEPTION_MESSAGE = "The results number is null!"
   val FILE_EXCEPTION_MESSAGE = "The file is null or empty!"
+  val QUERY_NAME_MESSAGE = "The query name is null or empty!"
   val FILE_PATH_TYPE_EXCEPTION_MESSAGE = "The file path must be hdfs or tachyon"
   val DATABASE_EXCEPTION_MESSAGE = "The database is null or empty!"
   val TABLE_EXCEPTION_MESSAGE = "The table name is null or empty!"
