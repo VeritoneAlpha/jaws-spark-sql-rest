@@ -1,36 +1,19 @@
 package foundation
 
-import org.junit.runner.RunWith
-import org.scalatest.junit.JUnitRunner
-import com.xpatterns.jaws.data.utils.Utils
-import org.apache.hadoop.fs.FileUtil
-import org.apache.hadoop.fs.FileSystem
-import java.io.File
-import org.apache.hadoop.fs.Path
-import akka.io.IO
-import akka.pattern.ask
-import spray.can.Http
-import spray.http._
 import spray.client.pipelining._
 import akka.actor.ActorSystem
 import scala.concurrent.Future
 import scala.concurrent.Await
-import scala.concurrent.duration._
 import scala.concurrent.duration.Duration._
 import scala.util.Success
 import scala.util.Failure
 import org.scalatest.FunSuite
 import org.scalatest.BeforeAndAfterAll
 import com.typesafe.config.ConfigFactory
-import com.xpatterns.jaws.data.DTO.Logs
-import spray.httpx.encoding.Deflate
-import spray.http._
+import com.xpatterns.jaws.data.DTO.{Queries, CustomResult}
 import spray.httpx.encoding.{ Gzip, Deflate }
 import spray.httpx.SprayJsonSupport._
 import scala.collection.GenSeq
-import com.xpatterns.jaws.data.DTO.CustomResult
-import spray.httpx.unmarshalling._
-import spray.util._
 import spray.http._
 import com.google.gson.Gson
 
@@ -90,25 +73,25 @@ class TestBase extends FunSuite with BeforeAndAfterAll {
 
   def waitforCompletion(queryId: String, retry: Int) = {
 
-    val pipeline: HttpRequest => Future[Logs] = (
+    val pipeline: HttpRequest => Future[Queries] = (
       addHeader("X-My-Special-Header", "fancy-value")
       ~> addCredentials(BasicHttpCredentials("bob", "secret"))
       ~> encode(Gzip)
       ~> sendReceive
       ~> decode(Deflate)
-      ~> unmarshal[Logs])
+      ~> unmarshal[Queries])
     var offset = 0;
     var status = "IN_PROGRESS"
     var mutableRetry = retry
 
     while (status.equals("IN_PROGRESS") && mutableRetry != 0) {
       Thread.sleep(1000)
-      val response: Future[Logs] = pipeline(Get(s"${jawsUrl}logs?queryID=$queryId&offset=$offset&limit=100"))
+      val response: Future[Queries] = pipeline(Get(s"${jawsUrl}queries?queryID=$queryId"))
       mutableRetry = mutableRetry - 1
       Await.ready(response, Inf).value.get match {
-        case Success(r: Logs) => {
+        case Success(r: Queries) => {
           assert(r != null)
-          status = r.status
+          status = r.queries(0).state
           println(s"Query status = $status, retry = $mutableRetry")
         }
         case Failure(e) => {
