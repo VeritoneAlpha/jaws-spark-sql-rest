@@ -32,6 +32,7 @@ class JawsResultsOnHdfsTest extends FunSuite with BeforeAndAfter {
       val detailsFolder = Option(hadoopConf.getString("detailsFolder"))
       val resultsFolder = Option(hadoopConf.getString("resultsFolder"))
       val metaInfoFolder = Option(hadoopConf.getString("metaInfoFolder"))
+      val queryNameFolder = Option(hadoopConf.getString("queryNameFolder"))
       val namenode = Option(hadoopConf.getString("namenode"))
 
       val configuration = new org.apache.hadoop.conf.Configuration()
@@ -52,6 +53,7 @@ class JawsResultsOnHdfsTest extends FunSuite with BeforeAndAfter {
       configuration.set(Utils.STATUS_FOLDER, stateFolder.getOrElse("jawsStates"))
       configuration.set(Utils.DETAILS_FOLDER, detailsFolder.getOrElse("jawsDetails"))
       configuration.set(Utils.METAINFO_FOLDER, metaInfoFolder.getOrElse("jawsMetainfoFolder"))
+      configuration.set(Utils.QUERY_NAME_FOLDER, queryNameFolder.getOrElse("jawsQueryNameFolder"))
       configuration.set(Utils.RESULTS_FOLDER, resultsFolder.getOrElse("jawsResultsFolder"))
       resultsDal = new JawsHdfsResults(configuration)
     }

@@ -29,6 +29,7 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
   Utils.createFolderIfDoesntExist(configuration, configuration.get(Utils.STATUS_FOLDER), forcedMode)
   Utils.createFolderIfDoesntExist(configuration, configuration.get(Utils.DETAILS_FOLDER), forcedMode)
   Utils.createFolderIfDoesntExist(configuration, configuration.get(Utils.METAINFO_FOLDER), forcedMode)
+  Utils.createFolderIfDoesntExist(configuration, configuration.get(Utils.QUERY_NAME_FOLDER), forcedMode)
 
   override def setState(uuid: String, queryState: QueryState.QueryState) {
     logger.debug("Writing query state " + queryState.toString() + " to query " + uuid)
@@ -177,20 +178,28 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
     Utils.TryWithRetry {
       logger.debug(s"Reading queries states for queries with name $name")
 
-      val stateList = Array[Query]()
-      return new Queries(stateList)
+      val filePath = getQueryNameFolderPath(name)
+      if (Utils.checkFileExistence(filePath, configuration)) {
+        val queryID =  Utils.readFile(configuration, filePath)
+        getQueries(List(queryID))
+      } else {
+        new Queries(Array[Query]())
+      }
     }
   }
 
   override def saveQueryName(name: String, queryId: String): Unit = {
     Utils.TryWithRetry {
       logger.debug("Saving query name " + name + " to query " + queryId)
+      Utils.rewriteFile(queryId, configuration, getQueryNameFolderPath(name))
     }
   }
 
   override def deleteQueryName(name: String): Unit = {
     Utils.TryWithRetry {
       logger.debug("Deleting query name " + name)
+      val filePath = getQueryNameFolderPath(name)
+      Utils.deleteFile(configuration, filePath)
     }
   }
 
@@ -204,6 +213,11 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
     logger.debug(s"Deleting query details for: $queryId")
     filePath = getQueryDetailsFilePath(queryId)
     Utils.deleteFile(configuration, filePath)
+
+    val metaInfo = getMetaInfo(queryId)
+    if (metaInfo.name != null) {
+      deleteQueryName(metaInfo.name)
+    }
 
     logger.debug(s"Deleting meta info for: $queryId")
     filePath = getQueryMetaInfoFilePath(queryId)
@@ -228,5 +242,9 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
 
   def getQueryLogsFolderPath(queryId: String): String = {
     configuration.get(Utils.LOGGING_FOLDER) + "/" + queryId
+  }
+
+  def getQueryNameFolderPath(name: String): String = {
+    configuration.get(Utils.QUERY_NAME_FOLDER) + "/" + name
   }
 }

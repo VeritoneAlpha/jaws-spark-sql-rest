@@ -29,6 +29,7 @@ class JawsHdfsParquetTablesTest extends FunSuite with BeforeAndAfter {
       val detailsFolder = Option(hadoopConf.getString("detailsFolder"))
       val resultsFolder = Option(hadoopConf.getString("resultsFolder"))
       val metaInfoFolder = Option(hadoopConf.getString("metaInfoFolder"))
+      val queryNameFolder = Option(hadoopConf.getString("queryNameFolder"))
       val parquetTablesFolder = Option(hadoopConf.getString("parquetTablesFolder"))
       val namenode = Option(hadoopConf.getString("namenode"))
 
