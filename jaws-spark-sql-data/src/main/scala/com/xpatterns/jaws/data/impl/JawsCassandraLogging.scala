@@ -35,6 +35,10 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
   val CF_SPARK_LOGS = "logs"
   val CF_SPARK_LOGS_NUMBER_OF_ROWS = 100
 
+  // The query names published and unpublished must be kept on a special row to be faster to access them
+  val QUERY_NAME_UNPUBLISHED_ROW = CF_SPARK_LOGS_NUMBER_OF_ROWS + 1
+  val QUERY_NAME_PUBLISHED_ROW = CF_SPARK_LOGS_NUMBER_OF_ROWS + 2
+
   val LEVEL_TYPE = 0
   val LEVEL_UUID = 1
   val LEVEL_TIME_STAMP = 2
@@ -428,6 +432,10 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
   }
 
   override def deleteQueryName(name: String): Unit = {
+    if (name == null) {
+      return
+    }
+
     Utils.TryWithRetry {
       logger.debug("Deleting query name " + name)
 
@@ -463,9 +471,9 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
       mutator.addDeletion(key, CF_SPARK_LOGS, columnScriptDetails, cs)
 
       val metaInfo = getMetaInfo(queryId)
-      if (metaInfo.name != null) {
+      if (metaInfo.name != None && metaInfo.name.get != null) {
         // The query has a name. It must be deleted to not appear in search.
-        deleteQueryName(metaInfo.name)
+        deleteQueryName(metaInfo.name.get)
       }
 
       logger.debug(s"Deleting meta info for: $queryId")

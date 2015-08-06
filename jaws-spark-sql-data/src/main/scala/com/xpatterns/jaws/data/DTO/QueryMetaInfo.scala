@@ -9,16 +9,16 @@ import scala.collection.mutable
 /**
  * Created by emaorhian
  */
-case class QueryMetaInfo(var name:String, var description:String, var timestamp:Long, var executionTime:Long,
+case class QueryMetaInfo(var name:Option[String], var description:Option[String], var timestamp:Long, var executionTime:Long,
                          var nrOfResults:Long, var maxNrOfResults:Long, var resultsDestination:Int,
                          var isLimited:Boolean){
  // resultsDestination : 0-cassandra, 1-hdfs, 2-tachyon 
    def this() = {
-     this(null, null, 0, 0, 0, 0, 0, false)
+     this(None, None, 0, 0, 0, 0, 0, false)
    }
 
   def this(nrOfResults : Long, maxNrOfResults : Long, resultsDestination : Int, isLimited : Boolean) = {
-    this(null, null, 0, 0, nrOfResults, maxNrOfResults, resultsDestination, isLimited)
+    this(None, None, 0, 0, nrOfResults, maxNrOfResults, resultsDestination, isLimited)
   }
    
 }
@@ -31,12 +31,13 @@ object QueryMetaInfo {
     def write(metaInfo: QueryMetaInfo):JsValue = {
       val fields:mutable.Map[String, JsValue] = mutable.Map.empty[String, JsValue]
 
-      if (metaInfo.name != null) {
-        fields("name") = JsString(metaInfo.name)
+      // Don't serialize the null values of name and description because this value means that they are deleted.
+      if (metaInfo.name != None && metaInfo.name.get != null) {
+        fields("name") = JsString(metaInfo.name.get)
       }
 
-      if (metaInfo.description != null) {
-        fields("description") = JsString(metaInfo.description)
+      if (metaInfo.description != None && metaInfo.description.get != null) {
+        fields("description") = JsString(metaInfo.description.get)
       }
 
       fields("timestamp") = JsNumber(metaInfo.timestamp)
@@ -51,14 +52,16 @@ object QueryMetaInfo {
 
     def read(value: JsValue):QueryMetaInfo = value match {
       case JsObject(fields) =>
-        var name = fields.getOrElse("name", JsString("")).convertTo[String]
-        if (name.isEmpty) {
-          name = null
+        val name = if (fields.contains("name")) {
+          Some(fields.getOrElse("name", JsNull).convertTo[Option[String]].orNull)
+        } else {
+          None
         }
 
-        var description = fields.getOrElse("description", JsString("")).convertTo[String]
-        if (description.isEmpty) {
-          description = null
+        val description = if (fields.contains("description")) {
+          Some(fields.getOrElse("description", JsNull).convertTo[Option[String]].orNull)
+        } else {
+          None
         }
 
         val timestamp = fields.getOrElse("timestamp", JsNumber(0)).convertTo[Long]

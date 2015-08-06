@@ -71,7 +71,7 @@ class RunScriptApiActor(hdfsConf: HadoopConfiguration, hiveContext: HiveContextW
 
         // Save the query name and prepare a message to execute the run query
         val query = queries(0)
-        dals.loggingDal.setQueryName(uuid, query.metaInfo.name, query.metaInfo.description, overwrite = true)
+        dals.loggingDal.setQueryProperties(uuid, query.metaInfo.name, query.metaInfo.description, overwrite = true)
 
         val runScript = RunScriptMessage(query.query, query.metaInfo.isLimited, query.metaInfo.maxNrOfResults,
           query.metaInfo.resultsDestination.toString)

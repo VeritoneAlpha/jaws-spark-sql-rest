@@ -72,7 +72,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
   val getDatasourceSchemaActor = createActor(Props(new GetDatasourceSchemaActor(hiveContext)), GET_DATASOURCE_SCHEMA_ACTOR_NAME, localSupervisor)
   val deleteQueryActor = createActor(Props(new DeleteQueryApiActor(dals)), DELETE_QUERY_ACTOR_NAME, localSupervisor)
   val getParquetTablesActor = createActor(Props(new GetParquetTablesApiActor(hiveContext, dals)), GET_PARQUET_TABLES_ACTOR_NAME, localSupervisor)
-  val queryNameApiActor = createActor(Props(new QueryNameApiActor(dals)), QUERY_NAME_ACTOR_NAME, localSupervisor)
+  val queryPropertiesApiActor = createActor(Props(new QueryPropertiesApiActor(dals)), QUERY_NAME_ACTOR_NAME, localSupervisor)
 
   //remote actors
   val runScriptActor = createActor(Props(new RunScriptApiActor(hdfsConf, hiveContext, dals)), RUN_SCRIPT_ACTOR_NAME, remoteSupervisor)
@@ -406,7 +406,7 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
                 validateCondition(queryID != null && !queryID.trim.isEmpty, Configuration.UUID_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
                   validateCondition(metaInfo != null, Configuration.META_INFO_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
                     respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
-                      val future = ask(queryNameApiActor, new UpdateQueryNameMessage(queryID, metaInfo.name, metaInfo.description, overwrite))
+                      val future = ask(queryPropertiesApiActor, new UpdateQueryPropertiesMessage(queryID, metaInfo.name, metaInfo.description, overwrite))
                       future.map {
                         case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
                         case message: String => ctx.complete(StatusCodes.OK, message)

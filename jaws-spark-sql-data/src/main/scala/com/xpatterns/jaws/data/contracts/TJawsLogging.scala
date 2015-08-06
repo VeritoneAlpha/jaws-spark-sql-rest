@@ -42,44 +42,57 @@ trait TJawsLogging {
     }
   }
 
-  def setQueryName(queryId:String, name:String, description:String, overwrite:Boolean) = {
+  def setQueryProperties(queryId: String, name: Option[String], description: Option[String], overwrite: Boolean) = {
     Utils.TryWithRetry {
-      val newQueryName = if (name != null) name.trim() else name
-
-      if (!overwrite) {
-        if (newQueryName != null && getQueriesByName(newQueryName).queries.nonEmpty) {
-          // When the query name already exist and the overwrite flag is not set,
-          // then the client should be warned about it
-          throw new Exception(s"There is already a query with the name $name. To overwrite " +
-            s"the query name, please send the parameter overwrite set on true")
-        }
-      } else if (newQueryName != null) {
-        // When overwriting the old values, the old queries should have the name and description reset
-        val notFoundState = QueryState.NOT_FOUND.toString
-        for (query <- getQueriesByName(newQueryName).queries) {
-          if (query.state != notFoundState) {
-            query.metaInfo.name = null
-            query.metaInfo.description = null
-            setMetaInfo(query.queryID, query.metaInfo)
-          }
-        }
-      }
-
       val metaInfo = getMetaInfo(queryId)
-      if (metaInfo.name != null) {
-        // delete the old query name
-        deleteQueryName(metaInfo.name)
-      }
-      metaInfo.name = newQueryName
-      metaInfo.description = description
-      setMetaInfo(queryId, metaInfo)
 
-      if (metaInfo.name != null) {
-        // save the query name to be able to search it
-        saveQueryName(metaInfo.name, queryId)
+      if (name != None) {
+        updateQueryName(queryId, metaInfo, name.get, overwrite)
       }
+
+      if (description != None) {
+        metaInfo.description = description
+      }
+
+
+      setMetaInfo(queryId, metaInfo)
     }
   }
+
+  private def updateQueryName(queryId: String, metaInfo: QueryMetaInfo, name: String, overwrite:Boolean) = {
+    val newQueryName = if (name != null) name.trim() else null
+
+    if (!overwrite) {
+      if (newQueryName != null && getQueriesByName(newQueryName).queries.nonEmpty) {
+        // When the query name already exist and the overwrite flag is not set,
+        // then the client should be warned about it
+        throw new Exception(s"There is already a query with the name $name. To overwrite " +
+          s"the query name, please send the parameter overwrite set on true")
+      }
+    } else if (newQueryName != null) {
+      // When overwriting the old values, the old queries should have the name and description reset
+      val notFoundState = QueryState.NOT_FOUND.toString
+      for (query <- getQueriesByName(newQueryName).queries) {
+        if (query.state != notFoundState) {
+          query.metaInfo.name = None
+          query.metaInfo.description = None
+          setMetaInfo(query.queryID, query.metaInfo)
+        }
+      }
+    }
+
+    if (metaInfo.name != None && metaInfo.name.get != null) {
+      // delete the old query name
+      deleteQueryName(metaInfo.name.get)
+    }
+    metaInfo.name = Some(newQueryName)
+
+    if (metaInfo.name != None && metaInfo.name.get != null) {
+      // save the query name to be able to search it
+      saveQueryName(metaInfo.name.get, queryId)
+    }
+  }
+
 
   def setMetaInfo(queryId: String, metainfo: QueryMetaInfo)
 
