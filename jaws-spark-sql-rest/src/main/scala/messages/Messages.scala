@@ -24,7 +24,7 @@ case class DeleteQueryMessage(queryID: String)
 case class RegisterTableMessage(name: String, path: String, namenode: String)
 case class UnregisterTableMessage(name: String)
 case class GetParquetTablesMessage(tables: Array[String], describe: Boolean)
-case class UpdateQueryPropertiesMessage(queryID:String, name:Option[String], description:Option[String], overwrite:Boolean)
+case class UpdateQueryPropertiesMessage(queryID:String, name:Option[String], description:Option[String], published:Option[Boolean], overwrite:Boolean)
 
 
 object ResultFormat {

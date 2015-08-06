@@ -48,6 +48,7 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
   val TYPE_LOG = 1
   val TYPE_META = 2
   val TYPE_QUERY_NAME = 3
+  val TYPE_QUERY_PUBLISHED_STATE = 4
 
   val logger = Logger.getLogger("JawsCassandraLogging")
 
@@ -452,6 +453,52 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
     }
   }
 
+  def setQueryPublishedStatus(queryId: String, metaInfo: QueryMetaInfo, published: Boolean): Unit = {
+    Utils.TryWithRetry {
+      logger.info(s"Updating published status of $queryId to $published")
+
+      val mutator = HFactory.createMutator(keyspace, is)
+
+      // Delete the old entry for query
+      deleteQueryPublishedStatus(queryId, metaInfo.published)
+
+      if (published) {
+        val column = new Composite()
+        column.setComponent(LEVEL_TYPE, TYPE_QUERY_PUBLISHED_STATE, is)
+        column.setComponent(LEVEL_UUID, queryId, ss)
+        mutator.addInsertion(QUERY_NAME_PUBLISHED_ROW, CF_SPARK_LOGS, HFactory.createColumn(column, metaInfo.name.getOrElse(""), cs, ss))
+      } else {
+        val column = new Composite()
+        column.setComponent(LEVEL_TYPE, TYPE_QUERY_PUBLISHED_STATE, is)
+        column.setComponent(LEVEL_UUID, queryId, ss)
+        mutator.addInsertion(QUERY_NAME_UNPUBLISHED_ROW, CF_SPARK_LOGS, HFactory.createColumn(column, metaInfo.name.getOrElse(""), cs, ss))
+      }
+
+      mutator.execute()
+    }
+  }
+
+  def deleteQueryPublishedStatus(queryId: String, published:Option[Boolean]): Unit = {
+    Utils.TryWithRetry {
+      logger.info(s"Deleting query published status of $queryId")
+
+      val mutator = HFactory.createMutator(keyspace, is)
+
+      if (published == None || !published.get) {
+        val column = new Composite()
+        column.setComponent(LEVEL_TYPE, TYPE_QUERY_PUBLISHED_STATE, is)
+        column.setComponent(LEVEL_UUID, queryId, ss)
+        mutator.addDeletion(QUERY_NAME_UNPUBLISHED_ROW, CF_SPARK_LOGS, column, cs)
+      } else {
+        val column = new Composite()
+        column.setComponent(LEVEL_TYPE, TYPE_QUERY_PUBLISHED_STATE, is)
+        column.setComponent(LEVEL_UUID, queryId, ss)
+        mutator.addDeletion(QUERY_NAME_PUBLISHED_ROW, CF_SPARK_LOGS, column, cs)
+      }
+      mutator.execute()
+    }
+  }
+
   def deleteQuery(queryId: String) {
     Utils.TryWithRetry {
       logger.debug(s"Deleting query: $queryId")
@@ -474,6 +521,10 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
       if (metaInfo.name != None && metaInfo.name.get != null) {
         // The query has a name. It must be deleted to not appear in search.
         deleteQueryName(metaInfo.name.get)
+
+        if (metaInfo.published != None) {
+          deleteQueryPublishedStatus(queryId, metaInfo.published)
+        }
       }
 
       logger.debug(s"Deleting meta info for: $queryId")

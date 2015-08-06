@@ -26,7 +26,7 @@ class QueryPropertiesApiActor (dals: DAL) extends Actor {
         dals.loggingDal.getState(message.queryID) match {
           case QueryState.NOT_FOUND => throw new Exception(s"The query ${message.queryID} was not found. Please provide a valid query id")
           case _ =>
-            dals.loggingDal.setQueryProperties(message.queryID, message.name, message.description, message.overwrite)
+            dals.loggingDal.setQueryProperties(message.queryID, message.name, message.description, message.published, message.overwrite)
             s"Query information for ${message.queryID} has been updated"
         }
       }

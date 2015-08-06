@@ -42,7 +42,8 @@ trait TJawsLogging {
     }
   }
 
-  def setQueryProperties(queryId: String, name: Option[String], description: Option[String], overwrite: Boolean) = {
+  def setQueryProperties(queryId: String, name: Option[String], description: Option[String], published:Option[Boolean],
+                         overwrite: Boolean) = {
     Utils.TryWithRetry {
       val metaInfo = getMetaInfo(queryId)
 
@@ -54,6 +55,17 @@ trait TJawsLogging {
         metaInfo.description = description
       }
 
+      // When the name of a query is deleted, the published parameter should be removed from query.
+      if (metaInfo.name == None || metaInfo.name.get == null) {
+        if (metaInfo.published != None) {
+          deleteQueryPublishedStatus(queryId, metaInfo.published)
+        }
+        metaInfo.description = None
+        metaInfo.published = None
+      } else if (published != None) {
+        setQueryPublishedStatus(queryId, metaInfo, published.get)
+        metaInfo.published = published
+      }
 
       setMetaInfo(queryId, metaInfo)
     }
@@ -87,12 +99,19 @@ trait TJawsLogging {
     }
     metaInfo.name = Some(newQueryName)
 
-    if (metaInfo.name != None && metaInfo.name.get != null) {
+    if (newQueryName != null) {
       // save the query name to be able to search it
-      saveQueryName(metaInfo.name.get, queryId)
+      saveQueryName(newQueryName, queryId)
+
+      // Set the default published value
+      val published = metaInfo.published.getOrElse(false)
+      setQueryPublishedStatus(queryId, metaInfo, published)
+      metaInfo.published = Some(published)
     }
   }
 
+  def setQueryPublishedStatus(queryId: String, metaInfo: QueryMetaInfo, published: Boolean)
+  def deleteQueryPublishedStatus(queryID: String, published: Option[Boolean])
 
   def setMetaInfo(queryId: String, metainfo: QueryMetaInfo)
 

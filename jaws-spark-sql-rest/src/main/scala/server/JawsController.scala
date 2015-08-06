@@ -406,7 +406,8 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
                 validateCondition(queryID != null && !queryID.trim.isEmpty, Configuration.UUID_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
                   validateCondition(metaInfo != null, Configuration.META_INFO_EXCEPTION_MESSAGE, StatusCodes.BadRequest) {
                     respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
-                      val future = ask(queryPropertiesApiActor, new UpdateQueryPropertiesMessage(queryID, metaInfo.name, metaInfo.description, overwrite))
+                      val future = ask(queryPropertiesApiActor, new UpdateQueryPropertiesMessage(queryID, metaInfo.name,
+                        metaInfo.description, metaInfo.published, overwrite))
                       future.map {
                         case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
                         case message: String => ctx.complete(StatusCodes.OK, message)

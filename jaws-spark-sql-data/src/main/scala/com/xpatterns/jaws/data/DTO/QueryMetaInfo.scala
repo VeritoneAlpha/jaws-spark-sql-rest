@@ -9,16 +9,16 @@ import scala.collection.mutable
 /**
  * Created by emaorhian
  */
-case class QueryMetaInfo(var name:Option[String], var description:Option[String], var timestamp:Long, var executionTime:Long,
+case class QueryMetaInfo(var name:Option[String], var description:Option[String], var published:Option[Boolean], var timestamp:Long, var executionTime:Long,
                          var nrOfResults:Long, var maxNrOfResults:Long, var resultsDestination:Int,
                          var isLimited:Boolean){
  // resultsDestination : 0-cassandra, 1-hdfs, 2-tachyon 
    def this() = {
-     this(None, None, 0, 0, 0, 0, 0, false)
+     this(None, None, None, 0, 0, 0, 0, 0, false)
    }
 
   def this(nrOfResults : Long, maxNrOfResults : Long, resultsDestination : Int, isLimited : Boolean) = {
-    this(None, None, 0, 0, nrOfResults, maxNrOfResults, resultsDestination, isLimited)
+    this(None, None, None, 0, 0, nrOfResults, maxNrOfResults, resultsDestination, isLimited)
   }
    
 }
@@ -38,6 +38,10 @@ object QueryMetaInfo {
 
       if (metaInfo.description != None && metaInfo.description.get != null) {
         fields("description") = JsString(metaInfo.description.get)
+      }
+
+      if (metaInfo.published != None) {
+        fields("published") = JsBoolean(metaInfo.published.get)
       }
 
       fields("timestamp") = JsNumber(metaInfo.timestamp)
@@ -64,6 +68,12 @@ object QueryMetaInfo {
           None
         }
 
+        val published = if (fields.contains("published")) {
+          fields.getOrElse("published", JsNull).convertTo[Option[Boolean]]
+        } else {
+          None
+        }
+
         val timestamp = fields.getOrElse("timestamp", JsNumber(0)).convertTo[Long]
         val executionTime = fields.getOrElse("executionTime", JsNumber(0)).convertTo[Long]
         val nrOfResults = fields.getOrElse("nrOfResults", JsNumber(0)).convertTo[Long]
@@ -71,7 +81,7 @@ object QueryMetaInfo {
         val resultsDestination = fields.getOrElse("resultsDestination", JsNumber(0)).convertTo[Int]
         val isLimited = fields.getOrElse("isLimited", JsFalse).convertTo[Boolean]
 
-        new QueryMetaInfo(name, description, timestamp, executionTime, nrOfResults, maxNrOfResults,
+        new QueryMetaInfo(name, description, published, timestamp, executionTime, nrOfResults, maxNrOfResults,
           resultsDestination, isLimited)
 
       case _ => deserializationError("Error while trying to parse a QueryMetaInfo")

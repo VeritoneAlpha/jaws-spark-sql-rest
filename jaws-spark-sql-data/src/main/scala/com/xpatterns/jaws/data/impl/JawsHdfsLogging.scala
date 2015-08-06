@@ -203,6 +203,18 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
     }
   }
 
+  def setQueryPublishedStatus(queryId: String, metaInfo: QueryMetaInfo, published: Boolean): Unit = {
+    Utils.TryWithRetry {
+      logger.info(s"Updating published status of $queryId to $published")
+    }
+  }
+
+  def deleteQueryPublishedStatus(queryId: String, published: Option[Boolean]): Unit = {
+    Utils.TryWithRetry {
+      logger.info(s"Deleting query published status of $queryId")
+    }
+  }
+
   def deleteQuery(queryId: String) {
     logger.debug(s"Deleting query: $queryId")
 
