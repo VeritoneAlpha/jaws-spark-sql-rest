@@ -362,6 +362,20 @@ object JawsController extends App with SimpleRoutingApp with CORSDirectives {
           }
         }
     } ~
+    path("queries" / "published") {
+      get {
+        corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
+          respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+            val future = ask(getQueriesActor, GetPublishedQueries())
+
+            future.map {
+              case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
+              case result:Array[String] => ctx.complete(StatusCodes.OK, result)
+            }
+          }
+        }
+      }
+    } ~
     pathPrefix("queries") {
       pathEnd {
         get {

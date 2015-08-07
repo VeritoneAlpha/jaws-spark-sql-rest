@@ -203,6 +203,10 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
     }
   }
 
+  override def getPublishedQueries():Array[String] = {
+    Array[String]()
+  }
+
   def setQueryPublishedStatus(queryId: String, metaInfo: QueryMetaInfo, published: Boolean): Unit = {
     Utils.TryWithRetry {
       logger.info(s"Updating published status of $queryId to $published")

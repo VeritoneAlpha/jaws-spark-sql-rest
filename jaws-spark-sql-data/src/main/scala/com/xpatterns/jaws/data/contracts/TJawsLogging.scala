@@ -129,6 +129,7 @@ trait TJawsLogging {
     }
   }
 
+  def getPublishedQueries():Array[String]
   def getQueriesByName(name:String):Queries
   def deleteQueryName(name: String)
   def saveQueryName(name: String, queryId: String)

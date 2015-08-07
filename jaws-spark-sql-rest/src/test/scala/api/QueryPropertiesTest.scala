@@ -154,9 +154,12 @@ class QueryPropertiesTest extends FunSuite with BeforeAndAfter with ScalaFutures
   test ("Setting a query published should keep the flag") {
     val f = tAct ? UpdateQueryPropertiesMessage(queryId, Some(QUERY_NAME_1), Some(""), Some(true), overwrite = false)
     whenReady(f, timeout) (s => {
-
       val newMetaInfo = dals.loggingDal.getMetaInfo(queryId)
       assert(newMetaInfo.published === Some(true), "The flag is not saved")
+
+      val publishedQueries = dals.loggingDal.getPublishedQueries()
+      assert(publishedQueries.length === 1, "There should be one query published")
+      assert(publishedQueries(0) === QUERY_NAME_1, "The published query name is not found")
     })
   }
 
@@ -168,6 +171,10 @@ class QueryPropertiesTest extends FunSuite with BeforeAndAfter with ScalaFutures
     whenReady(f2) (s => {
       val newMetaInfo = dals.loggingDal.getMetaInfo(queryId)
       assert(newMetaInfo.published === Some(true), "The flag is not saved")
+
+      val publishedQueries = dals.loggingDal.getPublishedQueries()
+      assert(publishedQueries.length === 1, "There should be one query published")
+      assert(publishedQueries(0) === QUERY_NAME_2, "The published query name is not found")
     })
   }
 
@@ -179,10 +186,12 @@ class QueryPropertiesTest extends FunSuite with BeforeAndAfter with ScalaFutures
     whenReady(f2) (s => {
       val newMetaInfo = dals.loggingDal.getMetaInfo(queryId)
       assert(newMetaInfo.published === None, "The flag should not be saved")
+      val publishedQueries = dals.loggingDal.getPublishedQueries()
+      assert(publishedQueries.length === 0, "There should be no query published")
     })
   }
 
-  test ("Unpublishing a published query should set the flag on false") {
+  test ("Unpublishing a query should set the flag on false") {
     val f = tAct ? UpdateQueryPropertiesMessage(queryId, Some(QUERY_NAME_1), Some(""), Some(true), overwrite = false)
     Await.ready(f, 10.seconds)
     val f2 = tAct ? UpdateQueryPropertiesMessage(queryId, None, None, Some(false), overwrite = true)
@@ -192,5 +201,4 @@ class QueryPropertiesTest extends FunSuite with BeforeAndAfter with ScalaFutures
       assert(newMetaInfo.published === Some(false), "The flag should be on false")
     })
   }
-
 }

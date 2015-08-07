@@ -1,6 +1,7 @@
 package com.xpatterns.jaws.data.impl
 
 import java.util.TreeMap
+
 import scala.collection.JavaConverters._
 import org.apache.log4j.Logger
 import com.xpatterns.jaws.data.DTO.Log
@@ -24,11 +25,12 @@ import me.prettyprint.hector.api.query.QueryResult
 import me.prettyprint.hector.api.query.SliceQuery
 import net.liftweb.json._
 import spray.json._
-import spray.json.DefaultJsonProtocol._
 import me.prettyprint.hector.api.query.MultigetSliceQuery
 import me.prettyprint.hector.api.beans.Rows
 import java.util.ArrayList
 import com.xpatterns.jaws.data.DTO.QueryMetaInfo
+
+import scala.collection.mutable.ArrayBuffer
 
 class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
 
@@ -257,7 +259,7 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
       logger.debug("Reading queries states starting with the query: " + queryId)
 
       val map = new TreeMap[String, Query]()
-      val stateList = Array[Query]()
+
       val keysList: java.util.List[Integer] = new ArrayList[Integer]()
 
       for (key <- 0 until CF_SPARK_LOGS_NUMBER_OF_ROWS) {
@@ -288,7 +290,7 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
       val result: QueryResult[Rows[Integer, Composite, String]] = multiSliceQuery.execute()
       val rows = result.get()
       if (rows == null || rows.getCount() == 0) {
-        return new Queries(stateList)
+        return new Queries(Array[Query]())
       }
 
       val rrows = rows.asScala
@@ -339,8 +341,6 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
     Utils.TryWithRetry {
       logger.debug(s"Reading queries states for queries with name $name")
 
-      val stateList = Array[Query]()
-
       val key = computeRowKey(name)
 
       val column = new Composite()
@@ -360,7 +360,7 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
           }
         }
       }
-      new Queries(stateList)
+      new Queries(Array[Query]())
     }
   }
 
@@ -451,6 +451,41 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
 
       mutator.execute()
     }
+  }
+
+  override def getPublishedQueries():Array[String] = {
+    Utils.TryWithRetry {
+      logger.info(s"Getting the published queries")
+
+      val column = new Composite()
+      column.addComponent(LEVEL_TYPE, TYPE_QUERY_PUBLISHED_STATE, ComponentEquality.EQUAL)
+
+      val sliceQuery = HFactory.createSliceQuery(keyspace, is, cs, ss)
+      sliceQuery.setColumnFamily(CF_SPARK_LOGS).setKey(QUERY_NAME_PUBLISHED_ROW).setColumnNames(column)
+        .setRange(null, null, false, Integer.MAX_VALUE)
+
+
+      val result = sliceQuery.execute()
+
+      if (result != null) {
+        val queryResult = result.get()
+
+        if (queryResult == null || queryResult.getColumns == null) {
+          return Array[String]()
+        }
+
+       val columnsIterator = queryResult.getColumns.iterator()
+
+        val arrayBuffer = ArrayBuffer[String]()
+
+        while (columnsIterator.hasNext) {
+          val compositeColumn = columnsIterator.next()
+          arrayBuffer += compositeColumn.getValue
+        }
+        return arrayBuffer.toArray
+      }
+    }
+    Array[String]()
   }
 
   def setQueryPublishedStatus(queryId: String, metaInfo: QueryMetaInfo, published: Boolean): Unit = {

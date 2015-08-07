@@ -9,6 +9,7 @@ case class CancelMessage(queryID: String) extends Serializable
 case class GetDatabasesMessage()
 case class GetQueriesMessage(queryIDs: Seq[String])
 case class GetQueriesByName(name: String)
+case class GetPublishedQueries()
 case class GetPaginatedQueriesMessage(startQueryID: String, limit: Int)
 case class GetLogsMessage(queryID: String, startDate: Long, limit: Int)
 case class GetResultsMessage(queryID: String, offset: Int, limit: Int, format : String)
