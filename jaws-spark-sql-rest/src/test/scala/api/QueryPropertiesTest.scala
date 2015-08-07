@@ -113,7 +113,7 @@ class QueryPropertiesTest extends FunSuite with BeforeAndAfter with ScalaFutures
     Await.ready(f, 10.seconds)
     val f2 = tAct ? UpdateQueryPropertiesMessage(secondQueryId, Some(QUERY_NAME_1), Some(""), None, overwrite = false)
 
-    whenReady(f2) (s => {
+    whenReady(f2, timeout) (s => {
       assert(s === ErrorMessage(s"Updating query failed with the following message: There is already a query with the name $QUERY_NAME_1. " +
         s"To overwrite the query name, please send the parameter overwrite set on true"))
       val query = dals.loggingDal.getQueriesByName(QUERY_NAME_1).queries(0)
@@ -130,7 +130,7 @@ class QueryPropertiesTest extends FunSuite with BeforeAndAfter with ScalaFutures
     Await.ready(f, 10.seconds)
     val f2 = tAct ? UpdateQueryPropertiesMessage(secondQueryId, Some(QUERY_NAME_1), Some(""), None, overwrite = true)
 
-    whenReady(f2) (s => {
+    whenReady(f2, timeout) (s => {
       assert(s === s"Query information for $secondQueryId has been updated")
       val query = dals.loggingDal.getQueriesByName(QUERY_NAME_1).queries(0)
       assert(query.query === queryScript)
@@ -143,7 +143,7 @@ class QueryPropertiesTest extends FunSuite with BeforeAndAfter with ScalaFutures
     Await.ready(f, 10.seconds)
     val f2 = tAct ? UpdateQueryPropertiesMessage(queryId, Some(null), Some(""), None, overwrite = true)
 
-    whenReady(f2) (s => {
+    whenReady(f2, timeout) (s => {
       val newMetaInfo = dals.loggingDal.getMetaInfo(queryId)
       assert(newMetaInfo.name === None)
       assert(dals.loggingDal.getQueriesByName(QUERY_NAME_1).queries.length === 0, "The name of the query should be deleted")
@@ -168,7 +168,7 @@ class QueryPropertiesTest extends FunSuite with BeforeAndAfter with ScalaFutures
     Await.ready(f, 10.seconds)
     val f2 = tAct ? UpdateQueryPropertiesMessage(queryId, Some(QUERY_NAME_2), Some(""), None, overwrite = true)
 
-    whenReady(f2) (s => {
+    whenReady(f2, timeout) (s => {
       val newMetaInfo = dals.loggingDal.getMetaInfo(queryId)
       assert(newMetaInfo.published === Some(true), "The flag is not saved")
 
@@ -183,7 +183,7 @@ class QueryPropertiesTest extends FunSuite with BeforeAndAfter with ScalaFutures
     Await.ready(f, 10.seconds)
     val f2 = tAct ? UpdateQueryPropertiesMessage(queryId, Some(null), Some(""), None, overwrite = true)
 
-    whenReady(f2) (s => {
+    whenReady(f2, timeout) (s => {
       val newMetaInfo = dals.loggingDal.getMetaInfo(queryId)
       assert(newMetaInfo.published === None, "The flag should not be saved")
       val publishedQueries = dals.loggingDal.getPublishedQueries()
@@ -196,7 +196,7 @@ class QueryPropertiesTest extends FunSuite with BeforeAndAfter with ScalaFutures
     Await.ready(f, 10.seconds)
     val f2 = tAct ? UpdateQueryPropertiesMessage(queryId, None, None, Some(false), overwrite = true)
 
-    whenReady(f2) (s => {
+    whenReady(f2, timeout) (s => {
       val newMetaInfo = dals.loggingDal.getMetaInfo(queryId)
       assert(newMetaInfo.published === Some(false), "The flag should be on false")
     })

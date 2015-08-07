@@ -252,6 +252,9 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
     val metaInfo = getMetaInfo(queryId)
     if (metaInfo.name != None && metaInfo.name.get != null) {
       deleteQueryName(metaInfo.name.get)
+      if (metaInfo.published != None) {
+        deleteQueryPublishedStatus(queryId, metaInfo.published)
+      }
     }
 
     logger.debug(s"Deleting meta info for: $queryId")
