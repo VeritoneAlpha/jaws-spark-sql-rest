@@ -571,9 +571,10 @@ Example:
         "queryID": "143205136408871e22b82-e1b7-4b95-ac0f-1c798154628e",
         "query": "select * from x limit 1",
         "metaInfo": {
-          "name": "test-query"
-          "description": "This is a test query"
+          "name": "test-query",
+          "description": "This is a test query",
           "executionTime": 100,
+          "published": true,
           "timestamp": 1438604592241,
           "nrOfResults": 1,
           "maxNrOfResults": 3,
@@ -589,13 +590,24 @@ This api allows to set a name and description for an executed query. This allow 
 
 #####Set a query name: 
 
-        curl -d '{"name": "test", "description": "This is a test query"}' 'http://devbox.local:9080/jaws/queries/143205136108871e22b82-e1b7-4b95-ac0f-1c798154628e?overwrite=false' -X PUT
+        curl -d '{"name": "test", "description": "This is a test query", "published": true}' 'http://devbox.local:9080/jaws/queries/143205136108871e22b82-e1b7-4b95-ac0f-1c798154628e?overwrite=false' -X PUT
 
 Parameters:
 
   * overwrite [not required]: (default false) if the value for this parameter is set on false and another query has
     the same name that is sent, an error will be returned because the name should be unique. When the parameter is set on
-    true, the name is updated and the old query has its name deleted. 
+    true, the name is updated and the old query has its name deleted.
+     
+The JSON data that is sent may contain the following fields:
+  
+  * name [not required]: the new name of the query. If there is another query with the same 
+      name, and the **overwrite** parameter is set on false, an error will be thrown because the name has to be unique.
+      To remove the name of a query this parameter should be set as **null**. Also if this parameter is missing 
+      no modification is made on name of a query  
+  * description [not required]: the new description of the query.
+  * published [not required] (boolean): the published state of the query. When the query is published, its name is 
+        available using a special api. The default value for a new query name is **false**. When a query has no name,
+        this field is not displayed in the meta information of the query.
     
 Results:
 
@@ -621,8 +633,9 @@ Example:
         "queryID": "143205136108871e22b82-e1b7-4b95-ac0f-1c798154628e",
         "query": "select * from x limit 1",
         "metaInfo": {
-          "name": "test"
-          "description": "This is a test query"
+          "name": "test",
+          "description": "This is a test query",
+          "published": true,
           "executionTime": 100,
           "timestamp": 1438604592241,
           "nrOfResults": 1,
@@ -647,9 +660,20 @@ The api returns an uuid that represents the new query that is executed. The quer
 
 Example:
 
-1438767470670203d4e55-8419-4020-a5a9-02d93d03d4c4
+    1438767470670203d4e55-8419-4020-a5a9-02d93d03d4c4
 
+#####Retrieve all published query names 
+    
+        curl 'http://devbox.local:9080/jaws/queries/published' -X GET
 
+Results:
+    
+A list that contains the name of published queries.
+
+Example:
+    
+     ["test", "test-query"]
+  
 
 #### Delete query api:
 
