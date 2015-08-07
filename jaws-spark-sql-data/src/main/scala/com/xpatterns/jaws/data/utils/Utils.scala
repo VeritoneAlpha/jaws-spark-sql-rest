@@ -24,6 +24,8 @@ object Utils {
   val STATUS_FOLDER = "stateFolder"
   val METAINFO_FOLDER = "metaInfoFolder"
   val QUERY_NAME_FOLDER = "queryNameFolder"
+  val QUERY_PUBLISHED_FOLDER = "queryNamePublishedFolder"
+  val QUERY_UNPUBLISHED_FOLDER = "queryNameUnpublishedFolder"
   val DETAILS_FOLDER = "detailsFolder"
   val RESULTS_FOLDER = "resultsFolder"
   val SCHEMA_FOLDER = "schemaFolder"

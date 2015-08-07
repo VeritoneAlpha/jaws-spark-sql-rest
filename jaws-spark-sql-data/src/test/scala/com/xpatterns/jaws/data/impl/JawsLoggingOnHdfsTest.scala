@@ -34,6 +34,8 @@ class JawsLoggingOnHdfsTest extends FunSuite with BeforeAndAfter {
       val resultsFolder = Option(hadoopConf.getString("resultsFolder"))
       val metaInfoFolder = Option(hadoopConf.getString("metaInfoFolder"))
       val queryNameFolder = Option(hadoopConf.getString("queryNameFolder"))
+      val queryPublishedFolder = Option(hadoopConf.getString("queryPublishedFolder"))
+      val queryUnpublishedFolder = Option(hadoopConf.getString("queryUnpublishedFolder"))
       val namenode = Option(hadoopConf.getString("namenode"))
 
       val configuration = new org.apache.hadoop.conf.Configuration()
@@ -55,6 +57,8 @@ class JawsLoggingOnHdfsTest extends FunSuite with BeforeAndAfter {
       configuration.set(Utils.DETAILS_FOLDER, detailsFolder.getOrElse("jawsDetails"))
       configuration.set(Utils.METAINFO_FOLDER, metaInfoFolder.getOrElse("jawsMetainfoFolder"))
       configuration.set(Utils.QUERY_NAME_FOLDER, queryNameFolder.getOrElse("jawsQueryNameFolder"))
+      configuration.set(Utils.QUERY_PUBLISHED_FOLDER, queryPublishedFolder.getOrElse("jawsQueryPublishedFolder"))
+      configuration.set(Utils.QUERY_UNPUBLISHED_FOLDER, queryUnpublishedFolder.getOrElse("jawsQueryUnpublishedFolder"))
       configuration.set(Utils.RESULTS_FOLDER, resultsFolder.getOrElse("jawsResultsFolder"))
       logingDal = new JawsHdfsLogging(configuration)
     }

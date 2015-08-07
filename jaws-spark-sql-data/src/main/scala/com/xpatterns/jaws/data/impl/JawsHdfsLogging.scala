@@ -1,22 +1,21 @@
 package com.xpatterns.jaws.data.impl
 
+import java.util
+
 import org.apache.hadoop.conf.Configuration
 import org.apache.log4j.Logger
 import com.xpatterns.jaws.data.contracts.TJawsLogging
 import com.xpatterns.jaws.data.DTO.Logs
 import java.util.Comparator
-import java.util.SortedSet
 import com.xpatterns.jaws.data.DTO.Log
 import com.xpatterns.jaws.data.DTO.Queries
 import com.xpatterns.jaws.data.DTO.Query
 import com.xpatterns.jaws.data.DTO.QueryMetaInfo
-import net.liftweb.json._
 import spray.json._
 import com.xpatterns.jaws.data.utils.QueryState
 import com.xpatterns.jaws.data.utils.Utils
-import org.apache.hadoop.fs.Path
-import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.io.IOUtils
+
+import scala.collection.mutable.ArrayBuffer
 
 class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
 
@@ -30,10 +29,12 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
   Utils.createFolderIfDoesntExist(configuration, configuration.get(Utils.DETAILS_FOLDER), forcedMode)
   Utils.createFolderIfDoesntExist(configuration, configuration.get(Utils.METAINFO_FOLDER), forcedMode)
   Utils.createFolderIfDoesntExist(configuration, configuration.get(Utils.QUERY_NAME_FOLDER), forcedMode)
+  Utils.createFolderIfDoesntExist(configuration, configuration.get(Utils.QUERY_PUBLISHED_FOLDER), forcedMode)
+  Utils.createFolderIfDoesntExist(configuration, configuration.get(Utils.QUERY_UNPUBLISHED_FOLDER), forcedMode)
 
   override def setState(uuid: String, queryState: QueryState.QueryState) {
-    logger.debug("Writing query state " + queryState.toString() + " to query " + uuid)
-    Utils.rewriteFile(queryState.toString(), configuration, getQueryStateFilePath(uuid))
+    logger.debug("Writing query state " + queryState.toString + " to query " + uuid)
+    Utils.rewriteFile(queryState.toString, configuration, getQueryStateFilePath(uuid))
 
   }
 
@@ -50,9 +51,9 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
 
     logger.debug("Writing log " + log + " to query " + queryId + " at time " + time)
     val folderName = getQueryLogsFolderPath(queryId)
-    val fileName = folderName + "/" + time.toString()
+    val fileName = folderName + "/" + time.toString
     val logMessage = jobId + QUERYID_SEPARATOR + log
-    Utils.createFolderIfDoesntExist(configuration, folderName, false)
+    Utils.createFolderIfDoesntExist(configuration, folderName, forcedMode = false)
     Utils.rewriteFile(logMessage, configuration, fileName)
 
   }
@@ -66,14 +67,13 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
       val state = Utils.readFile(configuration, filename)
       return QueryState.withName(state)
     }
-    return QueryState.NOT_FOUND
+    QueryState.NOT_FOUND
   }
 
   override def getScriptDetails(queryId: String): String = {
     logger.info("Reading script details for query: " + queryId)
     val filename = getQueryDetailsFilePath(queryId)
-    return if (Utils.checkFileExistence(filename, configuration)) Utils.readFile(configuration, filename) else ""
-
+    if (Utils.checkFileExistence(filename, configuration)) Utils.readFile(configuration, filename) else ""
   }
 
   override def getLogs(queryId: String, time: Long, limit: Int): Logs = {
@@ -85,15 +85,11 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
     var logs = Array[Log]()
     if (Utils.checkFileExistence(folderName, configuration)) {
       var files = Utils.listFiles(configuration, folderName, new Comparator[String]() {
-
-        override def compare(o1: String, o2: String): Int = {
-          return o1.compareTo(o2)
-        }
-
+        override def compare(o1: String, o2: String) = o1.compareTo(o2)
       })
 
-      if (files.contains(time.toString())) {
-        files = files.tailSet(time.toString())
+      if (files.contains(time.toString)) {
+        files = files.tailSet(time.toString)
       }
 
       val filesToBeRead = getSubset(limit, files)
@@ -107,22 +103,22 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
       })
     }
 
-    return new Logs(logs, state)
+    new Logs(logs, state)
   }
 
-  def getSubset(limit: Int, files: SortedSet[String]): List[String] = {
+  def getSubset(limit: Int, files: util.SortedSet[String]): List[String] = {
     var filesToBeRead = List[String]()
     var limitMutable = limit
 
     val iterator = files.iterator()
 
-    while (iterator.hasNext() && limitMutable > 0) {
+    while (iterator.hasNext && limitMutable > 0) {
       val file = iterator.next()
       filesToBeRead = filesToBeRead ++ List(file)
       limitMutable = limitMutable - 1
     }
 
-    return filesToBeRead
+    filesToBeRead
   }
 
   override def getQueries(queryId: String, limit: Int): Queries = {
@@ -131,13 +127,8 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
     var stateList = Array[Query]()
 
     val folderName = configuration.get(Utils.STATUS_FOLDER)
-    val startFilename = folderName + "/" + queryIdValue
     var files = Utils.listFiles(configuration, folderName, new Comparator[String]() {
-
-      override def compare(o1: String, o2: String): Int = {
-        return o2.compareTo(o1)
-      }
-
+      override def compare(o1: String, o2: String): Int = o2.compareTo(o1)
     })
 
     if (files.contains(queryIdValue)) {
@@ -204,18 +195,46 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
   }
 
   override def getPublishedQueries():Array[String] = {
-    Array[String]()
+    import scala.collection.JavaConversions._
+
+    val folderName = configuration.get(Utils.QUERY_PUBLISHED_FOLDER)
+    val files = Utils.listFiles(configuration, folderName, new Comparator[String]() {
+      override def compare(o1: String, o2: String): Int = o2.compareTo(o1)
+    })
+
+    val stateList = ArrayBuffer[String]()
+    files.foreach(file => {
+      stateList += Utils.readFile(configuration, folderName + "/" + file)
+    })
+
+    stateList.toArray
   }
 
   def setQueryPublishedStatus(queryId: String, metaInfo: QueryMetaInfo, published: Boolean): Unit = {
     Utils.TryWithRetry {
       logger.info(s"Updating published status of $queryId to $published")
+      // Delete the old entry for query
+      deleteQueryPublishedStatus(queryId, metaInfo.published)
+
+      val filePath = if (published) {
+        getQueryPublishedFolderPath(queryId)
+      } else {
+        getQueryUnpublishedFolderPath(queryId)
+      }
+
+      Utils.rewriteFile(metaInfo.name.getOrElse(""), configuration, filePath)
     }
   }
 
   def deleteQueryPublishedStatus(queryId: String, published: Option[Boolean]): Unit = {
     Utils.TryWithRetry {
       logger.info(s"Deleting query published status of $queryId")
+      val filePath = if (published == None || !published.get) {
+        getQueryUnpublishedFolderPath(queryId)
+      } else {
+        getQueryPublishedFolderPath(queryId)
+      }
+      Utils.deleteFile(configuration, filePath)
     }
   }
 
@@ -262,5 +281,12 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
 
   def getQueryNameFolderPath(name: String): String = {
     configuration.get(Utils.QUERY_NAME_FOLDER) + "/" + name
+  }
+
+  def getQueryPublishedFolderPath(name: String): String = {
+    configuration.get(Utils.QUERY_PUBLISHED_FOLDER) + "/" + name
+  }
+  def getQueryUnpublishedFolderPath(name: String): String = {
+    configuration.get(Utils.QUERY_UNPUBLISHED_FOLDER) + "/" + name
   }
 }

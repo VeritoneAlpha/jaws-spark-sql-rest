@@ -69,8 +69,14 @@ class RunScriptApiActor(hdfsConf: HadoopConfiguration, hiveContext: HiveContextW
           throw new Exception(s"There is no query with the name $queryName")
         }
 
-        // Save the query name and prepare a message to execute the run query
+
         val query = queries(0)
+        // Set the previous query not published
+        if (query.metaInfo.published == Some(true)) {
+          dals.loggingDal.deleteQueryPublishedStatus(query.queryID, query.metaInfo.published)
+        }
+
+        // Save the query name and prepare a message to execute the run query
         dals.loggingDal.setQueryProperties(uuid, query.metaInfo.name, query.metaInfo.description,
           query.metaInfo.published, overwrite = true)
 
