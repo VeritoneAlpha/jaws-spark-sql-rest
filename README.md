@@ -605,7 +605,7 @@ The JSON data that is sent may contain the following fields:
       To remove the name of a query this parameter should be set as **null**. Also if this parameter is missing 
       no modification is made on name of a query  
   * description [not required]: the new description of the query.
-  * published [not required] (boolean): the published state of the query. When the query is published, its name is 
+  * published [not required]: (default false) the published state of the query. When the query is published, its name is 
         available using a special api. The default value for a new query name is **false**. When a query has no name,
         this field is not displayed in the meta information of the query.
     
