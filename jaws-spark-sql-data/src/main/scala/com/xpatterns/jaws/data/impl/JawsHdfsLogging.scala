@@ -195,44 +195,37 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
   }
 
   override def getPublishedQueries():Array[String] = {
-    import scala.collection.JavaConversions._
-
     val folderName = configuration.get(Utils.QUERY_PUBLISHED_FOLDER)
     val files = Utils.listFiles(configuration, folderName, new Comparator[String]() {
       override def compare(o1: String, o2: String): Int = o2.compareTo(o1)
     })
 
-    val stateList = ArrayBuffer[String]()
-    files.foreach(file => {
-      stateList += Utils.readFile(configuration, folderName + "/" + file)
-    })
-
-    stateList.toArray
+    files.toArray(new Array[String](files.size()))
   }
 
-  def setQueryPublishedStatus(queryId: String, metaInfo: QueryMetaInfo, published: Boolean): Unit = {
+  def setQueryPublishedStatus(name: String, metaInfo: QueryMetaInfo, published: Boolean): Unit = {
     Utils.TryWithRetry {
-      logger.info(s"Updating published status of $queryId to $published")
+      logger.info(s"Updating published status of $name to $published")
       // Delete the old entry for query
-      deleteQueryPublishedStatus(queryId, metaInfo.published)
+      deleteQueryPublishedStatus(name, metaInfo.published)
 
       val filePath = if (published) {
-        getQueryPublishedFolderPath(queryId)
+        getQueryPublishedFolderPath(name)
       } else {
-        getQueryUnpublishedFolderPath(queryId)
+        getQueryUnpublishedFolderPath(name)
       }
 
-      Utils.rewriteFile(metaInfo.name.getOrElse(""), configuration, filePath)
+      Utils.rewriteFile("", configuration, filePath)
     }
   }
 
-  def deleteQueryPublishedStatus(queryId: String, published: Option[Boolean]): Unit = {
+  def deleteQueryPublishedStatus(name: String, published: Option[Boolean]): Unit = {
     Utils.TryWithRetry {
-      logger.info(s"Deleting query published status of $queryId")
+      logger.info(s"Deleting query published status of $name")
       val filePath = if (published == None || !published.get) {
-        getQueryUnpublishedFolderPath(queryId)
+        getQueryUnpublishedFolderPath(name)
       } else {
-        getQueryPublishedFolderPath(queryId)
+        getQueryPublishedFolderPath(name)
       }
       Utils.deleteFile(configuration, filePath)
     }
@@ -253,7 +246,7 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
     if (metaInfo.name != None && metaInfo.name.get != null) {
       deleteQueryName(metaInfo.name.get)
       if (metaInfo.published != None) {
-        deleteQueryPublishedStatus(queryId, metaInfo.published)
+        deleteQueryPublishedStatus(metaInfo.name.get, metaInfo.published)
       }
     }
 

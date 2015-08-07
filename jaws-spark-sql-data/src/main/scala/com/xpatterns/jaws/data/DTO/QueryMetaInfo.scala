@@ -32,15 +32,20 @@ object QueryMetaInfo {
       val fields:mutable.Map[String, JsValue] = mutable.Map.empty[String, JsValue]
 
       // Don't serialize the null values of name and description because this value means that they are deleted.
-      if (metaInfo.name != None && metaInfo.name.get != null) {
+      val queryHasName = if (metaInfo.name != None && metaInfo.name.get != null) {
         fields("name") = JsString(metaInfo.name.get)
+        true
+      } else {
+        false
       }
 
-      if (metaInfo.description != None && metaInfo.description.get != null) {
+      // Write the description or published only when the query has a name
+      // to make sure that these properties are not visible
+      if (metaInfo.description != None && metaInfo.description.get != null && queryHasName) {
         fields("description") = JsString(metaInfo.description.get)
       }
 
-      if (metaInfo.published != None) {
+      if (metaInfo.published != None && metaInfo.name != None && metaInfo.name.get != null && queryHasName) {
         fields("published") = JsBoolean(metaInfo.published.get)
       }
 

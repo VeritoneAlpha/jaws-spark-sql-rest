@@ -55,15 +55,13 @@ trait TJawsLogging {
         metaInfo.description = description
       }
 
-      // When the name of a query is deleted, the published parameter should be removed from query.
+      // When the name of a query is not present, the description and published flags should be removed,
+      // because they appear only when a query has a name
       if (metaInfo.name == None || metaInfo.name.get == null) {
-        if (metaInfo.published != None) {
-          deleteQueryPublishedStatus(queryId, metaInfo.published)
-        }
         metaInfo.description = None
         metaInfo.published = None
       } else if (published != None) {
-        setQueryPublishedStatus(queryId, metaInfo, published.get)
+        setQueryPublishedStatus(metaInfo.name.get, metaInfo, published.get)
         metaInfo.published = published
       }
 
@@ -71,8 +69,12 @@ trait TJawsLogging {
     }
   }
 
-  private def updateQueryName(queryId: String, metaInfo: QueryMetaInfo, name: String, overwrite:Boolean) = {
+  private def updateQueryName(queryId: String, metaInfo: QueryMetaInfo, name: String, overwrite:Boolean):Unit = {
     val newQueryName = if (name != null) name.trim() else null
+
+    if (newQueryName != null && newQueryName.isEmpty) {
+      return
+    }
 
     if (!overwrite) {
       if (newQueryName != null && getQueriesByName(newQueryName).queries.nonEmpty) {
@@ -94,24 +96,26 @@ trait TJawsLogging {
     }
 
     if (metaInfo.name != None && metaInfo.name.get != null) {
-      // delete the old query name
+      // Delete the old query name
       deleteQueryName(metaInfo.name.get)
+      // Remove the old published status of the query from storage
+      deleteQueryPublishedStatus(metaInfo.name.get, metaInfo.published)
     }
     metaInfo.name = Some(newQueryName)
 
     if (newQueryName != null) {
-      // save the query name to be able to search it
+      // Save the query name to be able to search it
       saveQueryName(newQueryName, queryId)
 
       // Set the default published value
       val published = metaInfo.published.getOrElse(false)
-      setQueryPublishedStatus(queryId, metaInfo, published)
+      setQueryPublishedStatus(newQueryName, metaInfo, published)
       metaInfo.published = Some(published)
     }
   }
 
-  def setQueryPublishedStatus(queryId: String, metaInfo: QueryMetaInfo, published: Boolean)
-  def deleteQueryPublishedStatus(queryID: String, published: Option[Boolean])
+  def setQueryPublishedStatus(name: String, metaInfo: QueryMetaInfo, published: Boolean)
+  def deleteQueryPublishedStatus(name: String, published: Option[Boolean])
 
   def setMetaInfo(queryId: String, metainfo: QueryMetaInfo)
 
