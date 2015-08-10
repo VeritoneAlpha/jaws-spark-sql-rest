@@ -42,6 +42,9 @@ class HiveRunnerActor(dals: DAL) extends Actor {
       implicit val ec = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(Configuration.nrOfThreads.getOrElse("10").toInt))
       var script = ""
 
+      val startTime = System.currentTimeMillis()
+      dals.loggingDal.setTimestamp(uuid, startTime)
+
       val tryPreRunScript = Try {
         writeLaunchStatus(uuid, message.script)
         script = prepareCommands(message.script, message.limit)
@@ -55,7 +58,6 @@ class HiveRunnerActor(dals: DAL) extends Actor {
       val runResponse = future {
         Configuration.log4j.info(s"[HiveRunnerActor]: Executing commands $script")
         runHiveScript(script, uuid)
-
       }
 
       runResponse onComplete {
@@ -63,13 +65,15 @@ class HiveRunnerActor(dals: DAL) extends Actor {
           val message = s"[HiveRunnerActor]: Query $uuid has successfully finished"
           dals.resultsDal.setResults(uuid, s)
           setStatus(uuid, message, QueryState.DONE)
+
+          val executionTime = System.currentTimeMillis() - startTime
+          dals.loggingDal.setExecutionTime(uuid, executionTime)
         }
         case Failure(e) => {
           val message = s"[HiveRunnerActor]: Query $uuid has failed with the following exception ${getCompleteStackTrace(e)}"
           setStatus(uuid, message, QueryState.FAILED)
         }
       }
-
     }
   }
 

@@ -36,7 +36,8 @@ class ResultsProcessorTest extends FunSuite {
   test("getResults") {
 
     val results = getResults(List("name	age	sex", "name1	age1	sex1", "name2	age2	sex2"))
-    val requiredResults = Array(Array("name", "age", "sex"), Array("name1", "age1", "sex1"), Array("name2", "age2", "sex2"))
+    val requiredResults = Array(Row.fromSeq(Array("name", "age", "sex")), Row.fromSeq(Array("name1", "age1", "sex1")),
+      Row.fromSeq(Array("name2", "age2", "sex2")))
 
     results should be(requiredResults)
   }

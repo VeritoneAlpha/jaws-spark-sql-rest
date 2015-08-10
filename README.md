@@ -558,8 +558,9 @@ Example:
         "state": "DONE",
         "queryID": "1432051694672f716608c-49a1-4dfe-ab77-8f98810b317f",
         "query": "select * from test limit 1",
-        "executionTime": 100,
-        "runMetaInfo": {
+        "metaInfo": {
+          "executionTime": 100,
+          "timestamp": 1438604292241,                
           "nrOfResults": 1,
           "maxNrOfResults": 3,
           "resultsDestination": 0,
@@ -569,8 +570,12 @@ Example:
         "state": "DONE",
         "queryID": "143205136408871e22b82-e1b7-4b95-ac0f-1c798154628e",
         "query": "select * from x limit 1",
-        "executionTime": 100,
-        "runMetaInfo": {
+        "metaInfo": {
+          "name": "test-query",
+          "description": "This is a test query",
+          "executionTime": 100,
+          "published": true,
+          "timestamp": 1438604592241,
           "nrOfResults": 1,
           "maxNrOfResults": 3,
           "resultsDestination": 0,
@@ -579,7 +584,96 @@ Example:
       }]
     }
 
+####Query name api:
 
+This api allows to set a name and description for an executed query. This allow to find a query after its name or to re-execute it.   
+
+#####Set a query name: 
+
+        curl -d '{"name": "test", "description": "This is a test query", "published": true}' 'http://devbox.local:9080/jaws/queries/143205136108871e22b82-e1b7-4b95-ac0f-1c798154628e?overwrite=false' -X PUT
+
+Parameters:
+
+  * overwrite [not required]: (default false) if the value for this parameter is set on false and another query has
+    the same name that is sent, an error will be returned because the name should be unique. When the parameter is set on
+    true, the name is updated and the old query has its name deleted.
+     
+The JSON data that is sent may contain the following fields:
+  
+  * name [not required]: the new name of the query. If there is another query with the same 
+      name, and the **overwrite** parameter is set on false, an error will be thrown because the name has to be unique.
+      To remove the name of a query this parameter should be set as **null**. Also if this parameter is missing 
+      no modification is made on name of a query  
+  * description [not required]: the new description of the query.
+  * published [not required]: (default false) the published state of the query. When the query is published, its name is 
+        available using a special api. The default value for a new query name is **false**. When a query has no name,
+        this field is not displayed in the meta information of the query.
+    
+Results:
+
+A message that tells whether the operation has been successfully performed.  
+
+#####Retrieve a query using its name 
+    
+        curl 'http://devbox.local:9080/jaws/queries?name=test' -X GET
+
+Parameters:
+
+  * name [required]: the name of the query to look after
+   
+Results:
+    
+A list of queries and associated meta information. When there is no query with the sent name, the results is an empty array.
+
+Example:
+    
+     {
+      "queries": [{
+        "state": "DONE",
+        "queryID": "143205136108871e22b82-e1b7-4b95-ac0f-1c798154628e",
+        "query": "select * from x limit 1",
+        "metaInfo": {
+          "name": "test",
+          "description": "This is a test query",
+          "published": true,
+          "executionTime": 100,
+          "timestamp": 1438604592241,
+          "nrOfResults": 1,
+          "maxNrOfResults": 3,
+          "resultsDestination": 0,
+          "isLimited": true
+        }
+      }]
+    }
+    
+#####Running a query using its name
+
+        curl 'http://devbox.local:9080/jaws/run?name=test' -X POST
+
+Parameters:
+
+  * name [required]: the name of the query to look after
+   
+Results:
+    
+The api returns an uuid that represents the new query that is executed. The query keeps its saved settings.
+
+Example:
+
+    1438767470670203d4e55-8419-4020-a5a9-02d93d03d4c4
+
+#####Retrieve all published query names 
+    
+        curl 'http://devbox.local:9080/jaws/queries/published' -X GET
+
+Results:
+    
+A list that contains the name of published queries.
+
+Example:
+    
+     ["test", "test-query"]
+  
 
 #### Delete query api:
 

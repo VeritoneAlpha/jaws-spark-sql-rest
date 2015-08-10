@@ -91,7 +91,7 @@ object HiveUtils {
         // we won't put an uuid because it fails otherwise
         Configuration.log4j.info("[HiveUtils]: the command is a set")
         val resultSet = hiveContext.sql(cmd_trimmed)
-        loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, 0, isLimited))
+        loggingDal.setRunMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, 0, isLimited))
         null
       }
 
@@ -101,7 +101,7 @@ object HiveUtils {
         Configuration.log4j.info("[HiveUtils]: the jar to be added is" + jarPath)
         val resultSet = hiveContext.getSparkContext.addJar(jarPath)
 
-        loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, 0, isLimited))
+        loggingDal.setRunMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, 0, isLimited))
         null
       }
       case ("add", "file") if (tokens.size >= 3) => {
@@ -110,7 +110,7 @@ object HiveUtils {
         Configuration.log4j.info("[HiveUtils]: the file to be added is" + filePath)
         val resultSet = hiveContext.getSparkContext.addFile(filePath)
 
-        loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, 0, isLimited))
+        loggingDal.setRunMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, 0, isLimited))
         null
       }
 
@@ -119,7 +119,7 @@ object HiveUtils {
         val metadataResults = runMetadataCmd(hiveContext, cmd_trimmed)
         val rows = metadataResults map (arr => Row.fromSeq(arr))
         val result = new ResultsConverter(new StructType(Array(new StructField("result", StringType, true))), rows)
-        loggingDal.setMetaInfo(uuid, new QueryMetaInfo(result.result.size, maxNumberOfResults, 0, isLimited))
+        loggingDal.setRunMetaInfo(uuid, new QueryMetaInfo(result.result.size, maxNumberOfResults, 0, isLimited))
         result
       }
 
@@ -186,7 +186,7 @@ object HiveUtils {
     // change the shark Row into String[] -> for serialization purpose 
     val transformedSelectRdd = selectRdd.map(row => {
 
-      var result = row.toSeq.map(value => {
+      val result = row.toSeq.map(value => {
         Option(value) match {
           case None => "Null"
           case _ => value
@@ -203,13 +203,13 @@ object HiveUtils {
     var destination = getHdfsPath(destinationIp)
 
     userDefinedDestination.toLowerCase() match {
-      case "hdfs" => loggingDal.setMetaInfo(uuid, new QueryMetaInfo(nbOfResults, maxNumberOfResults, 1, isLimited))
+      case "hdfs" => loggingDal.setRunMetaInfo(uuid, new QueryMetaInfo(nbOfResults, maxNumberOfResults, 1, isLimited))
 
       case "tachyon" => {
-        loggingDal.setMetaInfo(uuid, new QueryMetaInfo(nbOfResults, maxNumberOfResults, 2, isLimited))
+        loggingDal.setRunMetaInfo(uuid, new QueryMetaInfo(nbOfResults, maxNumberOfResults, 2, isLimited))
         destination = getTachyonPath(destinationIp)
       }
-      case _ => loggingDal.setMetaInfo(uuid, new QueryMetaInfo(nbOfResults, maxNumberOfResults, 1, isLimited))
+      case _ => loggingDal.setRunMetaInfo(uuid, new QueryMetaInfo(nbOfResults, maxNumberOfResults, 1, isLimited))
     }
 
     // save rdd on hdfs
@@ -247,7 +247,7 @@ object HiveUtils {
     val resultRdd = hiveContext.sql(cmd)
     val result = resultRdd.collect
     val schema = resultRdd.schema
-    loggingDal.setMetaInfo(uuid, new QueryMetaInfo(result.size, maxNumberOfResults, 0, isLimited))
+    loggingDal.setRunMetaInfo(uuid, new QueryMetaInfo(result.size, maxNumberOfResults, 0, isLimited))
     new ResultsConverter(schema, result)
   }
 

@@ -3,20 +3,14 @@ package org.apache.spark.scheduler
 import com.xpatterns.jaws.data.contracts.DAL
 import org.apache.hadoop.conf.{ Configuration => HadoopConfiguration }
 import com.xpatterns.jaws.data.utils.Utils._
-import server.MainActors
 import server.Configuration
-import server.LogsActor.PushLogs
 import org.apache.commons.lang.time.DurationFormatUtils
 import com.xpatterns.jaws.data.utils.QueryState
 import implementation.HiveContextWrapper
 import com.xpatterns.jaws.data.DTO.QueryMetaInfo
-import org.apache.spark.sql.parquet.SparkParquetUtility._
-import com.xpatterns.jaws.data.DTO.ParquetTable
-import akka.actor.ActorSelection
 import akka.pattern.ask
 import messages.RegisterTableMessage
 import akka.util.Timeout
-import scala.util.Success
 import scala.util.Failure
 import scala.concurrent.ExecutionContext.Implicits.global
 import messages.ErrorMessage
@@ -41,6 +35,9 @@ class RunScriptTask(dals: DAL, hiveContext: HiveContextWrapper,
 
       val startTime = System.currentTimeMillis()
 
+      // Set the start time for the query
+      dals.loggingDal.setTimestamp(uuid, startTime)
+
       // job group id used to identify these jobs when trying to cancel them.
       hiveContext.sparkContext.setJobGroup(uuid, "")
 
@@ -57,7 +54,7 @@ class RunScriptTask(dals: DAL, hiveContext: HiveContextWrapper,
         Configuration.log4j.error(message)
         HiveUtils.logMessage(uuid, message, "sparksql", dals.loggingDal)
         dals.loggingDal.setState(uuid, QueryState.FAILED)
-        dals.loggingDal.setMetaInfo(uuid, new QueryMetaInfo(0, runMessage.maxNumberOfResults, 0, runMessage.limited))
+        dals.loggingDal.setRunMetaInfo(uuid, new QueryMetaInfo(0, runMessage.maxNumberOfResults, 0, runMessage.limited))
 
         throw new RuntimeException(e)
 

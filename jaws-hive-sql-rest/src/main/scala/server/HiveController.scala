@@ -119,8 +119,10 @@ object HiveController extends App with SimpleRoutingApp with CORSDirectives {
     configuration.set(Utils.LOGGING_FOLDER, Configuration.loggingFolder.getOrElse("jawsLogs"))
     configuration.set(Utils.STATUS_FOLDER, Configuration.stateFolder.getOrElse("jawsStates"))
     configuration.set(Utils.DETAILS_FOLDER, Configuration.detailsFolder.getOrElse("jawsDetails"))
-    configuration.set(Utils.EXECUTION_TIME_FOLDER, Configuration.executionTimeFolder.getOrElse("jawsExecutionTimeFolder"))
     configuration.set(Utils.METAINFO_FOLDER, Configuration.metaInfoFolder.getOrElse("jawsMetainfoFolder"))
+    configuration.set(Utils.QUERY_NAME_FOLDER, Configuration.queryNameFolder.getOrElse("jawsQueryNameFolder"))
+    configuration.set(Utils.QUERY_PUBLISHED_FOLDER, Configuration.queryPublishedFolder.getOrElse("jawsQueryPublishedFolder"))
+    configuration.set(Utils.QUERY_UNPUBLISHED_FOLDER, Configuration.queryUnpublishedFolder.getOrElse("jawsQueryUnpublishedFolder"))
     configuration.set(Utils.RESULTS_FOLDER, Configuration.resultsFolder.getOrElse("jawsResultsFolder"))
     configuration.set(Utils.PARQUET_TABLES_FOLDER, Configuration.parquetTablesFolder.getOrElse("parquetTablesFolder"))
 
@@ -163,7 +165,9 @@ object Configuration {
   val detailsFolder = getStringConfiguration(hadoopConf, "detailsFolder")
   val resultsFolder = getStringConfiguration(hadoopConf, "resultsFolder")
   val metaInfoFolder = getStringConfiguration(hadoopConf, "metaInfoFolder")
-  val executionTimeFolder = getStringConfiguration(hadoopConf, "executionTimeFolder")
+  val queryNameFolder = getStringConfiguration(hadoopConf, "queryNameFolder")
+  val queryPublishedFolder = getStringConfiguration(hadoopConf, "queryPublishedFolder")
+  val queryUnpublishedFolder = getStringConfiguration(hadoopConf, "queryUnpublishedFolder")
   val namenode = getStringConfiguration(hadoopConf, "namenode")
   val parquetTablesFolder = getStringConfiguration(hadoopConf, "parquetTablesFolder")
 

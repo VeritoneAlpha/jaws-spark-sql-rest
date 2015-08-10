@@ -45,9 +45,9 @@ class RunScriptApiActor(hdfsConf: HadoopConfiguration, hiveContext: HiveContextW
   }
 
   override def receive = {
-    case message: RunScriptMessage => {
+    case message: RunScriptMessage =>
 
-      val uuid = System.currentTimeMillis() + UUID.randomUUID().toString()
+      val uuid = System.currentTimeMillis() + UUID.randomUUID().toString
       val tryRun = Try {
         Configuration.log4j.info("[RunScriptApiActor -run]: running the following script: " + message.script)
         Configuration.log4j.info("[RunScriptApiActor -run]: The script will be executed with the limited flag set on " + message.limited + ". The maximum number of results is " + message.maxNumberOfResults)
@@ -57,11 +57,43 @@ class RunScriptApiActor(hdfsConf: HadoopConfiguration, hiveContext: HiveContextW
         writeLaunchStatus(uuid, message.script)
         threadPool.execute(task)
       }
-      returnResult(tryRun, uuid, "run query failed with the following message: ", sender)
-    }
+      returnResult(tryRun, uuid, "run query failed with the following message: ", sender())
+
+    case message:RunQueryMessage =>
+      val uuid = System.currentTimeMillis() + UUID.randomUUID().toString
+      val tryRunMessage = Try {
+        // Make sure that there is a query with the sent name
+        val queryName = message.name.trim()
+        val queries = dals.loggingDal.getQueriesByName(queryName).queries
+        if (queries.length == 0 || queries(0).query == null) {
+          throw new Exception(s"There is no query with the name $queryName")
+        }
+
+        val query = queries(0)
+        // Set the previous query not published
+        if (query.metaInfo.published == Some(true)) {
+          dals.loggingDal.deleteQueryPublishedStatus(query.metaInfo.name.get, query.metaInfo.published)
+        }
+
+        // Save the query name and prepare a message to execute the run query
+        dals.loggingDal.setQueryProperties(uuid, query.metaInfo.name, query.metaInfo.description,
+          query.metaInfo.published, overwrite = true)
+
+        val runScript = RunScriptMessage(query.query, query.metaInfo.isLimited, query.metaInfo.maxNrOfResults,
+          query.metaInfo.resultsDestination.toString)
+        Configuration.log4j.info("[RunScriptApiActor -run]: running the following query: " + queryName)
+        Configuration.log4j.info("[RunScriptApiActor -run]: running the following script: " + runScript.script)
+        Configuration.log4j.info("[RunScriptApiActor -run]: The script will be executed with the limited flag set on " + runScript.limited + ". The maximum number of results is " + runScript.maxNumberOfResults)
+
+        val task = new RunScriptTask(dals, hiveContext, uuid, hdfsConf, runScript)
+        taskCache.put(uuid, task)
+        writeLaunchStatus(uuid, query.query)
+        threadPool.execute(task)
+      }
+      returnResult(tryRunMessage, uuid, "run query failed with the following message: ", sender())
 
     case message: RunParquetMessage => {
-      val uuid = System.currentTimeMillis() + UUID.randomUUID().toString()
+      val uuid = System.currentTimeMillis() + UUID.randomUUID().toString
       val tryRunParquet = Try {
 
         Configuration.log4j.info(s"[RunScriptApiActor -runParquet]: running the following sql: ${message.script}")
@@ -72,10 +104,10 @@ class RunScriptApiActor(hdfsConf: HadoopConfiguration, hiveContext: HiveContextW
         writeLaunchStatus(uuid, message.script)
         threadPool.execute(task)
       }
-      returnResult(tryRunParquet, uuid, "run parquet query failed with the following message: ", sender)
+      returnResult(tryRunParquet, uuid, "run parquet query failed with the following message: ", sender())
     }
 
-    case message: CancelMessage => {
+    case message: CancelMessage =>
       Configuration.log4j.info("[RunScriptApiActor]: Canceling the jobs for the following uuid: " + message.queryID)
 
       val task = taskCache.getIfPresent(message.queryID)
@@ -98,8 +130,6 @@ class RunScriptApiActor(hdfsConf: HadoopConfiguration, hiveContext: HiveContextW
 
         }
       }
-
-    }
   }
 
   private def writeLaunchStatus(uuid: String, script: String) {
