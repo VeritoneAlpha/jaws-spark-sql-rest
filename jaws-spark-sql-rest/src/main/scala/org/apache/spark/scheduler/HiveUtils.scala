@@ -183,17 +183,8 @@ object HiveUtils {
     val selectRdd = hiveContext.sql(cmd)
     val nbOfResults = selectRdd.count()
 
-    // change the shark Row into String[] -> for serialization purpose 
-    val transformedSelectRdd = selectRdd.map(row => {
-
-      val result = row.toSeq.map(value => {
-        Option(value) match {
-          case None => "Null"
-          case _ => value
-        }
-      })
-      result.toArray
-    })
+    // change the row into an array -> for serialization purpose
+    val transformedSelectRdd = selectRdd.map(row => row.toSeq.toArray)
 
     val customIndexer = new CustomIndexer()
     val indexedRdd = customIndexer.indexRdd(transformedSelectRdd)
@@ -202,13 +193,13 @@ object HiveUtils {
     Utils.rewriteFile(serializaSchema(selectRdd.schema), conf, Configuration.schemaFolder.getOrElse("jawsSchemaFolder") + "/" + uuid)
     var destination = getHdfsPath(destinationIp)
 
-    userDefinedDestination.toLowerCase() match {
+    userDefinedDestination.toLowerCase match {
       case "hdfs" => loggingDal.setRunMetaInfo(uuid, new QueryMetaInfo(nbOfResults, maxNumberOfResults, 1, isLimited))
 
-      case "tachyon" => {
+      case "tachyon" =>
         loggingDal.setRunMetaInfo(uuid, new QueryMetaInfo(nbOfResults, maxNumberOfResults, 2, isLimited))
         destination = getTachyonPath(destinationIp)
-      }
+
       case _ => loggingDal.setRunMetaInfo(uuid, new QueryMetaInfo(nbOfResults, maxNumberOfResults, 1, isLimited))
     }
 
@@ -222,8 +213,8 @@ object HiveUtils {
     val baos = new ByteArrayOutputStream
     val oos = new ObjectOutputStream(baos)
     oos.writeObject(schema)
-    oos.close
-    baos.toByteArray()
+    oos.close()
+    baos.toByteArray
   }
 
   def deserializaSchema(schemaByteArray: Array[Byte]): StructType = {
