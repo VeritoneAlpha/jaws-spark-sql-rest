@@ -1,5 +1,7 @@
 package api
 
+import com.google.gson.Gson
+import com.xpatterns.jaws.data.DTO.Logs
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import foundation.TestBase
@@ -8,15 +10,8 @@ import org.apache.hadoop.fs.FileUtil
 import org.apache.hadoop.fs.FileSystem
 import java.io.File
 import org.apache.hadoop.fs.Path
-import akka.io.IO
-import akka.pattern.ask
-import spray.can.Http
 import spray.http._
-import spray.client.pipelining._
-import akka.actor.ActorSystem
-import scala.concurrent.Future
 import scala.concurrent.Await
-import scala.concurrent.duration._
 import scala.concurrent.duration.Duration._
 import scala.util.Success
 import scala.util.Failure
@@ -68,7 +63,6 @@ class RunApiTest extends TestBase {
   }
 
   test(" select * unlimited hdfs") {
-
     val url = s"${jawsUrl}run?limited=false&destination=hdfs"
     val queryID= selectAllFromTable(url, table)
     validataAllResultsFromNormalTable(queryID, false)
@@ -141,5 +135,30 @@ class RunApiTest extends TestBase {
     assert(flatResults.containsSlice(GenSeq(3, "m")), "Different nb of men")
     assert(flatResults.containsSlice(GenSeq(3, "f")), "Different nb of women")
 
+  }
+
+  test("logs api") {
+    val url = s"${jawsUrl}run?limited=true"
+    val body = s"use $database;\nselect count(name), sex from  $table group by sex"
+
+    val queryId = postRun(url, body)
+    val queryStatus = waitforCompletion(queryId, 100)
+    assert(queryStatus === "DONE", "Query is not DONE!")
+
+    val response = get(s"${jawsUrl}logs?queryID=$queryId&limit=100")
+
+    Await.ready(response, Inf).value.get match {
+      case Success(r: HttpResponse) =>
+        assert(r.status.isSuccess)
+        val responseText = r.entity.data.asString
+        val gson = new Gson()
+        val logs = gson.fromJson(responseText, classOf[Logs])
+        assert(logs.status === "DONE", "Query is not done!")
+        assert(logs.logs.nonEmpty, "The logs are empty")
+
+      case Failure(e) =>
+        println(e.getMessage)
+        fail()
+    }
   }
 }
