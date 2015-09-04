@@ -26,7 +26,7 @@ import scala.concurrent.duration._
  */
 @RunWith(classOf[JUnitRunner])
 class QueryPropertiesTest extends FunSuite with BeforeAndAfter with ScalaFutures {
-  val hdfsConf = JawsController.getHadoopConf()
+  val hdfsConf = JawsController.getHadoopConf
   var dals: DAL = _
 
   private val timeout:PatienceConfiguration.Timeout = timeout(100.seconds)
