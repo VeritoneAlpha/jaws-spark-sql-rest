@@ -10,10 +10,10 @@ import spray.routing._
  */
 trait UIApi extends HttpService with CORSDirectives {
   /**
-   * Handles the call for getting the ui.
+   * Handles the call <b>/jaws/ui/</b> for getting the ui.
    */
   def uiRoute: Route = pathPrefix("ui") {
-    // Handles the call made to /ui/ by returnig the index page stored in webapp folder.
+    // Handles the call made to /ui/ by returning the index page stored in webapp folder.
     pathSingleSlash {
       get {
         getFromResource("webapp/index.html")

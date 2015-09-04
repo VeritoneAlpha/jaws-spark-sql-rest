@@ -21,8 +21,8 @@ import org.apache.spark.SparkConf
 /**
  * Created by emaorhian
  */
-object JawsController extends App with BaseApi with UIApi with IndexApi with ParquetApi with MetadataApi
-  with QueryManagementApi with SimpleRoutingApp with CORSDirectives {
+object JawsController extends App with UIApi with IndexApi with ParquetApi with MetadataApi with QueryManagementApi
+  with SimpleRoutingApp with CORSDirectives {
   initialize()
 
   // initialize parquet tables
@@ -33,7 +33,7 @@ object JawsController extends App with BaseApi with UIApi with IndexApi with Par
   startServer(interface = Configuration.serverInterface.getOrElse(InetAddress.getLocalHost.getHostName),
     port = Configuration.webServicesPort.getOrElse("8080").toInt) {
       pathPrefix("jaws") {
-        uiRoute ~ indexRoute ~ parquetRoute ~ metadataRoute ~ runManagementRoute
+        uiRoute ~ indexRoute ~ runLogsResultsQueriesCancelRoute ~ parquetRoute ~ hiveSchemaRoute
       }
     }
 

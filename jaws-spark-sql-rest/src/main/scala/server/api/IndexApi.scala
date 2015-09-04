@@ -9,7 +9,9 @@ import spray.routing.{HttpService, Route}
  * Handles the calls to index page
  */
 trait IndexApi extends HttpService with CORSDirectives {
-
+  /**
+   * Handles the <b>/jaws/index</b> call. If the server starts successfully, this call returns a proper message.
+   */
   def indexRoute: Route = path("index") {
     get {
       corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
