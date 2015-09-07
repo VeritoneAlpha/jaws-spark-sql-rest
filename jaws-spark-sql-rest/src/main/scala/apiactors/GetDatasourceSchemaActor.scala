@@ -44,23 +44,15 @@ class GetDatasourceSchemaActor(hiveContext: HiveContextWrapper) extends Actor {
               case Hdfs() =>
                 val hdfsURL = HiveUtils.getHdfsPath(hostname)
 
-                // Make sure that file exists, otherwise an NPE will be thrown.
-                val newConf = new org.apache.hadoop.conf.Configuration(request.hdfsConf)
-                newConf.set("fs.defaultFS", hdfsURL)
-                if (!Utils.checkFileExistence(hdfsURL + path, newConf)) {
-                  throw new Exception("File path does not exist")
-                }
+                // Make sure that file exists
+                checkFileExistence(request.hdfsConf, hdfsURL, path)
 
                 result = hiveContext.readXPatternsParquet(hdfsURL, path).schema
               case Tachyon() =>
                 val tachyonURL = HiveUtils.getTachyonPath(hostname)
 
-                // Make sure that file exists, otherwise an NPE will be thrown.
-                val newConf = new org.apache.hadoop.conf.Configuration(request.hdfsConf)
-                newConf.set("fs.defaultFS", tachyonURL)
-                if (!Utils.checkFileExistence(tachyonURL + path, newConf)) {
-                  throw new Exception("File path does not exist")
-                }
+                // Make sure that file exists
+                checkFileExistence(request.hdfsConf, tachyonURL, path)
 
                 result = hiveContext.readXPatternsParquet(tachyonURL, path).schema
             }
@@ -79,4 +71,17 @@ class GetDatasourceSchemaActor(hiveContext: HiveContextWrapper) extends Actor {
     case request: Any => Configuration.log4j.error(request.toString)
   }
 
+  /**
+   * Checks the file existence on the sent file system. If the file is not found an exception is thrown
+   * @param hdfsConfiguration the hdfs configuration
+   * @param defaultFSUrl the file system default path. It is different for hdfs and for tachyon.
+   * @param filePath the path for the file for which the existence is checked
+   */
+  private def checkFileExistence(hdfsConfiguration: org.apache.hadoop.conf.Configuration, defaultFSUrl:String, filePath:String) = {
+    val newConf = new org.apache.hadoop.conf.Configuration(hdfsConfiguration)
+    newConf.set("fs.defaultFS", defaultFSUrl)
+    if (!Utils.checkFileExistence(defaultFSUrl + filePath, newConf)) {
+      throw new Exception("File path does not exist")
+    }
+  }
 }
