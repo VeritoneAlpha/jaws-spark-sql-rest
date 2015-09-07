@@ -256,7 +256,7 @@ trait MetadataApi extends BaseApi with CORSDirectives {
                   Configuration.log4j.error(e.getMessage)
                   ctx.complete(StatusCodes.InternalServerError, e.getMessage)
                 case Success(_) =>
-                  val schemaRequest: GetDatasourceSchemaMessage = GetDatasourceSchemaMessage(path, validSourceType, validStorageType)
+                  val schemaRequest: GetDatasourceSchemaMessage = GetDatasourceSchemaMessage(path, validSourceType, validStorageType, hdfsConf)
                   val future = ask(getDatasourceSchemaActor, schemaRequest)
                   future.map {
                     case e: ErrorMessage => ctx.complete(StatusCodes.InternalServerError, e.message)
