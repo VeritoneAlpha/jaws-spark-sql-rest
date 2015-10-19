@@ -25,6 +25,8 @@ object AvroConverter {
     callMethod(result, "noDefault")
   }
 
+  private def getNamespace (parentNamespace : String, fieldName : String ) = if (parentNamespace isEmpty()) fieldName else parentNamespace concat "." concat fieldName
+  
   private def addFields[R](dataType: DataType, fieldName: String, typeBuilder: Object, namespace: String) {
 
     dataType match {
@@ -39,7 +41,7 @@ object AvroConverter {
       case fieldType: StructType => {
         val recordBuilder = typeBuilder.getClass.getMethod("record", classOf[String]).invoke(typeBuilder, fieldName)
         val fieldAssembler = callMethod(recordBuilder.getClass.getMethod("namespace", classOf[String]).invoke(recordBuilder, namespace), "fields")
-        addStructType(fieldType, fieldAssembler.asInstanceOf[FieldAssembler[R]], fieldName)
+        addStructType(fieldType, fieldAssembler.asInstanceOf[FieldAssembler[R]], getNamespace(namespace, fieldName))
         callMethodWithNoDefaults(fieldAssembler, "endRecord")
 
       }
@@ -48,7 +50,7 @@ object AvroConverter {
         var arrayItemsBuilder = callMethod(arrayBuilder, "items")
         if (arrayType.containsNull)
           arrayItemsBuilder = callMethod(arrayItemsBuilder, "nullable")
-        addFields(arrayType.elementType, fieldName, arrayItemsBuilder, fieldName)
+        addFields(arrayType.elementType, fieldName, arrayItemsBuilder, getNamespace(namespace, fieldName))
       }
       case mapType: MapType => {
         val mapBuilder = callMethod(typeBuilder, "map")
@@ -60,7 +62,7 @@ object AvroConverter {
           case _          => throw new IllegalArgumentException("Avro schema map key has to be String")
         }
 
-        addFields(mapType.valueType, fieldName, mapValuesBuilder, fieldName)
+        addFields(mapType.valueType, fieldName, mapValuesBuilder, getNamespace(namespace, fieldName))
 
       }
       case unsupportedType => throw new IllegalArgumentException(s"Unhandled Avro schema type $unsupportedType")
@@ -125,7 +127,7 @@ object AvroConverter {
 
         case ArrayType(elementType, _) =>
         // this will be the converter for the elements is the array. The namespace has to be the name of the array
-        val elementConverter = createConverter(elementType, structName, structName)
+        val elementConverter = createConverter(elementType, structName,  getNamespace(recordNamespace, structName))
         (item: Any) => {
           if (item == null) {
             null
@@ -143,7 +145,7 @@ object AvroConverter {
 
         case MapType(StringType, valueType, _) =>
          // this will be the converter for the values is the map. The namespace has to be the name of the map
-        val valueConverter = createConverter(valueType, structName, structName)
+        val valueConverter = createConverter(valueType, structName, getNamespace(recordNamespace, structName))
 
         (item: Any) => {
           if (item == null) {
@@ -162,7 +164,7 @@ object AvroConverter {
         val schema: Schema = getAvroSchema(structType, structName, recordNamespace)
         val fieldConverters = structType.fields.map(field =>
           // the struct name is the name of the field
-          createConverter(field.dataType, field.name, structName))
+          createConverter(field.dataType, field.name, getNamespace(recordNamespace, structName)))
 
         (item: Any) => {
           if (item == null) {

@@ -14,7 +14,7 @@ import scala.util.{ Success, Failure }
 import messages.ErrorMessage
 import com.xpatterns.jaws.data.utils.{Utils, AvroConverter}
 import org.apache.spark.sql.types.StructType
-
+import com.xpatterns.jaws.data.utils.Utils._
 /**
  * Handles the operations used for getting the schema
  */
@@ -58,6 +58,8 @@ class GetDatasourceSchemaActor(hiveContext: HiveContextWrapper) extends Actor {
             }
         }
 
+        Configuration.log4j.info("Reading the avro schema from result df")
+      
         val avroSchema = AvroConverter.getAvroSchema(result).toString(true)
         Configuration.log4j.debug(avroSchema)
         avroSchema
@@ -65,7 +67,7 @@ class GetDatasourceSchemaActor(hiveContext: HiveContextWrapper) extends Actor {
 
       getDatasourceSchemaFuture onComplete {
         case Success(result) => currentSender ! result
-        case Failure(e) => currentSender ! ErrorMessage(s"GET data source schema failed with the following message: ${e.getMessage}")
+        case Failure(e) => currentSender ! ErrorMessage(s"GET data source schema failed with the following message: ${getCompleteStackTrace(e)}")
       }
 
     case request: Any => Configuration.log4j.error(request.toString)
