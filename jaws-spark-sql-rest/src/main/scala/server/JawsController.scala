@@ -22,7 +22,7 @@ import org.apache.spark.SparkConf
  * Created by emaorhian
  */
 object JawsController extends App with UIApi with IndexApi with ParquetApi with MetadataApi with QueryManagementApi
-  with SimpleRoutingApp with CORSDirectives {
+with SimpleRoutingApp with CORSDirectives {
   initialize()
 
   // initialize parquet tables
@@ -32,10 +32,10 @@ object JawsController extends App with UIApi with IndexApi with ParquetApi with 
 
   startServer(interface = Configuration.serverInterface.getOrElse(InetAddress.getLocalHost.getHostName),
     port = Configuration.webServicesPort.getOrElse("8080").toInt) {
-      pathPrefix("jaws") {
-        uiRoute ~ indexRoute ~ runLogsResultsQueriesCancelRoute ~ parquetRoute ~ hiveSchemaRoute
-      }
+    pathPrefix("jaws") {
+      uiRoute ~ indexRoute ~ runLogsResultsQueriesCancelRoute ~ parquetRoute ~ hiveSchemaRoute
     }
+  }
 
   private val reactiveServer = new ReactiveServer(Configuration.webSocketsPort.getOrElse("8081").toInt, MainActors.logsActor)
   reactiveServer.start()
@@ -48,7 +48,7 @@ object JawsController extends App with UIApi with IndexApi with ParquetApi with 
 
     Configuration.loggingType.getOrElse("cassandra") match {
       case "cassandra" => dals = new CassandraDal(Configuration.cassandraHost.get, Configuration.cassandraClusterName.get, Configuration.cassandraKeyspace.get)
-      case _           => dals = new HdfsDal(hdfsConf)
+      case _ => dals = new HdfsDal(hdfsConf)
     }
 
     hiveContext = createHiveContext(dals)
@@ -72,9 +72,17 @@ object JawsController extends App with UIApi with IndexApi with ParquetApi with 
     val hContext: HiveContextWrapper = {
       val sparkConf = configToSparkConf(Configuration.sparkConf, Configuration.applicationName.getOrElse("Jaws"), jars)
       val sContext = new SparkContext(sparkConf)
+      for (
+        property <- Configuration.sparkConf.entrySet().asScala if property.getKey.startsWith("spark-scheduler-pool") && property.getValue != null
+      ) {
+        val key = property.getKey.replaceAll("-", ".")
+        println("###Set Scheduler pool: " + key + " | " + property.getValue.unwrapped() + "###")
+        sContext.setLocalProperty(key, property.getValue.unwrapped().toString)
+      }
 
       val hContext = new HiveContextWrapper(sContext)
       hContext.sparkContext.addSparkListener(new LoggingListener(dal))
+      //hContext.sparkContext.setLocalProperty("spark.scheduler.pool", "production")
 
       HiveUtils.setSharkProperties(hContext, this.getClass.getClassLoader.getResourceAsStream("sharkSettings.txt"))
       //make sure that lazy variable hiveConf gets initialized
