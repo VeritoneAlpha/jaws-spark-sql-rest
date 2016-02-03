@@ -1,6 +1,7 @@
 .cache
 syntax: glob
 *.log
+*.log.*
 RemoteSystemsTempFiles
 *.metadata
 target/*
