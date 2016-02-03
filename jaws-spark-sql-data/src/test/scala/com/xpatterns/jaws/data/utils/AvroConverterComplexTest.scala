@@ -118,6 +118,23 @@ class AvroConverterComplexTest extends FunSuite {
     val avroResult = new AvroResult(schema, result)
     val serialized = avroResult.serializeResult
     val deserialized = AvroResult.deserializeResult(serialized, schema)
+    sc.stop()
+  }
+  
+  test("complex custom") {
+    val listInt = (1 to 10).toList
+
+    val conf = new SparkConf().setAppName("Simple Application").setMaster("local")
+    val sc = new SparkContext(conf)
     
+    val sqlContext = new SQLContext(sc)
+    import sqlContext.implicits._
+  
+    
+    val df = sc.parallelize(listInt.map(newComplObj(_))).toDF()
+
+    val result = CustomConverter.getCustomResult(df.collect, df.schema)
+    val schema = CustomConverter.getCustomSchema(df.schema)
+    sc.stop()
   }
 }

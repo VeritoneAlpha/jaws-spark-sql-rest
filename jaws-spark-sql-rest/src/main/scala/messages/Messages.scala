@@ -1,6 +1,7 @@
 package messages
 
 import implementation.SchemaSettingsFactory.{ StorageType, SourceType }
+import org.apache.hadoop.conf.Configuration
 
 /**
  * Created by emaorhian
@@ -19,7 +20,7 @@ case class GetFormattedTablesMessage(database: String, tables: Array[String])
 case class RunQueryMessage(name: String)
 case class RunScriptMessage(script: String, limited: Boolean, maxNumberOfResults: Long, rddDestination: String)
 case class RunParquetMessage(script: String, tablePath: String, namenode:String, table: String, limited: Boolean, maxNumberOfResults: Long, rddDestination: String)
-case class GetDatasourceSchemaMessage(path: String, sourceType: SourceType, storageType: StorageType)
+case class GetDatasourceSchemaMessage(path: String, sourceType: SourceType, storageType: StorageType, hdfsConf:Configuration)
 case class ErrorMessage(message: String)
 case class DeleteQueryMessage(queryID: String)
 case class RegisterTableMessage(name: String, path: String, namenode: String)

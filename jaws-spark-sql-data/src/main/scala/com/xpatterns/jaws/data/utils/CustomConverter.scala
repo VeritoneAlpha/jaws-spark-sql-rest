@@ -21,7 +21,7 @@ object CustomConverter {
       case ArrayType(elementType, _)         => new Column(fieldName, "ArrayType", "", Array(getCustomSchema(elementType, "items")))
       case MapType(StringType, valueType, _) => new Column(fieldName, "MapType", "", Array(getCustomSchema(valueType, "values")))
       case structType: StructType            => new Column(fieldName, "StructType", "", structType.fields map (field => getCustomSchema(field.dataType, field.name)) toArray)
-      case _                                 => new Column(fieldName, fieldType.toString(),"", Array.empty)
+      case _                                 => new Column(fieldName, fieldType.toString(), "", Array.empty)
     }
   }
 
@@ -52,7 +52,9 @@ object CustomConverter {
             null
           } else {
 
-            val sourceArray = item.asInstanceOf[GenericRow].toSeq
+            
+            
+            val sourceArray = if (item.isInstanceOf[Seq[Any]]) item.asInstanceOf[Seq[Any]] else item.asInstanceOf[GenericRow].toSeq
             val destination = sourceArray map { element => elementConverter(element) }
             destination.toArray
           }
