@@ -12,7 +12,7 @@ import java.util.UUID
 import akka.util.Timeout
 import server.Configuration
 import akka.pattern.ask
-import org.apache.spark.scheduler.HiveUtils
+import org.apache.spark.sql.hive.HiveUtils
 import implementation.HiveContextWrapper
 import akka.actor.Actor
 import com.xpatterns.jaws.data.DTO.Tables
@@ -41,8 +41,8 @@ class GetParquetTablesApiActor(hiveContext: HiveContextWrapper, dals: DAL) exten
           }
 
         } else {
-          var tablesMap = message.tables.map(table => {
-            if (dals.parquetTableDal.tableExists(table) == false)
+          val tablesMap = message.tables.map(table => {
+            if (!dals.parquetTableDal.tableExists(table))
               throw new Exception(s" Table $table does not exist")
              getFields(table)
           })

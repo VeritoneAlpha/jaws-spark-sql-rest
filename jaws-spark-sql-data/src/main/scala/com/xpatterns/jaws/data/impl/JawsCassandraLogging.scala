@@ -1,7 +1,5 @@
 package com.xpatterns.jaws.data.impl
 
-import java.util.TreeMap
-
 import scala.collection.JavaConverters._
 import org.apache.log4j.Logger
 import com.xpatterns.jaws.data.DTO.Log
@@ -27,7 +25,6 @@ import net.liftweb.json._
 import spray.json._
 import me.prettyprint.hector.api.query.MultigetSliceQuery
 import me.prettyprint.hector.api.beans.Rows
-import java.util.ArrayList
 import com.xpatterns.jaws.data.DTO.QueryMetaInfo
 
 import scala.collection.mutable.ArrayBuffer
@@ -225,23 +222,23 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
           Option(columnSlice) match {
             case None => return new Logs(logs, getState(queryId).toString)
             case _ => {
-              Option(columnSlice.getColumns()) match {
+              Option(columnSlice.getColumns) match {
 
                 case None => return new Logs(logs, getState(queryId).toString)
                 case _ => {
-                  if (columnSlice.getColumns().size() == 0) {
+                  if (columnSlice.getColumns.size == 0) {
                     return new Logs(logs, getState(queryId).toString)
                   }
 
-                  val columns = columnSlice.getColumns().asScala
+                  val columns = columnSlice.getColumns.asScala
                   implicit val formats = DefaultFormats
                   columns.foreach(col => {
-                    val value = col.getValue()
+                    val value = col.getValue
                     val json = parse(value)
                     val log = json.extract[Log]
                     logs = logs ++ Array(log)
                   })
-                  return return new Logs(logs, state)
+                  new Logs(logs, state)
                 }
               }
 
@@ -258,9 +255,9 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
       var skipFirst = false
       logger.debug("Reading queries states starting with the query: " + queryId)
 
-      val map = new TreeMap[String, Query]()
+      val map = new java.util.TreeMap[String, Query]()
 
-      val keysList: java.util.List[Integer] = new ArrayList[Integer]()
+      val keysList: java.util.List[Integer] = new java.util.ArrayList[Integer]()
 
       for (key <- 0 until CF_SPARK_LOGS_NUMBER_OF_ROWS) {
         keysList.add(key)
@@ -268,19 +265,19 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
 
       val startColumn = new Composite()
       startColumn.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, ComponentEquality.EQUAL)
-      if (queryId != null && !queryId.isEmpty()) {
+      if (queryId != null && !queryId.isEmpty) {
         startColumn.addComponent(LEVEL_UUID, queryId, ComponentEquality.EQUAL)
       }
 
       val endColumn = new Composite()
-      if (queryId != null && !queryId.isEmpty()) {
+      if (queryId != null && !queryId.isEmpty) {
         endColumn.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, ComponentEquality.LESS_THAN_EQUAL)
       } else {
         endColumn.addComponent(LEVEL_TYPE, TYPE_QUERY_STATE, ComponentEquality.GREATER_THAN_EQUAL)
       }
 
       val multiSliceQuery: MultigetSliceQuery[Integer, Composite, String] = HFactory.createMultigetSliceQuery(keyspace, IntegerSerializer.get.asInstanceOf[Serializer[Integer]], cs, ss)
-      if (queryId != null && !queryId.isEmpty()) {
+      if (queryId != null && !queryId.isEmpty) {
         multiSliceQuery.setColumnFamily(CF_SPARK_LOGS).setKeys(keysList).setRange(startColumn, endColumn, true, limit + 1)
         skipFirst = true
       } else {
@@ -289,7 +286,7 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
 
       val result: QueryResult[Rows[Integer, Composite, String]] = multiSliceQuery.execute()
       val rows = result.get()
-      if (rows == null || rows.getCount() == 0) {
+      if (rows == null || rows.getCount == 0) {
         return new Queries(Array[Query]())
       }
 
@@ -297,16 +294,16 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
 
       rrows.foreach(row => {
 
-        val columnSlice = row.getColumnSlice()
-        if (columnSlice == null || columnSlice.getColumns() == null || columnSlice.getColumns().size() == 0) {
+        val columnSlice = row.getColumnSlice
+        if (columnSlice == null || columnSlice.getColumns == null || columnSlice.getColumns.size == 0) {
 
         } else {
-          val columns = columnSlice.getColumns().asScala
+          val columns = columnSlice.getColumns.asScala
           columns.foreach(column => {
             val name = column.getName
             if (name.get(LEVEL_TYPE, is) == TYPE_QUERY_STATE) {
               val queryId = name.get(LEVEL_UUID, ss)
-              val query = new Query(column.getValue(), queryId, getScriptDetails(queryId),getMetaInfo(queryId))
+              val query = new Query(column.getValue, queryId, getScriptDetails(queryId),getMetaInfo(queryId))
               map.put(name.get(LEVEL_UUID, ss), query)
             }
           })
@@ -317,7 +314,9 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
     }
   }
 
-  def getCollectionFromSortedMapWithLimit(map: TreeMap[String, Query], limit: Int, skipFirst: Boolean): Array[Query] = {
+  def getCollectionFromSortedMapWithLimit(map: java.util.TreeMap[String, Query],
+                                          limit: Int,
+                                          skipFirst: Boolean): Array[Query] = {
 
     var collection = Array[Query]()
     val iterator = map.descendingKeySet().iterator()
@@ -523,7 +522,7 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
 
       val mutator = HFactory.createMutator(keyspace, is)
 
-      if (published == None || !published.get) {
+      if (published.isEmpty || !published.get) {
         val column = new Composite()
         column.setComponent(LEVEL_TYPE, TYPE_QUERY_PUBLISHED_STATE, is)
         column.setComponent(LEVEL_UUID, name, ss)
@@ -557,11 +556,11 @@ class JawsCassandraLogging(keyspace: Keyspace) extends TJawsLogging {
       mutator.addDeletion(key, CF_SPARK_LOGS, columnScriptDetails, cs)
 
       val metaInfo = getMetaInfo(queryId)
-      if (metaInfo.name != None && metaInfo.name.get != null) {
+      if (metaInfo.name.isDefined && metaInfo.name.get != null) {
         // The query has a name. It must be deleted to not appear in search.
         deleteQueryName(metaInfo.name.get)
 
-        if (metaInfo.published != None) {
+        if (metaInfo.published.isDefined) {
           deleteQueryPublishedStatus(metaInfo.name.get, metaInfo.published)
         }
       }

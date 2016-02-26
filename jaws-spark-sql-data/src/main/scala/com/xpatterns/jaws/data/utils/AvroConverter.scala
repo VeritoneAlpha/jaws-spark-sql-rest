@@ -1,14 +1,11 @@
 package com.xpatterns.jaws.data.utils
 
-import org.apache.avro.SchemaBuilder.{ BaseFieldTypeBuilder, BaseTypeBuilder, FieldAssembler, RecordDefault }
+import org.apache.avro.SchemaBuilder.FieldAssembler
 import org.apache.avro.{ Schema, SchemaBuilder }
-import org.apache.avro.SchemaBuilder.ArrayDefault
-import org.apache.avro.SchemaBuilder.FieldDefault
-import org.apache.spark.sql.catalyst.expressions.Row
+import org.apache.spark.sql.Row
 import org.apache.avro.generic.GenericRecord
 import org.apache.avro.generic.GenericData
 import java.sql.Timestamp
-import java.util.HashMap
 import org.apache.avro.generic.GenericData.Record
 import collection.JavaConversions._
 import java.nio.ByteBuffer

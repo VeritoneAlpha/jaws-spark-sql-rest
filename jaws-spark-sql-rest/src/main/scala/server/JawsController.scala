@@ -12,7 +12,7 @@ import com.xpatterns.jaws.data.impl.HdfsDal
 import spray.routing.Directive.pimpApply
 import spray.routing.SimpleRoutingApp
 import com.xpatterns.jaws.data.contracts.DAL
-import org.apache.spark.scheduler.HiveUtils
+import org.apache.spark.sql.hive.HiveUtils
 import implementation.HiveContextWrapper
 import org.apache.spark.SparkContext
 import org.apache.spark.scheduler.LoggingListener
@@ -44,10 +44,14 @@ object JawsController extends App with UIApi with IndexApi with ParquetApi with 
     Configuration.log4j.info("Initializing...")
 
     hdfsConf = getHadoopConf
-    Utils.createFolderIfDoesntExist(hdfsConf, Configuration.schemaFolder.getOrElse("jawsSchemaFolder"), forcedMode = false)
+    Utils.createFolderIfDoesntExist(hdfsConf,
+                                    Configuration.schemaFolder.getOrElse("jawsSchemaFolder"),
+                                    forcedMode = false)
 
-    Configuration.loggingType.getOrElse("cassandra") match {
-      case "cassandra" => dals = new CassandraDal(Configuration.cassandraHost.get, Configuration.cassandraClusterName.get, Configuration.cassandraKeyspace.get)
+    Configuration.dalType.getOrElse("cassandra") match {
+      case "cassandra" => dals = new CassandraDal(Configuration.cassandraHost.get,
+                                                  Configuration.cassandraClusterName.get,
+                                                  Configuration.cassandraKeyspace.get)
       case _           => dals = new HdfsDal(hdfsConf)
     }
 
@@ -55,7 +59,7 @@ object JawsController extends App with UIApi with IndexApi with ParquetApi with 
   }
 
   def createHiveContext(dal: DAL): HiveContextWrapper = {
-    val jars = Array(Configuration.jarPath.get)
+    val jars = Configuration.jarPath.get.split(",")
 
     def configToSparkConf(config: Config, contextName: String, jars: Array[String]): SparkConf = {
       val sparkConf = new SparkConf().setAppName(contextName).setJars(jars)

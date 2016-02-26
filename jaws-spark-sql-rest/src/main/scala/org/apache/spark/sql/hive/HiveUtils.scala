@@ -1,40 +1,24 @@
-package org.apache.spark.scheduler
+package org.apache.spark.sql.hive
 
-import java.io.InputStream
-import org.apache.spark.sql.parquet.SparkParquetUtility._
-import org.apache.commons.lang.RandomStringUtils
-import org.apache.commons.lang.StringUtils
-import com.xpatterns.jaws.data.utils.Utils
-import server.Configuration
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, ObjectInputStream, ObjectOutputStream}
+import java.util.regex.{Matcher, Pattern}
+import com.xpatterns.jaws.data.DTO.{ParquetTable, QueryMetaInfo}
+import com.xpatterns.jaws.data.contracts.{DAL, TJawsLogging}
+import com.xpatterns.jaws.data.utils.{ResultsConverter, Utils}
 import customs.CustomIndexer
-import org.apache.spark.sql.hive.HiveContext
-import com.xpatterns.jaws.data.contracts.TJawsLogging
-import com.xpatterns.jaws.data.DTO.QueryMetaInfo
-import spray.json._
-import spray.json.DefaultJsonProtocol._
-import com.xpatterns.jaws.data.DTO.Column
 import implementation.HiveContextWrapper
-import server.MainActors
-import server.LogsActor.PushLogs
-import com.xpatterns.jaws.data.contracts.DAL
-import com.xpatterns.jaws.data.DTO.ParquetTable
-import java.util.regex.Pattern
-import java.util.regex.Matcher
-import org.apache.hadoop.conf.{ Configuration => HadoopConfiguration }
-import com.xpatterns.jaws.data.utils.ResultsConverter
-import org.apache.spark.sql.catalyst.expressions.Row
-import java.io.ByteArrayOutputStream
-import java.io.ObjectOutputStream
-import java.io.ObjectInputStream
-import java.io.ByteArrayInputStream
+import org.apache.commons.lang.{RandomStringUtils, StringUtils}
+import org.apache.hadoop.conf.{Configuration => HadoopConfiguration}
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.catalyst.TableIdentifier
+import org.apache.spark.sql.execution.datasources.parquet.SparkParquetUtility._
 import org.apache.spark.sql.types._
+import server.LogsActor.PushLogs
+import server.{Configuration, MainActors}
 
 /**
  * Created by emaorhian
  */
-class HiveUtils {
-
-}
 
 object HiveUtils {
   val COLUMN_SEPARATOR = "###"
@@ -54,7 +38,7 @@ object HiveUtils {
             command += trimmedCmd
           }
 
-          if (StringUtils.isBlank(command) == false) {
+          if (!StringUtils.isBlank(command)) {
             result = result ::: List(command)
           }
 
@@ -67,15 +51,21 @@ object HiveUtils {
     result
   }
 
-  def runCmdRdd(
-    cmd: String, hiveContext: HiveContextWrapper, defaultNumberOfResults: Int,
-    uuid: String, isLimited: Boolean, maxNumberOfResults: Long,
-    isLastCommand: Boolean, hdfsNamenode: String,
-    loggingDal: TJawsLogging, conf: HadoopConfiguration, rddDestination: String): ResultsConverter = {
+  def runCmdRdd(cmd: String,
+                hiveContext: HiveContextWrapper,
+                defaultNumberOfResults: Int,
+                uuid: String,
+                isLimited: Boolean,
+                maxNumberOfResults: Long,
+                isLastCommand: Boolean,
+                hdfsNamenode: String,
+                loggingDal: TJawsLogging,
+                conf: HadoopConfiguration,
+                rddDestination: String): ResultsConverter = {
 
     Configuration.log4j.info("[HiveUtils]: execute the following command:" + cmd)
 
-    var cmd_trimmed = cmd.trim
+    val cmd_trimmed = cmd.trim
     val tokens = cmd_trimmed.split("\\s+")
 
     val (firstToken, secondToken) = if (tokens.size >= 2) (tokens(0).trim.toLowerCase(), tokens(1).trim.toLowerCase()) else (tokens(0).trim.toLowerCase(), "")
@@ -90,12 +80,11 @@ object HiveUtils {
       case ("set", _) => {
         // we won't put an uuid because it fails otherwise
         Configuration.log4j.info("[HiveUtils]: the command is a set")
-        val resultSet = hiveContext.sql(cmd_trimmed)
         loggingDal.setRunMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, 0, isLimited))
         null
       }
 
-      case ("add", "jar") if (tokens.size >= 3) => {
+      case ("add", "jar") if (tokens.length >= 3) => {
         Configuration.log4j.info("[HiveUtils]: the command is a add jar")
         val jarPath = tokens(2).trim
         Configuration.log4j.info("[HiveUtils]: the jar to be added is" + jarPath)
@@ -104,7 +93,7 @@ object HiveUtils {
         loggingDal.setRunMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, 0, isLimited))
         null
       }
-      case ("add", "file") if (tokens.size >= 3) => {
+      case ("add", "file") if (tokens.length >= 3) => {
         Configuration.log4j.info("[HiveUtils]: the command is a add file")
         val filePath = tokens(2).trim
         Configuration.log4j.info("[HiveUtils]: the file to be added is" + filePath)
@@ -119,7 +108,7 @@ object HiveUtils {
         val metadataResults = runMetadataCmd(hiveContext, cmd_trimmed)
         val rows = metadataResults map (arr => Row.fromSeq(arr))
         val result = new ResultsConverter(new StructType(Array(new StructField("result", StringType, true))), rows)
-        loggingDal.setRunMetaInfo(uuid, new QueryMetaInfo(result.result.size, maxNumberOfResults, 0, isLimited))
+        loggingDal.setRunMetaInfo(uuid, new QueryMetaInfo(result.result.length, maxNumberOfResults, 0, isLimited))
         result
       }
 
@@ -132,11 +121,17 @@ object HiveUtils {
 
   }
 
-  def executeSelect(
-    cmd: String, uuid: String, isLimited: Boolean,
-    maxNumberOfResults: Long, isLastCommand: Boolean, defaultNumberOfResults: Int,
-    hiveContext: HiveContextWrapper, loggingDal: TJawsLogging, hdfsNamenode: String,
-    rddDestination: String, conf: HadoopConfiguration): ResultsConverter = {
+  def executeSelect(cmd: String,
+                    uuid: String,
+                    isLimited: Boolean,
+                    maxNumberOfResults: Long,
+                    isLastCommand: Boolean,
+                    defaultNumberOfResults: Int,
+                    hiveContext: HiveContextWrapper,
+                    loggingDal: TJawsLogging,
+                    hdfsNamenode: String,
+                    rddDestination: String,
+                    conf: HadoopConfiguration): ResultsConverter = {
 
     if (isLimited && maxNumberOfResults <= defaultNumberOfResults) {
       // ***** limited and few results -> cassandra
@@ -170,10 +165,15 @@ object HiveUtils {
     result map (row => row map (_ trim ()))
   }
 
-  def runRdd(
-    hiveContext: HiveContext, uuid: String, cmd: String,
-    destinationIp: String, maxNumberOfResults: Long, isLimited: Boolean,
-    loggingDal: TJawsLogging, conf: HadoopConfiguration, userDefinedDestination: String): ResultsConverter = {
+  def runRdd(hiveContext: HiveContext,
+             uuid: String,
+             cmd: String,
+             destinationIp: String,
+             maxNumberOfResults: Long,
+             isLimited: Boolean,
+             loggingDal: TJawsLogging,
+             conf: HadoopConfiguration,
+             userDefinedDestination: String): ResultsConverter = {
 
     // we need to run sqlToRdd. Needed for pagination
     Configuration.log4j.info("[HiveUtils]: we will execute sqlToRdd command")
@@ -227,25 +227,30 @@ object HiveUtils {
 
   def getRddDestinationPath(uuid: String, rddDestination: String): String = {
     var finalDestination = rddDestination
-    if (rddDestination.endsWith("/") == false) {
+    if (!rddDestination.endsWith("/")) {
       finalDestination = rddDestination + "/"
     }
     s"${finalDestination}user/${System.getProperty("user.name")}/${Configuration.resultsFolder.getOrElse("jawsResultsFolder")}/$uuid"
   }
 
-  def run(hiveContext: HiveContext, cmd: String, maxNumberOfResults: Long, isLimited: Boolean, loggingDal: TJawsLogging, uuid: String): ResultsConverter = {
+  def run(hiveContext: HiveContext,
+          cmd: String,
+          maxNumberOfResults: Long,
+          isLimited: Boolean,
+          loggingDal: TJawsLogging,
+          uuid: String): ResultsConverter = {
     Configuration.log4j.info("[HiveUtils]: the final command is " + cmd)
     val resultRdd = hiveContext.sql(cmd)
     val result = resultRdd.collect
     val schema = resultRdd.schema
-    loggingDal.setRunMetaInfo(uuid, new QueryMetaInfo(result.size, maxNumberOfResults, 0, isLimited))
+    loggingDal.setRunMetaInfo(uuid, new QueryMetaInfo(result.length, maxNumberOfResults, 0, isLimited))
     new ResultsConverter(schema, result)
   }
 
   def limitQuery(numberOfResults: Long, cmd: String): String = {
     val temporaryTableName = RandomStringUtils.randomAlphabetic(10)
     // take only x results
-    return "select " + temporaryTableName + ".* from ( " + cmd + ") " + temporaryTableName + " limit " + numberOfResults
+    "select " + temporaryTableName + ".* from ( " + cmd + ") " + temporaryTableName + " limit " + numberOfResults
   }
 
   def setSharkProperties(sc: HiveContext, sharkSettings: InputStream) = {
@@ -257,6 +262,7 @@ object HiveUtils {
     }
   }
 
+  //hardcoded ports - shouldn't they be taken from configuration?
   def getHdfsPath(ip: String): String = {
     "hdfs://" + ip.trim() + ":8020"
   }
@@ -275,8 +281,9 @@ object HiveUtils {
     MainActors.logsActor ! new PushLogs(uuid, message)
   }
 
-  val pattern: Pattern = Pattern.compile("^([^/]+://[^/]+)(.+?)/*$")
-  def splitPath(filePath: String): Tuple2[String, String] = {
+
+  def splitPath(filePath: String): (String, String) = {
+    val pattern: Pattern = Pattern.compile("^([^/]+://[^/]+)(.+?)/*$")
     val matcher: Matcher = pattern.matcher(filePath)
 
     if (matcher.matches())
@@ -286,12 +293,37 @@ object HiveUtils {
 
   }
 
-  def registerParquetTable(hiveContext: HiveContextWrapper, tableName: String, parquetNamenode: String, tablePath: String, dals: DAL) {
+  /**
+    * Uses Parquet utility to register a table.
+    *
+    * @param hiveContext
+    * @param tableName
+    * @param parquetNamenode
+    * @param tablePath
+    * @param dals
+    */
+  def registerParquetTable(hiveContext: HiveContextWrapper,
+                           tableName: String,
+                           parquetNamenode: String,
+                           tablePath: String,
+                           dals: DAL) {
     Configuration.log4j.info(s"[HiveUtils] registering table $tableName")
     val parquetFile = hiveContext.readXPatternsParquet(parquetNamenode, tablePath)
 
     // register table
     parquetFile.registerTempTable(tableName)
     dals.parquetTableDal.addParquetTable(new ParquetTable(tableName, tablePath, parquetNamenode))
+  }
+
+  /**
+    * Helper class that adds a more public method to unregister a table in Hive.
+    * TableIdentifier is available only in org.apache.spark.sql package and included packages.
+    *
+    * @param hiveC
+    */
+  implicit class XPatternsHive (hiveC: HiveContextWrapper) {
+    def unregisterTable(tableName: String): Unit = {
+      hiveC.getCatalog.unregisterTable(TableIdentifier(tableName));
+    }
   }
 }

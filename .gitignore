@@ -1,6 +1,7 @@
 .cache
 syntax: glob
 *.log
+*.log.*
 RemoteSystemsTempFiles
 *.metadata
 target/*
@@ -18,20 +19,16 @@ bin/*
 */META-INF/
 */src/main/webapp/resources/node_modules/
 */node_modules/
-atlassian-ide-plugin.xml
-RemoteSystemsTempFiles
 Servers
 bin
 .metadata
 target
-.DS_Store
 .settings
 .classpath
 .project
 project
 classpath
 HadoopCryptoCompressor
-.idea
 .iml
 .orig
 .java.orig
@@ -44,3 +41,5 @@ dependency-reduced-pom.xml
 test_warehouses
 localhost
 jawsSchemaFolder
+**/resources/*
+!**/resources/jaws-env.sh

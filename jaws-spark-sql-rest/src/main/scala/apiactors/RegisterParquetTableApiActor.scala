@@ -5,7 +5,8 @@ import com.xpatterns.jaws.data.contracts.DAL
 import akka.actor.Actor
 import messages.RegisterTableMessage
 import server.Configuration
-import org.apache.spark.scheduler.HiveUtils
+import org.apache.spark.sql.hive.HiveUtils
+import org.apache.spark.sql.hive.HiveUtils._
 import messages.UnregisterTableMessage
 import scala.concurrent._
 import ExecutionContext.Implicits.global
@@ -36,7 +37,7 @@ class RegisterParquetTableApiActor(hiveContext: HiveContextWrapper, dals: DAL) e
 
       val unregisterTableFuture = future {
         // unregister table
-    	hiveContext.getCatalog.unregisterTable(Seq(message.name))
+    	  hiveContext.unregisterTable(Seq(message.name))
         dals.parquetTableDal.deleteParquetTable(message.name)
       }
 

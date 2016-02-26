@@ -107,11 +107,11 @@ class JawsCassandraResults(keyspace: Keyspace) extends TJawsResults {
           Option(columnSlice) match {
             case None => new AvroResult()
             case _ => {
-              Option(columnSlice.getColumns()) match {
+              Option(columnSlice.getColumns) match {
                 case None => new AvroResult()
                 case _ => {
 
-                  columnSlice.getColumns().size() match {
+                  columnSlice.getColumns.size match {
                     case 2 => {
                       var sch: Schema = null
                       var resultByteArray: Array[Byte] = null
@@ -122,9 +122,7 @@ class JawsCassandraResults(keyspace: Keyspace) extends TJawsResults {
                             val schemaParser = new Schema.Parser()
                             sch = schemaParser.parse(new String(col.getValue()))
                           }
-                          case _ => {
-                            resultByteArray = col.getValue()
-                          }
+                          case _ => resultByteArray = col.getValue
                         }
                       })
 
@@ -167,7 +165,7 @@ class JawsCassandraResults(keyspace: Keyspace) extends TJawsResults {
             case None => new CustomResult()
             case _ => {
               val gson = new GsonBuilder().create()
-              gson.fromJson(hColumn.getValue(), classOf[CustomResult])
+              gson.fromJson(hColumn.getValue, classOf[CustomResult])
             }
           }
         }

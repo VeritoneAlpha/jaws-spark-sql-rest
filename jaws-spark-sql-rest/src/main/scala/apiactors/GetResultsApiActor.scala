@@ -14,7 +14,7 @@ import messages.GetResultsMessage
 import net.liftweb.json._
 import net.liftweb.json.DefaultFormats
 import com.xpatterns.jaws.data.contracts.DAL
-import org.apache.spark.scheduler.HiveUtils
+import org.apache.spark.sql.hive.HiveUtils
 import ExecutionContext.Implicits.global
 import scala.util.Try
 import scala.util.Success
@@ -24,7 +24,7 @@ import messages.ResultFormat._
 import com.xpatterns.jaws.data.DTO.AvroResult
 import com.xpatterns.jaws.data.DTO.CustomResult
 import com.xpatterns.jaws.data.utils.ResultsConverter
-import org.apache.spark.sql.catalyst.expressions.Row
+import org.apache.spark.sql.Row
 import com.xpatterns.jaws.data.DTO.AvroBinaryResult
 
 /**
@@ -95,7 +95,7 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCon
       }
   }
 
-  def getOffsetAndLimit(message: GetResultsMessage): Tuple2[Int, Int] = {
+  def getOffsetAndLimit(message: GetResultsMessage): (Int, Int) = {
     var offset = message.offset
     var limit = message.limit
 
