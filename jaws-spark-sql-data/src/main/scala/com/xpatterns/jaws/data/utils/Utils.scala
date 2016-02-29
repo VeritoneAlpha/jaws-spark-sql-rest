@@ -56,10 +56,9 @@ object Utils {
       }
 
     } catch {
-      case e: Exception => {
-        log.error(e.getMessage())
+      case e: Exception =>
+        log.error(e.getMessage)
         throw e
-      }
     } finally {
       if (fs != null) {
         fs.close()
@@ -100,10 +99,9 @@ object Utils {
       }
       fs.rename(temporaryFile, file)
     } catch {
-      case ex: Exception => {
+      case ex: Exception =>
         log.error(ex.getStackTraceString)
         throw ex
-      }
     } finally {
       if (fs != null) {
         fs.close()
@@ -126,7 +124,7 @@ object Utils {
         content = content + line + "\n"
         line = br.readLine()
       }
-      return content.toString().trim()
+      content.trim
     } finally {
       if (br != null) {
         br.close()
@@ -158,7 +156,7 @@ object Utils {
       val filePath = new Path(filename)
       fs = FileSystem.newInstance(configuration)
       if (fs.exists(filePath)) {
-        fs.delete(filePath)
+        fs.delete(filePath, false)
       }
 
     } finally {
@@ -180,7 +178,8 @@ object Utils {
       name = mutablePath.substring(path.lastIndexOf("/") + 1, mutablePath.length())
     else
       name = mutablePath
-    return name
+
+    name
   }
 
   def listFiles(configuration: Configuration, folderName: String, comparator: Comparator[String]): SortedSet[String] = {
@@ -190,12 +189,12 @@ object Utils {
       val folderPath = new Path(folderName)
       fs = FileSystem.newInstance(configuration)
       val files = fs.listFiles(folderPath, false)
-      while (files.hasNext()) {
+      while (files.hasNext) {
         val file = files.next()
-        allFiles.add(file.getPath().getName())
+        allFiles.add(file.getPath.getName)
       }
 
-      return allFiles
+      allFiles
 
     } finally {
       if (fs != null) {
@@ -214,7 +213,7 @@ object Utils {
   def TryWithRetry[A](f: => A): A = {
     val maxRetries = 30
     val sleepRetry = 1000
-    val logger = Logger.getLogger(this.getClass().getName())
+    val logger = Logger.getLogger(this.getClass.getName)
 
     var finished: Boolean = false
     var result: A = null.asInstanceOf[A]
@@ -231,7 +230,7 @@ object Utils {
             finished = false
             logger.warn("Retrying " + retries + "/" + maxRetries + " at " + sleepRetry + "ms " + ex.getStackTraceString)
             try {
-              Thread.sleep(sleepRetry);
+              Thread.sleep(sleepRetry)
             } catch {
               case ex: InterruptedException => logger.warn(ex.getStackTraceString)
             }
@@ -244,7 +243,7 @@ object Utils {
             finished = false
             logger.warn("Retrying " + retries + "/" + maxRetries + " at " + sleepRetry + "ms " + ex.getStackTraceString)
             try {
-              Thread.sleep(sleepRetry);
+              Thread.sleep(sleepRetry)
             } catch {
               case ex: InterruptedException => logger.warn(ex.getStackTraceString)
             }
@@ -252,19 +251,19 @@ object Utils {
               throw ex
           }
         case ex: HectorException => {
-          if (ex.getMessage().contains("All host pools marked down. Retry burden pushed out to client.")) {
+          if (ex.getMessage.contains("All host pools marked down. Retry burden pushed out to client.")) {
             retries += 1
             finished = false
-            logger.warn("Retrying " + retries + "/" + maxRetries + " at " + sleepRetry + "ms " + ex.getMessage() + " ")
+            logger.warn("Retrying " + retries + "/" + maxRetries + " at " + sleepRetry + "ms " + ex.getMessage + " ")
             try {
-              Thread.sleep(sleepRetry);
+              Thread.sleep(sleepRetry)
             } catch {
-              case ex: InterruptedException => logger.warn(ex.getMessage())
+              case ex: InterruptedException => logger.warn(ex.getMessage)
             }
             if (retries > maxRetries)
               throw ex
           } else
-            throw ex;
+            throw ex
         }
       }
     }
@@ -272,7 +271,7 @@ object Utils {
   }
 
   def getCompleteStackTrace(e: Throwable): String = {
-    var message = s"${e.getMessage()} : ${e.getStackTraceString}\n"
+    var message = s"${e.getMessage} : ${e.getStackTraceString}\n"
     var cause = e.getCause
     while (cause != null) {
       message = s"$message Caused by \n ${cause.getMessage} \n ${cause.getStackTraceString}"

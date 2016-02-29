@@ -37,7 +37,7 @@ class RegisterParquetTableApiActor(hiveContext: HiveContextWrapper, dals: DAL) e
 
       val unregisterTableFuture = future {
         // unregister table
-    	  hiveContext.unregisterTable(Seq(message.name))
+    	  hiveContext.unregisterTable(message.name)
         dals.parquetTableDal.deleteParquetTable(message.name)
       }
 

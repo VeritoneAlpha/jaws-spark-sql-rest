@@ -11,10 +11,10 @@ import org.apache.commons.lang.{RandomStringUtils, StringUtils}
 import org.apache.hadoop.conf.{Configuration => HadoopConfiguration}
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.execution.datasources.parquet.SparkParquetUtility._
 import org.apache.spark.sql.types._
 import server.LogsActor.PushLogs
 import server.{Configuration, MainActors}
+import org.apache.spark.sql.execution.datasources.parquet.SparkParquetUtility._
 
 /**
  * Created by emaorhian
@@ -84,20 +84,20 @@ object HiveUtils {
         null
       }
 
-      case ("add", "jar") if (tokens.length >= 3) => {
+      case ("add", "jar") if tokens.length >= 3 => {
         Configuration.log4j.info("[HiveUtils]: the command is a add jar")
         val jarPath = tokens(2).trim
         Configuration.log4j.info("[HiveUtils]: the jar to be added is" + jarPath)
-        val resultSet = hiveContext.getSparkContext.addJar(jarPath)
+        val resultSet = hiveContext.getSparkContext().addJar(jarPath)
 
         loggingDal.setRunMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, 0, isLimited))
         null
       }
-      case ("add", "file") if (tokens.length >= 3) => {
+      case ("add", "file") if tokens.length >= 3 => {
         Configuration.log4j.info("[HiveUtils]: the command is a add file")
         val filePath = tokens(2).trim
         Configuration.log4j.info("[HiveUtils]: the file to be added is" + filePath)
-        val resultSet = hiveContext.getSparkContext.addFile(filePath)
+        val resultSet = hiveContext.getSparkContext().addFile(filePath)
 
         loggingDal.setRunMetaInfo(uuid, new QueryMetaInfo(0, maxNumberOfResults, 0, isLimited))
         null
@@ -323,7 +323,7 @@ object HiveUtils {
     */
   implicit class XPatternsHive (hiveC: HiveContextWrapper) {
     def unregisterTable(tableName: String): Unit = {
-      hiveC.getCatalog.unregisterTable(TableIdentifier(tableName));
+      hiveC.getCatalog.unregisterTable(TableIdentifier(tableName))
     }
   }
 }

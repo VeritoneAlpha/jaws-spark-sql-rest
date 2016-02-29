@@ -3,7 +3,7 @@ package com.xpatterns.jaws.data.utils
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.FunSuite
-import org.apache.spark.sql.catalyst.expressions.Row
+import org.apache.spark.sql.Row
 import com.xpatterns.jaws.data.DTO.Column
 import com.xpatterns.jaws.data.DTO.CustomResult
 import org.apache.spark.sql.types._
@@ -31,7 +31,7 @@ class CustomConverterTest extends FunSuite {
 
   test("simple schema") {
     val resultsConverter = new ResultsConverter(structType, structTypeRow)
-    val customRes = resultsConverter.toCustomResults()
+    val customRes = resultsConverter.toCustomResults
 
     val expectedSchema = Array(new Column("int", "IntegerType", "", Array.empty),
       new Column("str", "StringType", "", Array.empty))
@@ -47,7 +47,7 @@ class CustomConverterTest extends FunSuite {
     val complexStructTypeRow = Array(Row.fromSeq(Seq("aa", Row.fromSeq(Seq(1, "a")))), Row.fromSeq(Seq("bb", Row.fromSeq(Seq(2, "b")))))
 
     val resultsConverter = new ResultsConverter(complexStructType, complexStructTypeRow)
-    val customRes = resultsConverter.toCustomResults()
+    val customRes = resultsConverter.toCustomResults
 
     val expectedSchema = Array(new Column("str", "StringType", "", Array.empty),
       new Column("record", "StructType", "", Array(
@@ -66,7 +66,7 @@ class CustomConverterTest extends FunSuite {
     val arrStructTypeRow = Array(Row.fromSeq(Seq(1, Row.fromSeq(Seq("a", "b", "c")))), Row.fromSeq(Seq(2, Row.fromSeq(Seq("d", "e", "f")))))
 
     val resultsConverter = new ResultsConverter(arrStructType, arrStructTypeRow)
-    val customRes = resultsConverter.toCustomResults()
+    val customRes = resultsConverter.toCustomResults
 
     val expectedSchema = Array(new Column("int", "IntegerType", "", Array.empty),
       new Column("arr", "ArrayType", "", Array(
@@ -94,7 +94,7 @@ class CustomConverterTest extends FunSuite {
             Seq("d")))))))
 
     val resultsConverter = new ResultsConverter(arrStructType, arrStructTypeRow)
-    val customRes = resultsConverter.toCustomResults()
+    val customRes = resultsConverter.toCustomResults
 
     val expectedSchema = Array(new Column("int", "IntegerType", "", Array.empty),
       new Column("arrOfRec", "ArrayType", "", Array(
@@ -116,7 +116,7 @@ class CustomConverterTest extends FunSuite {
         Seq(2, Map("d" -> "e", "f" -> "g"))))
 
     val resultsConverter = new ResultsConverter(mapStructType, mapStructTypeRow)
-    val customRes = resultsConverter.toCustomResults()
+    val customRes = resultsConverter.toCustomResults
 
     val expectedSchema = Array(new Column("int", "IntegerType", "", Array.empty),
       new Column("map", "MapType", "", Array(
@@ -137,7 +137,7 @@ class CustomConverterTest extends FunSuite {
         Seq(2, Map("d" -> Row.fromSeq(Seq("e")), "f" -> Row.fromSeq(Seq("g"))))))
 
     val resultsConverter = new ResultsConverter(mapStructType, mapStructTypeRow)
-    val customRes = resultsConverter.toCustomResults()
+    val customRes = resultsConverter.toCustomResults
 
     val expectedSchema = Array(new Column("int", "IntegerType", "", Array.empty),
       new Column("mapOfRec", "MapType", "", Array(

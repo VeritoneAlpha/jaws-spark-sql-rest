@@ -1,29 +1,20 @@
 package server
 
 import java.net.InetAddress
-import scala.collection.JavaConverters._
+import java.util.concurrent.TimeUnit
 import com.typesafe.config.Config
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.apache.log4j.Logger
 import akka.actor.ActorSystem
 import akka.actor.Props
-import akka.actor.actorRef2Scala
 import akka.pattern.ask
 import akka.util.Timeout
 import customs.CORSDirectives
 import spray.http.{ StatusCodes, HttpHeaders, HttpMethods, MediaTypes }
-import spray.httpx.SprayJsonSupport.sprayJsonMarshaller
 import spray.httpx.marshalling.ToResponseMarshallable.isMarshallable
-import spray.json.DefaultJsonProtocol._
-import akka.actor._
 import spray.routing.Directive.pimpApply
 import spray.routing.SimpleRoutingApp
 import spray.routing.directives.ParamDefMagnet.apply
-import scala.util.{ Failure, Success, Try }
-import scala.concurrent.Future
-import scala.concurrent.Await
-import scala.concurrent.duration._
-import scala.concurrent.duration.Duration._
 import apiactors.ErrorMessage
 import apiactors.HiveRunnerActor
 import apiactors.RunQueryMessage
@@ -36,7 +27,7 @@ import com.xpatterns.jaws.data.utils.Utils
  */
 object HiveController extends App with SimpleRoutingApp with CORSDirectives {
 
-  implicit val timeout = Timeout(Configuration.timeout.toInt)
+  implicit val timeout = Timeout(Configuration.timeout.toInt, TimeUnit.MILLISECONDS)
   implicit val localSystem: ActorSystem = ActorSystem("localSystem")
 
   val hdfsConf: org.apache.hadoop.conf.Configuration = getHadoopConf()
@@ -45,8 +36,8 @@ object HiveController extends App with SimpleRoutingApp with CORSDirectives {
     case _ => new HdfsDal(hdfsConf)
   }
 
-  val hiveRunnerActor = localSystem.actorOf(Props(new HiveRunnerActor(dal)), "hiveRunnerActor");
-  startServer(interface = Configuration.serverInterface.getOrElse(InetAddress.getLocalHost().getHostName()), port = Configuration.webServicesPort.getOrElse("8080").toInt) {
+  val hiveRunnerActor = localSystem.actorOf(Props(new HiveRunnerActor(dal)), "hiveRunnerActor")
+  startServer(interface = Configuration.serverInterface.getOrElse(InetAddress.getLocalHost.getHostName), port = Configuration.webServicesPort.getOrElse("8080").toInt) {
 
     pathPrefix("jaws" / "hive") {
       path("index") {
@@ -73,7 +64,7 @@ object HiveController extends App with SimpleRoutingApp with CORSDirectives {
               corsFilter(List(Configuration.corsFilterAllowedHosts.getOrElse("*"))) {
                 validate(limit > 0, "Limit must be higher than 0") {
                   entity(as[String]) { query: String =>
-                    validate(query != null && !query.trim.isEmpty(), "Script is empty!") {
+                    validate(query != null && !query.trim.isEmpty, "Script is empty!") {
                       respondWithMediaType(MediaTypes.`text/plain`) { ctx =>
                         Configuration.log4j.info(s"The query has the limit=$limit")
                         val future = ask(hiveRunnerActor, RunQueryMessage(query, limit))
@@ -105,11 +96,10 @@ object HiveController extends App with SimpleRoutingApp with CORSDirectives {
 
     // set hadoop name node and job tracker
     Configuration.namenode match {
-      case None => {
+      case None =>
         val message = "You need to set the namenode! "
         Configuration.log4j.error(message)
         throw new RuntimeException(message)
-      }
       case _ => configuration.set("fs.defaultFS", Configuration.namenode.get)
 
     }
@@ -126,7 +116,7 @@ object HiveController extends App with SimpleRoutingApp with CORSDirectives {
     configuration.set(Utils.RESULTS_FOLDER, Configuration.resultsFolder.getOrElse("jawsResultsFolder"))
     configuration.set(Utils.PARQUET_TABLES_FOLDER, Configuration.parquetTablesFolder.getOrElse("parquetTablesFolder"))
 
-    return configuration
+    configuration
   }
 
 }
@@ -135,7 +125,7 @@ object Configuration {
 
   import com.typesafe.config.ConfigFactory
 
-  val log4j = Logger.getLogger(HiveController.getClass())
+  val log4j = Logger.getLogger(HiveController.getClass)
 
   private val conf = ConfigFactory.load
   conf.checkValid(ConfigFactory.defaultReference)

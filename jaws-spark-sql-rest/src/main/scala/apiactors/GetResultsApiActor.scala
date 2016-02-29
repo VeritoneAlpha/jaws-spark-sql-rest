@@ -1,22 +1,17 @@
 package apiactors
 
-import apiactors.ActorOperations._
 import scala.concurrent._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.hive.HiveContext
-import com.google.common.base.Preconditions
-import com.xpatterns.jaws.data.DTO.Column
 import com.xpatterns.jaws.data.utils.Utils
 import server.Configuration
 import akka.actor.Actor
 import akka.actor.actorRef2Scala
 import messages.GetResultsMessage
-import net.liftweb.json._
 import net.liftweb.json.DefaultFormats
 import com.xpatterns.jaws.data.contracts.DAL
 import org.apache.spark.sql.hive.HiveUtils
 import ExecutionContext.Implicits.global
-import scala.util.Try
 import scala.util.Success
 import scala.util.Failure
 import messages.ErrorMessage
@@ -45,31 +40,28 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCon
 
           metaInfo.resultsDestination match {
             // cassandra
-            case 0 => {
-              var endIndex = offset + limit
+            case 0 =>
+              val endIndex = offset + limit
               message.format match {
                 case AVRO_BINARY_FORMAT => new AvroBinaryResult(getDBAvroResults(message.queryID, offset, endIndex))
                 case AVRO_JSON_FORMAT   => getDBAvroResults(message.queryID, offset, endIndex).result
                 case _                  => getCustomResults(message.queryID, offset, endIndex)
               }
 
-            }
             //hdfs
-            case 1 => {
+            case 1 =>
               val destinationPath = HiveUtils.getHdfsPath(Configuration.rddDestinationIp.get)
               getFormattedResult(message.format, getResults(offset, limit, destinationPath))
 
-            }
             //tachyon
-            case 2 => {
+            case 2 =>
               val destinationPath = HiveUtils.getTachyonPath(Configuration.rddDestinationIp.get)
               getFormattedResult(message.format, getResults(offset, limit, destinationPath))
 
-            }
-            case _ => {
+            case _ =>
               Configuration.log4j.info("[GetResultsMessage]: Unidentified results path : " + metaInfo.resultsDestination)
               null
-            }
+
           }
         }
 
@@ -100,23 +92,19 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCon
     var limit = message.limit
 
     Option(offset) match {
-      case None => {
+      case None =>
         Configuration.log4j.info("[GetResultsMessage]: offset null... setting it on 0")
         offset = 0
-      }
-      case _ => {
-        Configuration.log4j.info("[GetResultsMessage]: offset = " + offset)
-      }
+      case _ =>  Configuration.log4j.info("[GetResultsMessage]: offset = " + offset)
+
     }
 
     Option(limit) match {
-      case None => {
+      case None =>
         Configuration.log4j.info("[GetResultsMessage]: limit null... setting it on 100")
         limit = 100
-      }
-      case _ => {
-        Configuration.log4j.info("[GetResultsMessage]: limit = " + limit)
-      }
+      case _ => Configuration.log4j.info("[GetResultsMessage]: limit = " + limit)
+
     }
     (offset, limit)
   }
@@ -135,9 +123,9 @@ class GetResultsApiActor(hdfsConf: org.apache.hadoop.conf.Configuration, hiveCon
 
   private def getFormattedResult(format: String, resultsConverter: ResultsConverter) = {
     format match {
-      case AVRO_BINARY_FORMAT => resultsConverter.toAvroBinaryResults()
+      case AVRO_BINARY_FORMAT => resultsConverter.toAvroBinaryResults
       case AVRO_JSON_FORMAT   => resultsConverter.toAvroResults().result
-      case _                  => resultsConverter.toCustomResults()
+      case _                  => resultsConverter.toCustomResults
     }
   }
 }

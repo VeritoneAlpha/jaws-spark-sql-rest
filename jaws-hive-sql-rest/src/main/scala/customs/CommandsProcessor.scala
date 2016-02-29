@@ -1,6 +1,5 @@
 package customs
 
-import scala.collection.mutable.ListBuffer
 import org.apache.commons.lang.StringUtils
 import org.apache.commons.lang.RandomStringUtils
 import scala.collection.mutable.ListBuffer
@@ -32,7 +31,7 @@ object CommandsProcessor {
         command = StringUtils.chop(command) + ";"
       }
 
-      if (StringUtils.isBlank(command) == false) {
+      if (!StringUtils.isBlank(command)) {
         commandsList += command
       }
 
@@ -43,6 +42,6 @@ object CommandsProcessor {
   def limitQuery(numberOfResults: Long, cmd: String): String = {
     val temporaryTableName = RandomStringUtils.randomAlphabetic(10)
     // take only x results
-    return s"select $temporaryTableName.* from ( $cmd ) $temporaryTableName limit $numberOfResults"
+    s"select $temporaryTableName.* from ( $cmd ) $temporaryTableName limit $numberOfResults"
   }
 }

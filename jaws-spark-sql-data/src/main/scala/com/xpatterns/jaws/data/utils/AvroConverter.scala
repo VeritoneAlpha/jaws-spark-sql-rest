@@ -1,7 +1,7 @@
 package com.xpatterns.jaws.data.utils
 
 import org.apache.avro.SchemaBuilder.FieldAssembler
-import org.apache.avro.{ Schema, SchemaBuilder }
+import org.apache.avro.{Schema, SchemaBuilder}
 import org.apache.spark.sql.Row
 import org.apache.avro.generic.GenericRecord
 import org.apache.avro.generic.GenericData
@@ -81,7 +81,7 @@ object AvroConverter {
   
   
   def getAvroSchema(structType: StructType, structName: String = "RECORD", structNamespace : String = ""): Schema = {
-    var recordAssembler = SchemaBuilder.record(structName).namespace(structNamespace).fields()
+    val recordAssembler = SchemaBuilder.record(structName).namespace(structNamespace).fields()
     addStructType(structType, recordAssembler, structName)
     recordAssembler.endRecord()
   }

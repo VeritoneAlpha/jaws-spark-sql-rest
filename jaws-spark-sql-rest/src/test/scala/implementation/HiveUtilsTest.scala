@@ -3,7 +3,7 @@ package implementation
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.FunSuite
-import org.apache.spark.scheduler.HiveUtils
+import org.apache.spark.sql.hive.HiveUtils
 import scala.util.Try
 
 @RunWith(classOf[JUnitRunner])

@@ -10,35 +10,8 @@
 	<name>jaws-spark-sql-rest-integration-tests</name>
 	<url>http://maven.apache.org</url>
 
-	<repositories>
-		<repository>
-			<id>mvnrepository</id>
-			<url>http://repo1.maven.org/maven2</url>
-			<snapshots>
-				<enabled>false</enabled>
-			</snapshots>
-			<releases>
-				<enabled>true</enabled>
-			</releases>
-		</repository>
-		<repository>
-			<id>cloudera-repo-releases</id>
-			<url>https://repository.cloudera.com/artifactory/repo/</url>
-		</repository>
-		<repository>
-			<id>Akka repository</id>
-			<url>http://repo.akka.io/releases</url>
-		</repository>
-
-	</repositories>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<scala.version.alias>2.10</scala.version.alias>
-		<spray.json.version>1.2.3</spray.json.version>
-		<scala.version>2.10.3</scala.version>
-		<akka.version>2.0.5</akka.version>
-		<spray.json.version>1.2.3</spray.json.version>
-		<spray.io.version>1.2.1</spray.io.version>
 	</properties>
 
 	<dependencies>
@@ -71,7 +44,7 @@
 		<dependency>
 			<groupId>com.xpatterns</groupId>
 			<artifactId>jaws-spark-sql-data</artifactId>
-			<version>1.1.0-spark1.1.0</version>
+			<version>1.1.0-spark1.6.0</version>
 		</dependency>
 	</dependencies>
 

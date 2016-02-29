@@ -1,17 +1,13 @@
 package org.apache.spark.scheduler
 
 import scala.collection.mutable.Map
-import org.json4s.jackson.JsonMethods._
 import server.Configuration
-import server.LogsActor.PushLogs
-import server.MainActors._
 import com.xpatterns.jaws.data.contracts.DAL
-import org.apache.spark.util.JsonProtocol
 import org.apache.spark.SparkContext
 import org.apache.spark.Success
-import org.apache.spark.executor.TaskMetrics
 import org.apache.spark.Resubmitted
 import org.apache.spark.FetchFailed
+import org.apache.spark.sql.hive.HiveUtils
 
 /**
  * Created by emaorhian
@@ -62,17 +58,16 @@ class LoggingListener(dals: DAL) extends SparkListener {
     val properties = jobStart.properties
     Option(properties) match {
       case None => Configuration.log4j.info("[LoggingListener - onJobStart] properties file is null")
-      case _ => {
+      case _ =>
         val jobId = jobStart.jobId
-        jobStart.properties.setProperty(JOB_ID, jobId.toString())
+        jobStart.properties.setProperty(JOB_ID, jobId.toString)
         val uuid = properties.getProperty("spark.jobGroup.id")
-        if (uuid != null && !uuid.isEmpty()) {
+        if (uuid != null && !uuid.isEmpty) {
           jobIdToStartTimestamp.put(jobId, System.currentTimeMillis())
           jobIdToUUID.put(jobId, uuid)
           HiveUtils.logInfoMessage(uuid, s"The job $jobId has started. Executing command.", jobId.toString, dals.loggingDal)
           HiveUtils.logInfoMessage(uuid, properties.getProperty(SparkContext.SPARK_JOB_DESCRIPTION, ""), jobId.toString, dals.loggingDal)
         }
-      }
     }
   }
 
@@ -171,7 +166,7 @@ class LoggingListener(dals: DAL) extends SparkListener {
             stageIdToNrTasks.remove(stageId)
             stageIdToSuccessullTasks.remove(stageId)
             var status = "STATUS=COMPLETED"
-            if (stageCompleted.stageInfo.failureReason.isEmpty == false) {
+            if (!stageCompleted.stageInfo.failureReason.isEmpty) {
               status = "STATUS=FAILED"
             }
             HiveUtils.logInfoMessage(uuid, s"The stage $stageId for job $jobId has finished in $executionTime s with $status!", jobId.toString, dals.loggingDal)

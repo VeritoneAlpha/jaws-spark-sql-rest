@@ -3,24 +3,7 @@ package api
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import foundation.TestBase
-import com.xpatterns.jaws.data.utils.Utils
-import org.apache.hadoop.fs.FileUtil
-import org.apache.hadoop.fs.FileSystem
-import java.io.File
-import org.apache.hadoop.fs.Path
-import akka.io.IO
-import akka.pattern.ask
-import spray.can.Http
-import spray.http._
-import spray.client.pipelining._
-import akka.actor.ActorSystem
-import scala.concurrent.Future
-import scala.concurrent.Await
-import scala.concurrent.duration._
-import scala.concurrent.duration.Duration._
-import scala.util.Success
-import scala.util.Failure
-import scala.collection.GenSeq
+
 
 @RunWith(classOf[JUnitRunner])
 class RunHiveApiTest extends TestBase {

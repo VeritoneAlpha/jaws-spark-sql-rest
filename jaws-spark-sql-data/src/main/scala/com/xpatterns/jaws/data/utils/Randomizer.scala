@@ -1,14 +1,12 @@
 package com.xpatterns.jaws.data.utils
 
-import java.util.ArrayList
+
 import org.apache.commons.lang.RandomStringUtils
 import org.apache.commons.lang.math.RandomUtils
-import com.xpatterns.jaws.data.DTO.Column
 import com.xpatterns.jaws.data.DTO.Log
 import com.xpatterns.jaws.data.DTO.QueryMetaInfo
 import com.xpatterns.jaws.data.DTO.ParquetTable
-import com.xpatterns.jaws.data.DTO.AvroResult
-import org.apache.spark.sql.catalyst.expressions.Row
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
 
@@ -16,11 +14,11 @@ import org.apache.spark.sql.types._
 object Randomizer {
 
 	def  getRandomString(nr : Int) : String = {
-		return RandomStringUtils.randomAlphabetic(nr)
+		RandomStringUtils.randomAlphabetic(nr)
 	}
 
 	def getRandomLong : Long = {
-		return RandomUtils.nextLong()
+		RandomUtils.nextLong()
 	}
 
 	
@@ -48,10 +46,10 @@ object Randomizer {
   }
 
 	def getLogDTO: Log = {
-		return new Log(Randomizer.getRandomString(5000), Randomizer.getRandomString(10), Randomizer.getRandomLong)
+		new Log(Randomizer.getRandomString(5000), Randomizer.getRandomString(10), Randomizer.getRandomLong)
 	}
 
 	def createQueryMetainfo  : QueryMetaInfo =  {
-		return new QueryMetaInfo(RandomUtils.nextLong(), RandomUtils.nextLong(), RandomUtils.nextInt(3), RandomUtils.nextBoolean())
+		new QueryMetaInfo(RandomUtils.nextLong(), RandomUtils.nextLong(), RandomUtils.nextInt(3), RandomUtils.nextBoolean())
 	}
 }

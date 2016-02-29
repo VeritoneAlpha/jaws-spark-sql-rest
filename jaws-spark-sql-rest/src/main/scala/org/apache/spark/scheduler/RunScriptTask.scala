@@ -20,6 +20,7 @@ import scala.concurrent.Future
 import messages.RunScriptMessage
 import messages.RunParquetMessage
 import com.xpatterns.jaws.data.utils.ResultsConverter
+import org.apache.spark.sql.hive.HiveUtils
 /**
  * Created by emaorhian
  */
@@ -70,16 +71,16 @@ class RunScriptTask(dals: DAL, hiveContext: HiveContextWrapper,
       val cmd = commands(commandIndex - 1)
       val isLastCmd = if (commandIndex == nrOfCommands) true else false
       isCanceled match {
-        case false => {
+        case false =>
           result = HiveUtils.runCmdRdd(cmd, hiveContext, Configuration.numberOfResults.getOrElse("100").toInt,
             uuid, runMessage.limited, runMessage.maxNumberOfResults, isLastCmd, Configuration.rddDestinationIp.get, dals.loggingDal, hdfsConf, runMessage.rddDestination)
           HiveUtils.logInfoMessage(uuid, s"Command progress : There were executed $commandIndex commands out of $nrOfCommands", "sparksql", dals.loggingDal)
-        }
-        case _ => {
+
+        case _ =>
           val message = s"The command $cmd was canceled!"
           Configuration.log4j.warn(message)
           HiveUtils.logMessage(uuid, message, "sparksql", dals.loggingDal)
-        }
+
       }
     }
 
