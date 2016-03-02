@@ -41,5 +41,3 @@ dependency-reduced-pom.xml
 test_warehouses
 localhost
 jawsSchemaFolder
-**/resources/*
-!**/resources/jaws-env.sh
