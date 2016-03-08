@@ -1,43 +1,20 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.xpatterns</groupId>
 	<artifactId>jaws-spark-sql-rest</artifactId>
-	<version>1.1.0-spark1.3.1</version>
+	<version>1.1.0-spark1.6.0</version>
 	<packaging>jar</packaging>
 
 	<name>jaws-spark-sql-rest</name>
 	<url>http://maven.apache.org</url>
 
-	<repositories>
-		<repository>
-			<id>mvnrepository</id>
-			<url>http://repo1.maven.org/maven2</url>
-			<snapshots>
-				<enabled>false</enabled>
-			</snapshots>
-			<releases>
-				<enabled>true</enabled>
-			</releases>
-		</repository>
-		<repository>
-			<id>cloudera-repo-releases</id>
-			<url>https://repository.cloudera.com/artifactory/repo/</url>
-		</repository>
-		<repository>
-			<id>Akka repository</id>
-			<url>http://repo.akka.io/releases</url>
-		</repository>
-
-	</repositories>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<scala.version.alias>2.10</scala.version.alias>
-		<spray.json.version>1.2.3</spray.json.version>
-		<scala.version>2.10.3</scala.version>
-
 		<spray.io.version>1.3.1</spray.io.version>
+		<jackson.version>2.3.1</jackson.version>
+		<spark.version>1.6.0</spark.version>
 	</properties>
 
 	<dependencies>
@@ -51,31 +28,35 @@
 		<dependency>
 			<groupId>com.xpatterns.spark.parquet</groupId>
 			<artifactId>spark-parquet-utility</artifactId>
-			<version>1.0.0-spark1.3.1</version>
+			<version>1.0.0-spark1.6.0</version>
 		</dependency>
 
 		<dependency>
 			<groupId>io.spray</groupId>
 			<artifactId>spray-client</artifactId>
 			<version>${spray.io.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>com.fasterxml.jackson.core</groupId>
+					<artifactId>jackson-annotations</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<dependency>
 			<groupId>io.spray</groupId>
 			<artifactId>spray-testkit</artifactId>
-			<version>1.3.1</version>
+			<version>${spray.io.version}</version>
 			<exclusions>
 				<exclusion>
 					<groupId>com.typesafe</groupId>
 					<artifactId>config</artifactId>
-
 				</exclusion>
 				<exclusion>
 					<artifactId>akka-actor_2.10</artifactId>
 					<groupId>com.typesafe.akka</groupId>
 				</exclusion>
 			</exclusions>
-
 		</dependency>
 
 		<dependency>
@@ -89,58 +70,29 @@
 			<artifactId>spray-routing</artifactId>
 			<version>${spray.io.version}</version>
 		</dependency>
+
 		<dependency>
 			<groupId>io.spray</groupId>
 			<artifactId>spray-can</artifactId>
 			<version>${spray.io.version}</version>
 		</dependency>
+
 		<dependency>
 			<groupId>io.spray</groupId>
 			<artifactId>spray-caching</artifactId>
 			<version>${spray.io.version}</version>
 		</dependency>
+
 		<dependency>
 			<groupId>com.google.code.findbugs</groupId>
 			<artifactId>jsr305</artifactId>
 			<version>2.0.3</version>
 		</dependency>
-		<dependency>
-			<groupId>org.tachyonproject</groupId>
-			<artifactId>tachyon</artifactId>
-			<version>0.6.4</version>
-			<exclusions>
-				<exclusion>
-					<groupId>org.eclipse.jetty</groupId>
-					<artifactId>jetty-server</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.eclipse.jetty</groupId>
-					<artifactId>jetty-servlet</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.eclipse.jetty</groupId>
-					<artifactId>jetty-webapp</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.eclipse.jetty.orbit</groupId>
-					<artifactId>javax.servlet</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.apache.hadoop</groupId>
-					<artifactId>hadoop-client</artifactId>
-				</exclusion>
 
-			</exclusions>
-		</dependency>
 		<dependency>
 			<groupId>org.java-websocket</groupId>
 			<artifactId>Java-WebSocket</artifactId>
 			<version>1.3.0</version>
-		</dependency>
-		<dependency>
-			<groupId>com.fasterxml.jackson.core</groupId>
-			<artifactId>jackson-annotations</artifactId>
-			<version>2.3.2</version>
 		</dependency>
 
 		<dependency>
@@ -166,10 +118,11 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
+
 		<dependency>
 			<groupId>org.apache.spark</groupId>
 			<artifactId>spark-hive_2.10</artifactId>
-			<version>1.3.1</version>
+			<version>${spark.version}</version>
 			<exclusions>
 				<exclusion>
 					<groupId>org.apache.hadoop</groupId>
@@ -178,21 +131,28 @@
 				<exclusion>
 					<groupId>com.typesafe</groupId>
 					<artifactId>config</artifactId>
-
 				</exclusion>
-
+				<!-- To avoid version error described in
+					https://github.com/FasterXML/jackson-module-scala/issues/137 -->
+				<exclusion>
+					<groupId>com.fasterxml.jackson.module</groupId>
+					<artifactId>jackson-module-scala_2.10</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.fasterxml.jackson.core</groupId>
+					<artifactId>jackson-annotations</artifactId>
+				</exclusion>
 			</exclusions>
 		</dependency>
 
 		<dependency>
 			<groupId>com.xpatterns</groupId>
 			<artifactId>jaws-spark-sql-data</artifactId>
-			<version>1.1.0-spark1.3.1</version>
+			<version>1.1.0-spark1.6.0</version>
 			<exclusions>
 				<exclusion>
 					<groupId>com.typesafe</groupId>
 					<artifactId>config</artifactId>
-
 				</exclusion>
 			</exclusions>
 		</dependency>
@@ -200,7 +160,7 @@
 		<dependency>
 			<groupId>org.apache.hadoop</groupId>
 			<artifactId>hadoop-client</artifactId>
-			<version>2.6.0-cdh5.4.1</version>
+			<version>2.6.0</version>
 			<exclusions>
 				<exclusion>
 					<groupId>asm</groupId>
@@ -222,19 +182,34 @@
 					<groupId>junit</groupId>
 					<artifactId>junit</artifactId>
 				</exclusion>
+				<exclusion>
+					<groupId>com.fasterxml.jackson.core</groupId>
+					<artifactId>jackson-annotations</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.avro</groupId>
+					<artifactId>avro</artifactId>
+				</exclusion>
 			</exclusions>
 		</dependency>
-	</dependencies>
 
+		<dependency>
+			<groupId>com.fasterxml.jackson.module</groupId>
+			<artifactId>jackson-module-scala_2.10</artifactId>
+			<version>${jackson.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<version>${jackson.version}</version>
+		</dependency>
+	</dependencies>
 
 	<build>
 		<resources>
 			<resource>
 				<directory>src/main/resources</directory>
-				<excludes>
-					<exclude>*</exclude>
-				</excludes>
-				<filtering>false</filtering>
 			</resource>
 		</resources>
 		<finalName>${project.artifactId}</finalName>
@@ -256,10 +231,9 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<!-- <version>3.1</version> -->
 				<configuration>
-					<source>1.6</source>
-					<target>1.6</target>
+					<source>1.7</source>
+					<target>1.7</target>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -288,7 +262,6 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-shade-plugin</artifactId>
 				<version>2.2</version>
-
 				<executions>
 					<execution>
 						<phase>package</phase>
@@ -308,7 +281,6 @@
 								</filter>
 							</filters>
 						</configuration>
-
 					</execution>
 				</executions>
 			</plugin>
@@ -353,12 +325,12 @@
 						<configuration>
 							<tasks>
 								<chmod file="${basedir}/target/temp_build/bin/main-jaws.sh"
-									perm="ugo+rx" />
+									   perm="ugo+rx" />
 								<chmod file="${basedir}/target/temp_build/conf/jaws-env.sh"
-									perm="ugo+rx" />
+									   perm="ugo+rx" />
 
 								<chmod file="${basedir}/src/main/scripts/start-jaws.sh"
-									perm="ugo+rx" />
+									   perm="ugo+rx" />
 
 							</tasks>
 						</configuration>

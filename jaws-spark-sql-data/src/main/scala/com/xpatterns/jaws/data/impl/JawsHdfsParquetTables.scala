@@ -24,7 +24,7 @@ class JawsHdfsParquetTables(configuration: Configuration) extends TJawsParquetTa
 
   override def deleteParquetTable(name: String) {
     logger.debug(s"Deleting parquet table called $name")
-    var filePath = getParquetTableFilePath(name)
+    val filePath = getParquetTableFilePath(name)
     Utils.deleteFile(configuration, filePath)
   }
 
@@ -33,20 +33,21 @@ class JawsHdfsParquetTables(configuration: Configuration) extends TJawsParquetTa
     logger.debug("Listing parquet tables: ")
     var tables = Array[ParquetTable]()
 
-    var files = Utils.listFiles(configuration, Utils.PARQUET_TABLES_FOLDER, new Comparator[String]() {
+    val files = Utils.listFiles(configuration, Utils.PARQUET_TABLES_FOLDER, new Comparator[String]() {
 
       override def compare(o1: String, o2: String): Int = {
-        return o1.compareTo(o2)
+        o1.compareTo(o2)
       }
 
     })
 
     val iterator = files.iterator()
 
-    while (iterator.hasNext()) {
+    while (iterator.hasNext) {
       val tableName = iterator.next()
       
-      val (namenode, filepath) = Utils.readFile(configuration, Utils.PARQUET_TABLES_FOLDER + "/" + tableName).parseJson.fromJson[Tuple2[String, String]]
+      val (namenode, filepath) = Utils.readFile(configuration, Utils.PARQUET_TABLES_FOLDER + "/" +
+                                    tableName).parseJson.convertTo[(String, String)]
       tables = tables :+ new ParquetTable(tableName, filepath, namenode) 
     }
     
@@ -65,7 +66,7 @@ class JawsHdfsParquetTables(configuration: Configuration) extends TJawsParquetTa
     val filename = getParquetTableFilePath(name)
 
     if (Utils.checkFileExistence(filename, configuration)){
-      val (namenode, filepath) = Utils.readFile(configuration, filename).parseJson.fromJson[Tuple2[String, String]]
+      val (namenode, filepath) = Utils.readFile(configuration, filename).parseJson.convertTo[(String, String)]
       new ParquetTable(name, filepath, namenode)
     }
       

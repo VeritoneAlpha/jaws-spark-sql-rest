@@ -1,8 +1,6 @@
 package apiactors
 
 import server.Configuration
-import sys.process._
-import scala.collection.mutable.ListBuffer
 import akka.actor.Actor
 import scala.util.Try
 import scala.util.Success
@@ -19,10 +17,6 @@ import java.util.UUID
 import com.xpatterns.jaws.data.utils.QueryState
 import scala.concurrent._
 import java.io.ByteArrayInputStream
-import java.io.InputStreamReader
-import java.io.BufferedReader
-import scala.io.Source
-import scala.io.BufferedSource
 import com.xpatterns.jaws.data.utils.Utils._
 
 /**
@@ -38,11 +32,11 @@ class HiveRunnerActor(dals: DAL) extends Actor {
 
     case message: RunQueryMessage => {
       Configuration.log4j.info(s"[HiveRunnerActor]: Running script=${message.script}")
-      val uuid = System.currentTimeMillis() + UUID.randomUUID().toString()
+      val uuid = System.currentTimeMillis + UUID.randomUUID.toString
       implicit val ec = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(Configuration.nrOfThreads.getOrElse("10").toInt))
       var script = ""
 
-      val startTime = System.currentTimeMillis()
+      val startTime = System.currentTimeMillis
       dals.loggingDal.setTimestamp(uuid, startTime)
 
       val tryPreRunScript = Try {
@@ -61,18 +55,17 @@ class HiveRunnerActor(dals: DAL) extends Actor {
       }
 
       runResponse onComplete {
-        case Success(s) => {
+        case Success(s) =>
           val message = s"[HiveRunnerActor]: Query $uuid has successfully finished"
           dals.resultsDal.setResults(uuid, s)
           setStatus(uuid, message, QueryState.DONE)
-
-          val executionTime = System.currentTimeMillis() - startTime
+          val executionTime = System.currentTimeMillis - startTime
           dals.loggingDal.setExecutionTime(uuid, executionTime)
-        }
-        case Failure(e) => {
+
+        case Failure(e) =>
           val message = s"[HiveRunnerActor]: Query $uuid has failed with the following exception ${getCompleteStackTrace(e)}"
           setStatus(uuid, message, QueryState.FAILED)
-        }
+
       }
     }
   }
@@ -92,7 +85,7 @@ class HiveRunnerActor(dals: DAL) extends Actor {
         })
       osWriter flush ()
 
-      getLastResults(new ByteArrayInputStream(stdOutOS.toByteArray()))
+      getLastResults(new ByteArrayInputStream(stdOutOS.toByteArray))
 
     } finally {
       if (osWriter != null) osWriter close ()

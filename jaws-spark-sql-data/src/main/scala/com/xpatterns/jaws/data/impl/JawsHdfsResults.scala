@@ -81,6 +81,6 @@ class JawsHdfsResults(configuration: Configuration) extends TJawsResults {
   }
 
   def getCustomResultsFilePaths(queryId: String) = {
-    s"${configuration.get(Utils.RESULTS_FOLDER)}/custom/${queryId}"
+    s"${configuration.get(Utils.RESULTS_FOLDER)}/custom/$queryId"
   }
 }

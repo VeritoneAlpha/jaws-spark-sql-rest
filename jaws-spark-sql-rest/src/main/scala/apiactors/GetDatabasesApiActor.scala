@@ -11,7 +11,7 @@ import messages.GetDatabasesMessage
 import java.util.UUID
 import server.Configuration
 import org.apache.spark.sql.hive.HiveContext
-import org.apache.spark.scheduler.HiveUtils
+import org.apache.spark.sql.hive.HiveUtils
 import implementation.HiveContextWrapper
 import scala.concurrent._
 import ExecutionContext.Implicits.global

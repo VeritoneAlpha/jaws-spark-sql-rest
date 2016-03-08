@@ -6,9 +6,7 @@ import org.apache.spark.sql.SQLContext
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.FunSuite
-import com.xpatterns.jaws.data.utils.ResultsConverter
 import com.xpatterns.jaws.data.DTO.AvroResult
-//import org.apache.spark.sql.parquet.SparkParquetUtility._
 
 case class Positions(
   start: Int,

@@ -42,7 +42,7 @@ class QueryPropertiesTest extends FunSuite with BeforeAndAfter with ScalaFutures
   var queryId = ""
 
   before {
-    Configuration.loggingType.getOrElse("cassandra") match {
+    Configuration.dalType.getOrElse("cassandra") match {
       case "cassandra" => dals = new CassandraDal(Configuration.cassandraHost.get, Configuration.cassandraClusterName.get, Configuration.cassandraKeyspace.get)
       case _ => dals = new HdfsDal(hdfsConf)
     }

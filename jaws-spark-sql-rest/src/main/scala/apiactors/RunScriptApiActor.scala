@@ -1,8 +1,6 @@
 package apiactors
 
 import akka.actor.Actor
-import akka.actor.actorRef2Scala
-import com.google.common.base.Preconditions
 import com.xpatterns.jaws.data.contracts.DAL
 import messages._
 import java.util.UUID
@@ -10,16 +8,13 @@ import server.Configuration
 import com.google.common.cache.CacheBuilder
 import java.util.concurrent.TimeUnit
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
-import server.MainActors
 import com.google.common.cache.Cache
 import org.apache.spark.scheduler.RunScriptTask
 import implementation.HiveContextWrapper
-import org.apache.spark.sql.parquet.SparkParquetUtility._
-import apiactors.ActorsPaths._
 import scala.util.Try
 import apiactors.ActorOperations._
 import org.apache.spark.scheduler.RunParquetScriptTask
-import org.apache.spark.scheduler.HiveUtils
+import org.apache.spark.sql.hive.HiveUtils
 import com.xpatterns.jaws.data.utils.QueryState
 import org.apache.hadoop.conf.{Configuration => HadoopConfiguration}
 /**

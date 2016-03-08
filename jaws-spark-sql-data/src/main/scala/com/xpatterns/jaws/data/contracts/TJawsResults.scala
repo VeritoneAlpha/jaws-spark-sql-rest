@@ -2,7 +2,6 @@ package com.xpatterns.jaws.data.contracts
 
 import com.xpatterns.jaws.data.utils.Utils
 import com.xpatterns.jaws.data.utils.ResultsConverter
-import spray.json.DefaultJsonProtocol._
 import com.xpatterns.jaws.data.DTO.AvroResult
 import com.xpatterns.jaws.data.DTO.CustomResult
 
@@ -19,7 +18,7 @@ trait TJawsResults {
     Utils.TryWithRetry { 
       
       setAvroResults(uuid, results.toAvroResults())
-      setCustomResults(uuid, results.toCustomResults())
+      setCustomResults(uuid, results.toCustomResults)
     }
   }
   def deleteResults(uuid: String)

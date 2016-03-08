@@ -15,7 +15,6 @@ import spray.json._
 import com.xpatterns.jaws.data.utils.QueryState
 import com.xpatterns.jaws.data.utils.Utils
 
-import scala.collection.mutable.ArrayBuffer
 
 class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
 
@@ -222,7 +221,7 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
   def deleteQueryPublishedStatus(name: String, published: Option[Boolean]): Unit = {
     Utils.TryWithRetry {
       logger.info(s"Deleting query published status of $name")
-      val filePath = if (published == None || !published.get) {
+      val filePath = if (published.isEmpty || !published.get) {
         getQueryUnpublishedFolderPath(name)
       } else {
         getQueryPublishedFolderPath(name)
@@ -243,9 +242,9 @@ class JawsHdfsLogging(configuration: Configuration) extends TJawsLogging {
     Utils.deleteFile(configuration, filePath)
 
     val metaInfo = getMetaInfo(queryId)
-    if (metaInfo.name != None && metaInfo.name.get != null) {
+    if (metaInfo.name.isDefined && metaInfo.name.get != null) {
       deleteQueryName(metaInfo.name.get)
-      if (metaInfo.published != None) {
+      if (metaInfo.published.isDefined) {
         deleteQueryPublishedStatus(metaInfo.name.get, metaInfo.published)
       }
     }

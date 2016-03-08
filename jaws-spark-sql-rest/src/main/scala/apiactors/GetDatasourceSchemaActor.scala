@@ -4,9 +4,9 @@ import akka.actor.Actor
 import implementation.SchemaSettingsFactory.{ Hdfs, Hive, Parquet, Tachyon }
 import implementation.HiveContextWrapper
 import messages.GetDatasourceSchemaMessage
-import org.apache.spark.scheduler.HiveUtils
+import org.apache.spark.sql.hive.HiveUtils
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
-import org.apache.spark.sql.parquet.SparkParquetUtility._
+import org.apache.spark.sql.execution.datasources.parquet.SparkParquetUtility._
 import server.Configuration
 import scala.concurrent._
 import ExecutionContext.Implicits.global

@@ -5,12 +5,15 @@ import com.xpatterns.jaws.data.contracts.DAL
 import akka.actor.Actor
 import messages.RegisterTableMessage
 import server.Configuration
-import org.apache.spark.scheduler.HiveUtils
+import org.apache.spark.sql.hive.HiveUtils
+import org.apache.spark.sql.hive.HiveUtils._
 import messages.UnregisterTableMessage
 import scala.concurrent._
 import ExecutionContext.Implicits.global
 import scala.util.{ Success, Failure }
 import messages.ErrorMessage
+
+import java.io.{StringWriter, PrintWriter}
 
 class RegisterParquetTableApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Actor {
   override def receive = {
@@ -26,7 +29,9 @@ class RegisterParquetTableApiActor(hiveContext: HiveContextWrapper, dals: DAL) e
 
       registerTableFuture onComplete {
         case Success(_) => currentSender ! s"Table ${message.name} was registered"
-        case Failure(e) => currentSender ! ErrorMessage(s"RegisterTable failed with the following message: ${e.getMessage}")
+        case Failure(e) => val sw = new StringWriter
+                           e.printStackTrace(new PrintWriter(sw))
+                           currentSender ! ErrorMessage(s"RegisterTable failed with the following message: ${sw.toString}")
       }
     }
 
@@ -36,7 +41,7 @@ class RegisterParquetTableApiActor(hiveContext: HiveContextWrapper, dals: DAL) e
 
       val unregisterTableFuture = future {
         // unregister table
-    	hiveContext.getCatalog.unregisterTable(Seq(message.name))
+    	  hiveContext.unregisterTable(message.name)
         dals.parquetTableDal.deleteParquetTable(message.name)
       }
 

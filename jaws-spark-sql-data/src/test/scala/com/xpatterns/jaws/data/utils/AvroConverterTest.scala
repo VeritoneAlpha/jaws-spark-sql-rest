@@ -4,9 +4,7 @@ import org.junit.runner.RunWith
 import org.scalatest.FunSuite
 import scala.util.Try
 import org.scalatest.junit.JUnitRunner
-import org.apache.spark.sql.catalyst.expressions.Row
-import org.apache.avro.generic.GenericRecordBuilder
-import org.apache.avro.generic.GenericRecord
+import org.apache.spark.sql.Row
 import org.apache.avro.generic.GenericData
 import collection.JavaConversions._
 import scala.collection.convert.Wrappers

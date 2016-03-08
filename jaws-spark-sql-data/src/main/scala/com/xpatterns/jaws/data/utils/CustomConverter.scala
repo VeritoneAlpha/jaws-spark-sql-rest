@@ -1,10 +1,7 @@
 package com.xpatterns.jaws.data.utils
 
-import org.apache.spark.sql.catalyst.expressions.Row
-import spray.json.DefaultJsonProtocol._
-import com.xpatterns.jaws.data.DTO.CustomResult
+import org.apache.spark.sql.Row
 import com.xpatterns.jaws.data.DTO.Column
-import com.google.gson.GsonBuilder
 import java.sql.Timestamp
 import collection.JavaConversions._
 import org.apache.spark.sql.types._
@@ -13,15 +10,15 @@ import org.apache.spark.sql.catalyst.expressions.GenericRow
 object CustomConverter {
 
   def getCustomSchema(schema: StructType): Array[Column] = {
-    schema.fields map (field => getCustomSchema(field.dataType, field.name)) toArray
+    schema.fields map (field => getCustomSchema(field.dataType, field.name))
   }
 
   private def getCustomSchema(fieldType: DataType, fieldName: String): Column = {
     fieldType match {
       case ArrayType(elementType, _)         => new Column(fieldName, "ArrayType", "", Array(getCustomSchema(elementType, "items")))
       case MapType(StringType, valueType, _) => new Column(fieldName, "MapType", "", Array(getCustomSchema(valueType, "values")))
-      case structType: StructType            => new Column(fieldName, "StructType", "", structType.fields map (field => getCustomSchema(field.dataType, field.name)) toArray)
-      case _                                 => new Column(fieldName, fieldType.toString(), "", Array.empty)
+      case structType: StructType            => new Column(fieldName, "StructType", "", structType.fields map (field => getCustomSchema(field.dataType, field.name)))
+      case _                                 => new Column(fieldName, fieldType.toString, "", Array.empty)
     }
   }
 
@@ -69,7 +66,7 @@ object CustomConverter {
           } else {
             val smap = item.asInstanceOf[Map[String, Any]] map {
               case (key, value) =>
-                (key -> valueConverter(value))
+                key -> valueConverter(value)
             }
             mapAsJavaMap(smap)
           }

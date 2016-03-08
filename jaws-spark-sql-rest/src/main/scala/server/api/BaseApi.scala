@@ -2,6 +2,7 @@ package server.api
 
 import akka.actor.{Props, ActorRef}
 import akka.util.Timeout
+import java.util.concurrent.TimeUnit
 import apiactors.{BalancerActor, RunScriptApiActor}
 import com.xpatterns.jaws.data.contracts.DAL
 import implementation.HiveContextWrapper
@@ -15,7 +16,7 @@ import apiactors.ActorsPaths._
  */
 trait BaseApi extends HttpService {
   // The default timeout for the futures
-  implicit val timeout = Timeout(Configuration.timeout.toInt)
+  implicit val timeout = Timeout(Configuration.timeout.toInt, TimeUnit.MILLISECONDS)
 
   // The hdfs configuration that is initialized when the server starts
   var hdfsConf: org.apache.hadoop.conf.Configuration = _

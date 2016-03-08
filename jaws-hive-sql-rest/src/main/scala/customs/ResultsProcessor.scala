@@ -3,8 +3,7 @@ package customs
 import java.io.ByteArrayInputStream
 import scala.io.Source
 import customs.CommandsProcessor._
-import com.xpatterns.jaws.data.DTO.Column
-import org.apache.spark.sql.catalyst.expressions.Row
+import org.apache.spark.sql.Row
 import com.xpatterns.jaws.data.utils.ResultsConverter
 import org.apache.spark.sql.types._
 

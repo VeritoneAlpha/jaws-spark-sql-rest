@@ -1,13 +1,10 @@
 package com.xpatterns.jaws.data.impl
 
 import org.scalatest.FunSuite
-import com.xpatterns.jaws.data.DTO.Column
-import org.apache.commons.lang.RandomStringUtils
 import com.xpatterns.jaws.data.utils.Randomizer
 import com.xpatterns.jaws.data.contracts.TJawsResults
 import org.scalatest.BeforeAndAfter
 import me.prettyprint.cassandra.service.CassandraHostConfigurator
-import org.junit.Assert
 import com.typesafe.config.ConfigFactory
 import me.prettyprint.cassandra.service.ThriftCluster
 import me.prettyprint.hector.api.factory.HFactory
@@ -16,8 +13,6 @@ import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import com.xpatterns.jaws.data.DTO.AvroResult
 import com.xpatterns.jaws.data.DTO.CustomResult
-import scala.collection.mutable.ArrayBuffer
-import org.apache.spark.sql.catalyst.expressions.Row
 
 @RunWith(classOf[JUnitRunner])
 class JawsResultsTest extends FunSuite with BeforeAndAfter {
@@ -55,7 +50,7 @@ class JawsResultsTest extends FunSuite with BeforeAndAfter {
     val customResults = resultsDal.getCustomResults(uuid)
 
     assert(resultsConverter.toAvroResults() === avroResults)
-    assert(resultsConverter.toCustomResults() === customResults)
+    assert(resultsConverter.toCustomResults === customResults)
 
   }
   
@@ -73,7 +68,7 @@ class JawsResultsTest extends FunSuite with BeforeAndAfter {
     val customResultsDeleted = resultsDal.getCustomResults(uuid)
 
     assert(resultsConverter.toAvroResults() === avroResults)
-    assert(resultsConverter.toCustomResults() === customResults)
+    assert(resultsConverter.toCustomResults === customResults)
     assert(new AvroResult() === avroResultsDeleted)
      assert(new CustomResult() === customResultsDeleted)
 

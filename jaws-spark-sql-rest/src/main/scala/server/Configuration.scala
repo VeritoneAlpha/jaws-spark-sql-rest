@@ -42,7 +42,7 @@ object Configuration {
 
   //app configuration
   val serverInterface = getStringConfiguration(appConf, "server.interface")
-  val loggingType = getStringConfiguration(appConf, "app.logging.type")
+  val dalType = getStringConfiguration(appConf, "app.dal.type")
   val rddDestinationIp = getStringConfiguration(appConf, "rdd.destination.ip")
   val rddDestinationLocation = getStringConfiguration(appConf, "rdd.destination.location")
   val remoteDomainActor = getStringConfiguration(appConf, "remote.domain.actor")

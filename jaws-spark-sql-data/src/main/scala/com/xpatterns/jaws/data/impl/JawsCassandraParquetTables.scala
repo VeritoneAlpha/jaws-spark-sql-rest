@@ -12,8 +12,6 @@ import me.prettyprint.hector.api.Serializer
 import me.prettyprint.cassandra.serializers.StringSerializer
 import me.prettyprint.cassandra.serializers.CompositeSerializer
 import me.prettyprint.cassandra.serializers.LongSerializer
-import me.prettyprint.hector.api.query.ColumnQuery
-import me.prettyprint.cassandra.model.thrift.ThriftColumnQuery
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 
@@ -72,7 +70,7 @@ class JawsCassandraParquetTables(keyspace: Keyspace) extends TJawsParquetTables 
                     case size: Int => {
                       for (index <- 0 until size) {
                         val column = columns.get(index)
-                        val (namenode, filepath) = column.getValue.parseJson.fromJson[Tuple2[String, String]]
+                        val (namenode, filepath) = column.getValue.parseJson.convertTo[(String, String)]
                         result = result :+ new ParquetTable(column.getName, filepath, namenode)
                       }
                       result
@@ -89,7 +87,7 @@ class JawsCassandraParquetTables(keyspace: Keyspace) extends TJawsParquetTables 
 
   override def tableExists(name: String): Boolean = {
     Utils.TryWithRetry {
-      logger.debug(s"Reading the parquet table ${name}")
+      logger.debug(s"Reading the parquet table $name")
       val columnQuery = HFactory.createColumnQuery(keyspace, ss, ss, ss)
       columnQuery.setColumnFamily(CF_PARQUET_TABLES).setKey(ROW_ID).setName(name)
 
@@ -109,7 +107,7 @@ class JawsCassandraParquetTables(keyspace: Keyspace) extends TJawsParquetTables 
 
   override def readParquetTable(name: String): ParquetTable = {
     Utils.TryWithRetry {
-      logger.debug(s"Reading the parquet table ${name}")
+      logger.debug(s"Reading the parquet table $name")
       val columnQuery = HFactory.createColumnQuery(keyspace, ss, ss, ss)
       columnQuery.setColumnFamily(CF_PARQUET_TABLES).setKey(ROW_ID).setName(name)
 
@@ -122,7 +120,7 @@ class JawsCassandraParquetTables(keyspace: Keyspace) extends TJawsParquetTables 
             case None => new ParquetTable
             case _ => 
               {
-                 val (namenode, filepath) = column.getValue.parseJson.fromJson[Tuple2[String, String]]
+                 val (namenode, filepath) = column.getValue.parseJson.convertTo[(String, String)]
                  new ParquetTable(column.getName, filepath, namenode)
               }
              

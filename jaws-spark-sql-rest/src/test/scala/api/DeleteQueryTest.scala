@@ -41,7 +41,7 @@ class DeleteQueryTest  extends FunSuite with BeforeAndAfter with ScalaFutures {
   implicit val system = ActorSystem("localSystem")
 
   before {
-    Configuration.loggingType.getOrElse("cassandra") match {
+    Configuration.dalType.getOrElse("cassandra") match {
       case "cassandra" => dals = new CassandraDal(Configuration.cassandraHost.get, Configuration.cassandraClusterName.get, Configuration.cassandraKeyspace.get)
       case _ => dals = new HdfsDal(hdfsConf)
     }

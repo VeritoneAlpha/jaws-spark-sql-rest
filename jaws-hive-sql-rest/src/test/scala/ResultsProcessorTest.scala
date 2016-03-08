@@ -1,17 +1,14 @@
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.FunSuite
-import scala.util.Try
 import customs.ResultsProcessor._
 import org.scalatest.Matchers._
 import java.io.ByteArrayOutputStream
 import java.io.OutputStreamWriter
 import customs.CommandsProcessor._
 import java.io.ByteArrayInputStream
-import com.xpatterns.jaws.data.DTO.Column
-import org.apache.spark.sql.catalyst.expressions.Row
+import org.apache.spark.sql.Row
 import com.xpatterns.jaws.data.utils.ResultsConverter
-import scala.collection.mutable.WrappedArray
 import org.apache.spark.sql.types._
 
 @RunWith(classOf[JUnitRunner])
@@ -57,7 +54,7 @@ class ResultsProcessorTest extends FunSuite {
 
     osWriter.flush()
 
-    val results = getLastResults(new ByteArrayInputStream(stdOutOS.toByteArray()))
+    val results = getLastResults(new ByteArrayInputStream(stdOutOS.toByteArray))
     val requiredSchema = new StructType(Array(StructField("name", StringType, true), StructField("age", StringType, true), StructField("sex", StringType, true)))
     val requiredResults = new ResultsConverter(requiredSchema,
       Array(Row.fromSeq(Array("name", "age", "sex")), Row.fromSeq(Array("name1", "age1", "sex1")), Row.fromSeq(Array("name2", "age2", "sex2"))))
@@ -79,7 +76,7 @@ class ResultsProcessorTest extends FunSuite {
 
     osWriter.flush()
 
-    val results = getLastResults(new ByteArrayInputStream(stdOutOS.toByteArray()))
+    val results = getLastResults(new ByteArrayInputStream(stdOutOS.toByteArray))
     val requiredResults = new ResultsConverter(StructType(Array(StructField("name", StringType, true), StructField("age", StringType, true), StructField("sex", StringType, true))), Array.empty)
 
     osWriter.close()

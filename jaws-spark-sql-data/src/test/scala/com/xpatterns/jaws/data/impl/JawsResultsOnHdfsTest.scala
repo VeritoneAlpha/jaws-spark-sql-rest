@@ -42,9 +42,7 @@ class JawsResultsOnHdfsTest extends FunSuite with BeforeAndAfter {
 
       // set hadoop name node and job tracker
       namenode match {
-        case None => {
-          throw new RuntimeException("You need to set the namenode! ")
-        }
+        case None => throw new RuntimeException("You need to set the namenode! ")
         case _ => configuration.set("fs.defaultFS", namenode.get)
 
       }
@@ -74,7 +72,7 @@ class JawsResultsOnHdfsTest extends FunSuite with BeforeAndAfter {
     val customResults = resultsDal.getCustomResults(uuid)
 
     assert(resultsConverter.toAvroResults() === avroResults)
-    assert(resultsConverter.toCustomResults() === customResults)
+    assert(resultsConverter.toCustomResults === customResults)
 
   }
 
@@ -92,7 +90,7 @@ class JawsResultsOnHdfsTest extends FunSuite with BeforeAndAfter {
     val customResultsDeleted = resultsDal.getCustomResults(uuid)
 
     assert(resultsConverter.toAvroResults() === avroResults)
-    assert(resultsConverter.toCustomResults() === customResults)
+    assert(resultsConverter.toCustomResults === customResults)
     assert(new AvroResult() === avroResultsDeleted)
     assert(new CustomResult() === customResultsDeleted)
 

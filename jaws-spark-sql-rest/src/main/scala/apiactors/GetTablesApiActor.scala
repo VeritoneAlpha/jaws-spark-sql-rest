@@ -9,7 +9,7 @@ import akka.util.Timeout
 import server.Configuration
 import scala.collection.immutable.Map
 import akka.pattern.ask
-import org.apache.spark.scheduler.HiveUtils
+import org.apache.spark.sql.hive.HiveUtils
 import implementation.HiveContextWrapper
 import akka.actor.Actor
 import scala.util.{ Try, Success, Failure }
