@@ -13,6 +13,8 @@ import ExecutionContext.Implicits.global
 import scala.util.{ Success, Failure }
 import messages.ErrorMessage
 
+import java.io.{StringWriter, PrintWriter}
+
 class RegisterParquetTableApiActor(hiveContext: HiveContextWrapper, dals: DAL) extends Actor {
   override def receive = {
 
@@ -27,7 +29,9 @@ class RegisterParquetTableApiActor(hiveContext: HiveContextWrapper, dals: DAL) e
 
       registerTableFuture onComplete {
         case Success(_) => currentSender ! s"Table ${message.name} was registered"
-        case Failure(e) => currentSender ! ErrorMessage(s"RegisterTable failed with the following message: ${e.getMessage}")
+        case Failure(e) => val sw = new StringWriter
+                           e.printStackTrace(new PrintWriter(sw))
+                           currentSender ! ErrorMessage(s"RegisterTable failed with the following message: ${sw.toString}")
       }
     }
 
