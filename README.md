@@ -584,11 +584,11 @@ Example:
       }]
     }
 
-####Query name api:
+#### Query name api:
 
 This api allows to set a name and description for an executed query. This allow to find a query after its name or to re-execute it.   
 
-#####Set a query name: 
+##### Set a query name: 
 
         curl -d '{"name": "test", "description": "This is a test query", "published": true}' 'http://devbox.local:9080/jaws/queries/143205136108871e22b82-e1b7-4b95-ac0f-1c798154628e?overwrite=false' -X PUT
 
@@ -613,7 +613,7 @@ Results:
 
 A message that tells whether the operation has been successfully performed.  
 
-#####Retrieve a query using its name 
+##### Retrieve a query using its name 
     
         curl 'http://devbox.local:9080/jaws/queries?name=test' -X GET
 
@@ -646,7 +646,7 @@ Example:
       }]
     }
     
-#####Running a query using its name
+##### Running a query using its name
 
         curl 'http://devbox.local:9080/jaws/run?name=test' -X POST
 
@@ -662,7 +662,7 @@ Example:
 
     1438767470670203d4e55-8419-4020-a5a9-02d93d03d4c4
 
-#####Retrieve all published query names 
+##### Retrieve all published query names 
     
         curl 'http://devbox.local:9080/jaws/queries/published' -X GET
 
@@ -708,7 +708,7 @@ Parameters:
   * queryID [required] : uuid returned by the run api.
 
 
-###Parquet management apis
+### Parquet management apis
 The following apis are used to register a parquet table, run queries against it, list the registered parquet tables and delete them.
 
 #### Run parquet api:
@@ -736,7 +736,7 @@ The api returns an uuid representing the query that was submitted. The query is 
 Example:
  1404998257416357bb29d-6801-41ca-82e4-7a265816b50c
 
-####Register parquet table api:
+#### Register parquet table api:
     curl 'http://devbox.local:9080/jaws/parquet/tables?path=/user/jaws/parquetFolder&pathType=tachyon&name=testTable&overwrite=false' -X POST
 
 Parameters:
@@ -843,7 +843,7 @@ Example:
  Table testTable was unregistered
 
 
-###Browse warehouse apis
+### Browse warehouse apis
 The following apis are used to browse the warehouse: show databases, tables, describing tables.
 
 #### Databases api:
